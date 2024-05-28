@@ -1,0 +1,4 @@
+services:
+    php_api_doc_bundle:
+        volumes:
+            - ~/.ssh:/home/{user}/.ssh

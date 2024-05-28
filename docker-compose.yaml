@@ -1,0 +1,7 @@
+services:
+    php_api_doc_bundle:
+        build:
+            context: docker/php
+        volumes:
+            - .:/var/www/bundle:cached
+        tty: true
