@@ -1,8 +1,14 @@
 {
     "type": "symfony-bundle",
     "name": "ehyiah/apidoc-bundle",
-    "description": "Symfony Bundle to deal with api doc with SwaggerUI",
+    "description": "Symfony Bundle to deal with api doc using SwaggerUI and yaml/yml files",
     "license": "MIT",
+    "keywords": [
+        "symfony",
+        "symfony-bundle",
+        "api-doc",
+        "apidoc"
+    ],
     "authors": [
         {
             "name": "Matthieu Gostiaux",
