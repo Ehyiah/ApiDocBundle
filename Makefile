@@ -18,6 +18,9 @@ update: vendor up clear-logs ## update after checkout
 
 ##@ Docker
 build: ## Build the images with local current user replication in PHP container
+	$(DOCKER_COMPOSE) build --build-arg APP_USER_ID=$$(id -u) --build-arg APP_USER=$$(id -u -n)
+
+build-no-cache: ## Build the images with local current user replication in PHP container
 	$(DOCKER_COMPOSE) build --no-cache --build-arg APP_USER_ID=$$(id -u) --build-arg APP_USER=$$(id -u -n)
 
 up: ## Up the images
@@ -33,7 +36,7 @@ clear-logs: ## clear application logs
   	fi
 
 ## don't forget this if you dont want makefile to get files with this name
-.PHONY: build up down clear-logs update install reload
+.PHONY: build up down clear-logs update install reload build-no-cache
 
 ##@ Composer
 vendor: ## Install composer dependencies

@@ -1,6 +1,6 @@
 {
     "type": "symfony-bundle",
-    "name": "ehyiah/api_doc_bundle",
+    "name": "ehyiah/apidoc-bundle",
     "description": "Symfony Bundle to deal with api doc with SwaggerUI",
     "license": "MIT",
     "authors": [
@@ -15,13 +15,15 @@
             "Ehyiah\\ApiDocBundle\\": "src/"
         }
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "require": {
         "php": ">=8.1",
         "doctrine/orm": "^2.10",
         "symfony/property-access": "^6.1|^7.0",
         "symfony/monolog-bundle": "^3.1",
-        "symfony/yaml": "^6.1|^7.0"
+        "symfony/yaml": "^6.1|^7.0",
+        "symfony/finder": "^6.1|^7.0",
+        "symfony/dependency-injection": "^6.1|^7.0"
     },
     "require-dev": {
         "symfony/console": "^7.0|^6.1",
@@ -32,7 +34,8 @@
         "phpstan/extension-installer": "^1.3",
         "phpunit/phpunit": "^9.6",
         "symfony/phpunit-bridge": "^7.0",
-        "dg/bypass-finals": "^1.5"
+        "dg/bypass-finals": "^1.5",
+        "composer/composer": "^2.7@dev"
     },
     "scripts": {
         "phpcsfixer": "./vendor/bin/php-cs-fixer fix",
