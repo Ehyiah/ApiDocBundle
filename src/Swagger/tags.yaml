@@ -1,0 +1,4 @@
+documentation:
+    tags:
+        -   name: 'My first TAG'
+            description: 'Description of my first tag'

@@ -1,0 +1,15 @@
+documentation:
+    openapi: 3.0.0
+    info:
+        title: Api Doc
+        description: my APIs
+        version: 1.0.0
+    components:
+        securitySchemes:
+            Bearer:
+                type: http
+                scheme: bearer
+                bearerFormat: JWT
+                name: "Authorization"
+                in: header
+                description: just insert a valid JWT token without any prefix
