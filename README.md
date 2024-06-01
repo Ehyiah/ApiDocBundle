@@ -59,13 +59,16 @@ the directory can be modified in the .env file with the source_path variable.
 
 - the default route is ehyiah/api/doc exemple : localhost/ehyiah/api/doc, you can modify this route in the config/routes/ehyiah_api_doc.yaml file.
 
+## Recommanded directory structure (if you want to use generation commands)
+If you want to use generation commands (see below) but do not want to use recommanded structure, you will have to check and update all $ref used in the generated yaml/yml files by the commands.
 
-# ApiDoc Linting
-If you want, there is a command to generate an apidoc file in yaml or json.
+```{SOURCE_PATH}``` => is the env variable used as source directory for your api doc default is ```src/Swagger```
 
-``` bin/console apidocbundle:api-doc:generate ```
+| Type of Components |   Default directory   |     |
+|:------------------:|:---------------------:|:---:|
+|      Schemas       | {SOURCE_PATH}/schemas |     |
+|                    |                       |     |
 
-You can use this command for exemple to generate a yaml file and use [vacuum](https://quobix.com/vacuum/api/getting-started) to lint your file.
 
 # Generating ApiDoc Components
 Some commands are included in the bundle to pre-generate components.
@@ -75,3 +78,11 @@ You will probably have to edit the generated files or at least check if everythi
 |:-----------------------------:|:----------------------------------------------------------------------------:|:-------:|:-----------------------------------------------------------------------:|
 | apidocbundle:component:schema | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO |    x    | Generate a [schema](https://swagger.io/specification/v3/#schema-object) |
 |                               |                                                                              |         |                                                                         |
+
+
+# ApiDoc Linting
+If needed, there is a command to generate your apidoc into a single file in yaml or json format.
+
+``` bin/console apidocbundle:api-doc:generate ```
+
+You can use this command for exemple to generate a yaml file and use [vacuum](https://quobix.com/vacuum/api/getting-started) to lint your file.
