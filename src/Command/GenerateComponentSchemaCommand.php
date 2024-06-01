@@ -92,11 +92,22 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
                 return;
             }
 
+            if ($type->isCollection()) {
+                $collectionClass = $type->getCollectionValueTypes()[0]->getClassName();
+                /** @var class-string $collectionClass */
+                $reflectionClass = (new ReflectionClass($collectionClass));
+                $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
+                $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = 'array';
+
+                return;
+            }
+
             $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['$ref'] = '#/components/schemas/' . $reflectionClass->getShortName();
 
             return;
         }
 
         $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = $type->getBuiltinType();
+        $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['description'] = '';
     }
 }
