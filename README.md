@@ -60,7 +60,10 @@ the directory can be modified in the .env file with the source_path variable.
 - the default route is ehyiah/api/doc exemple : localhost/ehyiah/api/doc, you can modify this route in the config/routes/ehyiah_api_doc.yaml file.
 
 ## Recommanded directory structure (if you want to use generation commands)
-If you want to use generation commands (see below) but do not want to use recommanded structure, you will have to check and update all $ref used in the generated yaml/yml files by the commands.
+If you want to use generation commands (see below) but do not want to use Auto-generated components names, you will have to check and update all ``$ref`` used in the generated yaml/yml files by the commands.
+
+**exemple**: You got a DTO class called ``MyDto``, a schema named ``MyDto`` will be created and used everywhere a reference to this class is created. 
+So if you want to call your component ``MyAwesomeDto`` instad of default name, you will have to update the reference (``$ref``) in every file.
 
 ```{SOURCE_PATH}``` => is the env variable used as source directory for your api doc default is ```src/Swagger```
 
