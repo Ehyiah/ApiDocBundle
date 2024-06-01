@@ -29,7 +29,8 @@
         "symfony/monolog-bundle": "^3.1",
         "symfony/yaml": "^6.1|^7.0",
         "symfony/finder": "^6.1|^7.0",
-        "symfony/dependency-injection": "^6.1|^7.0"
+        "symfony/dependency-injection": "^6.1|^7.0",
+        "symfony/property-info": "^6.1|^7.0"
     },
     "require-dev": {
         "symfony/console": "^7.0|^6.1",
