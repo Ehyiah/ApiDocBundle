@@ -94,7 +94,8 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
 
             if ($type->isCollection()) {
                 $collectionClass = $type->getCollectionValueTypes()[0]->getClassName();
-                $reflectionClass = new ReflectionClass($collectionClass);
+                /** @var class-string $collectionClass */
+                $reflectionClass = (new ReflectionClass($collectionClass));
                 $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
                 $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = 'array';
 
@@ -107,5 +108,6 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
         }
 
         $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = $type->getBuiltinType();
+        $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['description'] = '';
     }
 }
