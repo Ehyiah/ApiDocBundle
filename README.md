@@ -66,3 +66,12 @@ If you want, there is a command to generate an apidoc file in yaml or json.
 ``` bin/console apidocbundle:api-doc:generate ```
 
 You can use this command for exemple to generate a yaml file and use [vacuum](https://quobix.com/vacuum/api/getting-started) to lint your file.
+
+# Generating ApiDoc Components
+Some commands are included in the bundle to pre-generate components.
+You will probably have to edit the generated files or at least check if everything is okay.
+
+|            Command            |                                  Arguments                                   | Options |                             Generation type                             |
+|:-----------------------------:|:----------------------------------------------------------------------------:|:-------:|:-----------------------------------------------------------------------:|
+| apidocbundle:component:schema | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO |    x    | Generate a [schema](https://swagger.io/specification/v3/#schema-object) |
+|                               |                                                                              |         |                                                                         |
