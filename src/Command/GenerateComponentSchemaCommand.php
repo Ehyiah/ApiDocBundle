@@ -55,8 +55,7 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
             self::addPropertyToSchema($array, $shortClassName, $property, $firstType);
         }
 
-        // add verif if yaml file already exist for this class and ask if override or cancel command
-        $this->generateYamlFile($array, '/schemas/' . $shortClassName);
+        $this->generateYamlFile($array, 'schemas/' . $shortClassName, $input, $output);
 
         return Command::SUCCESS;
     }
