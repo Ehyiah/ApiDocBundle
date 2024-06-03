@@ -1,6 +1,6 @@
 <?php
 
-namespace Ehyiah\ApiDocBundle\Command;
+namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
 use DateTimeInterface;
 use ReflectionClass;

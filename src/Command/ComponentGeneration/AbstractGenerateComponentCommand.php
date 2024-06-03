@@ -1,6 +1,6 @@
 <?php
 
-namespace Ehyiah\ApiDocBundle\Command;
+namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
 use LogicException;
 use Symfony\Component\Console\Command\Command;
