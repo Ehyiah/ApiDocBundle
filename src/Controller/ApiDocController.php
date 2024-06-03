@@ -32,9 +32,12 @@ class ApiDocController extends AbstractController
         $config = [];
         $finder = new Finder();
 
-        $baseUrl = $this->parameterBag->get('ehyiah_api_doc.site_url');
-
-        $config['servers'][]['url'] = $baseUrl;
+        /** @var string $baseUrlParameter */
+        $baseUrlParameter = $this->parameterBag->get('ehyiah_api_doc.site_urls');
+        $baseUrls = explode(',', $baseUrlParameter);
+        foreach ($baseUrls as $index => $url) {
+            $config['servers'][$index]['url'] = $url;
+        }
 
         $location = $this->parameterBag->get('ehyiah_api_doc.source_path');
         if (!is_string($location)) {

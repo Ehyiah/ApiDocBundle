@@ -32,7 +32,7 @@ class EhyiahApiDocBundle extends AbstractBundle
 
         $container->import('../config/services.yaml');
 
-        $container->parameters()->set('ehyiah_api_doc.site_url', $config['site_url']);
+        $container->parameters()->set('ehyiah_api_doc.site_urls', $config['site_urls']);
         $container->parameters()->set('ehyiah_api_doc.source_path', $config['source_path']);
         $container->parameters()->set('ehyiah_api_doc.dump_path', $config['dump_path']);
     }
@@ -43,7 +43,7 @@ class EhyiahApiDocBundle extends AbstractBundle
 
         $definition->rootNode()
             ->children()
-                ->scalarNode('site_url')
+                ->scalarNode('site_urls')
                     ->isRequired()
                     ->defaultValue('')
                 ->end()
