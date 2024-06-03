@@ -14,12 +14,14 @@ use Symfony\Component\PropertyInfo\Type;
 
 #[AsCommand(
     name: 'apidocbundle:component:schema',
-    description: 'generate a schema component from a Class (DTO or Entity only)'
+    description: 'generate a schema component from a Class'
 )]
 final class GenerateComponentSchemaCommand extends AbstractGenerateComponentCommand
 {
     protected function configure(): void
     {
+        parent::configure();
+
         $this->addArgument(
             name: 'class',
             mode: InputArgument::REQUIRED,
@@ -55,7 +57,11 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
             self::addPropertyToSchema($array, $shortClassName, $property, $firstType);
         }
 
-        $this->generateYamlFile($array, 'schemas/' . $shortClassName, $input, $output);
+        if ($this->dumpLocation === $input->getOption('output')) {
+            $destination = 'schemas/';
+        }
+
+        $this->generateYamlFile($array, $shortClassName, $input, $output, $destination ?? null);
 
         return Command::SUCCESS;
     }
@@ -78,6 +84,8 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
         if (!$type->isNullable()) {
             $schema['documentation']['components']['schemas'][$shortClassName]['required'][] = $property;
         }
+        // handle enum
+        // handle array
 
         if (null !== $type->getClassName()) {
             /** @var class-string $className */
