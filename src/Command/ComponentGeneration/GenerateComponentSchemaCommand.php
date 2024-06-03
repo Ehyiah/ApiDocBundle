@@ -93,6 +93,19 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
                 $itemClass = $type->getCollectionValueTypes()[0]->getClassName();
                 $reflectionClass = (new ReflectionClass($itemClass));
 
+                if (in_array(BackedEnum::class, $reflectionClass->getInterfaceNames())) {
+                    $values = [];
+                    $enumCases = $reflectionClass->getConstants();
+                    /** @var BackedEnum $enumCase */
+                    foreach ($enumCases as $enumCase) {
+                        $values[] = $enumCase->value;
+                    }
+                    $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = 'array';
+                    $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['enum'] = $values;
+
+                    return;
+                }
+
                 $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
                 $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = 'array';
 
@@ -134,7 +147,7 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
                 foreach ($enumCases as $enumCase) {
                     $values[] = $enumCase->value;
                 }
-                $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = 'enum';
+                $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = 'string';
                 $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['enum'] = $values;
 
                 return;
