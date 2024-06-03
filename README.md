@@ -59,8 +59,9 @@ the directory can be modified in the .env file with the source_path variable.
 
 - the default route is ehyiah/api/doc exemple : localhost/ehyiah/api/doc, you can modify this route in the config/routes/ehyiah_api_doc.yaml file.
 
-## Recommanded directory structure (if you want to use generation commands)
-If you want to use generation commands (see below) but do not want to use Auto-generated components names, you will have to check and update all ``$ref`` used in the generated yaml/yml files by the commands.
+## Recommended directory structure
+If you want to use generation commands (see below) but do not want to use Auto-generated components names, 
+you will have to check and update all ``$ref`` used in the generated yaml/yml files by the commands.
 
 **exemple**: You got a DTO class called ``MyDto``, a schema named ``MyDto`` will be created and used everywhere a reference to this class is created. 
 So if you want to call your component ``MyAwesomeDto`` instad of default name, you will have to update the reference (``$ref``) in every file.
@@ -77,10 +78,10 @@ So if you want to call your component ``MyAwesomeDto`` instad of default name, y
 Some commands are included in the bundle to pre-generate components.
 You will probably have to edit the generated files or at least check if everything is okay.
 
-|            Command            |                                  Arguments                                   | Options |                             Generation type                             |
-|:-----------------------------:|:----------------------------------------------------------------------------:|:-------:|:-----------------------------------------------------------------------:|
-| apidocbundle:component:schema | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO |    x    | Generate a [schema](https://swagger.io/specification/v3/#schema-object) |
-|                               |                                                                              |         |                                                                         |
+|            Command            |                                  Arguments                                   |                                                Options                                                 |                             Generation type                             |
+|:-----------------------------:|:----------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------:|
+| apidocbundle:component:schema | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO | --output (-o) specify a custom output directory to dump the generated file from the kernel_project_dir | Generate a [schema](https://swagger.io/specification/v3/#schema-object) |
+|                               |                                                                              |                                                                                                        |                                                                         |
 
 
 # ApiDoc Linting

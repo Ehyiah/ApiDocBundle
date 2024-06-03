@@ -6,6 +6,7 @@ use LogicException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
@@ -14,9 +15,11 @@ use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\PropertyInfo\PropertyInfoExtractorInterface;
 use Symfony\Component\Yaml\Yaml;
 
+use function Symfony\Component\String\u;
+
 abstract class AbstractGenerateComponentCommand extends Command
 {
-    protected string $dumpLocation;
+    protected ?string $dumpLocation = null;
 
     public function __construct(
         protected readonly KernelInterface $kernel,
@@ -35,20 +38,35 @@ abstract class AbstractGenerateComponentCommand extends Command
             throw new LogicException('Location must be a string');
         }
 
-        $this->dumpLocation = $dumpLocation;
+        $this->dumpLocation = u($dumpLocation)->ensureStart('/');
+        $this->dumpLocation = u($dumpLocation)->ensureEnd('/');
+    }
+
+    protected function configure(): void
+    {
+        if (null === $this->dumpLocation) {
+            $this->initializeClass();
+        }
+
+        $this->addOption(
+            name: 'output',
+            shortcut: 'o',
+            mode: InputOption::VALUE_OPTIONAL,
+            description: 'Output dir, pass a relative path to the kernel_project_dir',
+            default: $this->dumpLocation,
+        );
     }
 
     /**
      * @param array<mixed> $array
      */
-    protected function generateYamlFile(array $array, string $fileName, InputInterface $input, OutputInterface $output): void
+    protected function generateYamlFile(array $array, string $fileName, InputInterface $input, OutputInterface $output, ?string $destination = null): void
     {
+        $outputDir = $input->getOption('output');
+        $outputDir = u($outputDir)->ensureStart('/')->ensureEnd('/');
+
         $yaml = Yaml::dump($array, 8, 4, 1024);
-        $dumpPath = $this->parameterBag->get('ehyiah_api_doc.source_path');
-        if (!is_string($dumpPath)) {
-            throw new LogicException('Yaml dump must be a string');
-        }
-        $dumpLocation = $this->kernel->getProjectDir() . $dumpPath . '/' . $fileName . '.yaml';
+        $dumpLocation = $this->kernel->getProjectDir() . $outputDir . $destination . $fileName . '.yaml';
 
         $fileSystem = new Filesystem();
         if ($fileSystem->exists($dumpLocation)) {
