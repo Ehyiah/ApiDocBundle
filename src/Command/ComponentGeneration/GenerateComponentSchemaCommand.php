@@ -39,7 +39,7 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
         if (!is_string($fullClassName)) {
             return Command::FAILURE;
         }
-        $shortClassName = $this->getShortClassName($fullClassName);
+        $shortClassName = $this->getShortClassName($input);
 
         $array = self::createComponentArray();
 

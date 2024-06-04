@@ -22,6 +22,8 @@ use function Symfony\Component\String\u;
 abstract class AbstractGenerateComponentCommand extends Command
 {
     protected ?string $dumpLocation = null;
+    /** @phpstan-ignore-next-line */
+    protected ?ReflectionClass $reflectionClass = null;
 
     public function __construct(
         protected readonly KernelInterface $kernel,
@@ -100,15 +102,21 @@ abstract class AbstractGenerateComponentCommand extends Command
         ];
     }
 
-    /**
-     * @throws ReflectionException
-     */
+    /** @phpstan-ignore-next-line  */
+    protected function getReflectionClass(InputInterface $input): ReflectionClass
+    {
+        /** @var class-string $fqcn */
+        $fqcn = $input->getArgument('class');
+        if (null === $this->reflectionClass) {
+            $this->reflectionClass = new ReflectionClass($fqcn);
+        }
+
+        return $this->reflectionClass;
+    }
+
     protected function checkIfClassExists(InputInterface $input, OutputInterface $output): int|string
     {
-        /** @var class-string $class */
-        $class = $input->getArgument('class');
-        $reflectionClass = new ReflectionClass($class);
-        $fullClassName = $reflectionClass->getName();
+        $fullClassName = $this->getReflectionClass($input)->getName();
 
         if (!class_exists($fullClassName)) {
             $output->writeln(sprintf('Class "%s" not found', $fullClassName));
@@ -122,11 +130,8 @@ abstract class AbstractGenerateComponentCommand extends Command
     /**
      * @throws ReflectionException
      */
-    protected function getShortClassName(string $fullClassName): string
+    protected function getShortClassName(InputInterface $input): string
     {
-        /** @var class-string $fullClassName */
-        $refectionClass = new ReflectionClass($fullClassName);
-
-        return $refectionClass->getShortName();
+        return $this->getReflectionClass($input)->getShortName();
     }
 }
