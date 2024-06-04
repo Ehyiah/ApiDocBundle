@@ -159,14 +159,7 @@ abstract class AbstractGenerateComponentCommand extends Command
                 $reflectionClass = (new ReflectionClass($itemClass));
 
                 if (in_array(BackedEnum::class, $reflectionClass->getInterfaceNames())) {
-                    $values = [];
-                    $enumCases = $reflectionClass->getConstants();
-                    /** @var BackedEnum $enumCase */
-                    foreach ($enumCases as $enumCase) {
-                        $values[] = $enumCase->value;
-                    }
-                    $schema[$property]['type'] = 'array';
-                    $schema[$property]['enum'] = $values;
+                    self::handleEnum($schema, $reflectionClass, $property, 'array');
 
                     return;
                 }
@@ -206,14 +199,7 @@ abstract class AbstractGenerateComponentCommand extends Command
             }
 
             if (in_array(BackedEnum::class, $interfaces)) {
-                $values = [];
-                $enumCases = $reflectionClass->getConstants();
-                /** @var BackedEnum $enumCase */
-                foreach ($enumCases as $enumCase) {
-                    $values[] = $enumCase->value;
-                }
-                $schema[$property]['type'] = 'string';
-                $schema[$property]['enum'] = $values;
+                self::handleEnum($schema, $reflectionClass, $property);
 
                 return;
             }
@@ -233,5 +219,22 @@ abstract class AbstractGenerateComponentCommand extends Command
     public static function addRequirement(array &$array, string $property): void
     {
         $array[] = $property;
+    }
+
+    /**
+     * @param array<mixed> $array
+     *
+     * @phpstan-ignore-next-line
+     */
+    public static function handleEnum(array &$array, ReflectionClass $reflectionClass, string $property, string $type = 'string'): void
+    {
+        $values = [];
+        $enumCases = $reflectionClass->getConstants();
+        /** @var BackedEnum $enumCase */
+        foreach ($enumCases as $enumCase) {
+            $values[] = $enumCase->value;
+        }
+        $array[$property]['type'] = $type;
+        $array[$property]['enum'] = $values;
     }
 }
