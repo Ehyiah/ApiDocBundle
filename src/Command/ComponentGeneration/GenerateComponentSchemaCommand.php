@@ -44,6 +44,8 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
         $array = self::createComponentArray();
 
         $properties = $this->propertyInfoExtractor->getProperties($fullClassName);
+        $propertiesArray = [];
+        $requiredProperties = [];
         foreach ($properties as $property) {
             $types = $this->propertyInfoExtractor->getTypes($fullClassName, $property);
             /** @var Type $firstType */
@@ -51,7 +53,14 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
             //             add a warning for this property at the end of the command if it has multiple types
 
             self::addTypeToSchema($array, $shortClassName);
-            self::addPropertyToSchema($array, $shortClassName, $property, $firstType);
+
+            self::addProperty($propertiesArray, $property, $firstType);
+            if (!$firstType->isNullable()) {
+                self::addRequirement($requiredProperties, $property);
+            }
+
+            self::addRequirementsToSchema($array, $requiredProperties, $shortClassName);
+            self::addPropertiesToSchema($array, $propertiesArray, $shortClassName);
         }
 
         if ($this->dumpLocation === $input->getOption('output')) {
@@ -76,12 +85,8 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
      *
      * @throws ReflectionException
      */
-    public static function addPropertyToSchema(array &$schema, string $shortClassName, string $property, Type $type): void
+    public static function addProperty(array &$schema, string $property, Type $type): void
     {
-        if (!$type->isNullable()) {
-            $schema['documentation']['components']['schemas'][$shortClassName]['required'][] = $property;
-        }
-
         if ('array' === $type->getBuiltinType()) {
             $arrayType = $type->getCollectionValueTypes();
             if (isset($arrayType[0])) {
@@ -96,19 +101,19 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
                     foreach ($enumCases as $enumCase) {
                         $values[] = $enumCase->value;
                     }
-                    $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = 'array';
-                    $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['enum'] = $values;
+                    $schema[$property]['type'] = 'array';
+                    $schema[$property]['enum'] = $values;
 
                     return;
                 }
 
-                $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
-                $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = 'array';
+                $schema[$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
+                $schema[$property]['type'] = 'array';
 
                 return;
             }
 
-            $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = 'array';
+            $schema[$property]['type'] = 'array';
 
             return;
         }
@@ -120,8 +125,8 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
             $interfaces = $reflectionClass->getInterfaceNames();
 
             if (in_array(DateTimeInterface::class, $interfaces)) {
-                $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = 'string';
-                $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['format'] = 'date-time';
+                $schema[$property]['type'] = 'string';
+                $schema[$property]['format'] = 'date-time';
 
                 return;
             }
@@ -130,8 +135,8 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
                 $collectionClass = $type->getCollectionValueTypes()[0]->getClassName();
                 /** @var class-string $collectionClass */
                 $reflectionClass = (new ReflectionClass($collectionClass));
-                $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
-                $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = 'array';
+                $schema[$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
+                $schema[$property]['type'] = 'array';
 
                 return;
             }
@@ -143,18 +148,44 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
                 foreach ($enumCases as $enumCase) {
                     $values[] = $enumCase->value;
                 }
-                $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = 'string';
-                $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['enum'] = $values;
+                $schema[$property]['type'] = 'string';
+                $schema[$property]['enum'] = $values;
 
                 return;
             }
 
-            $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['$ref'] = '#/components/schemas/' . $reflectionClass->getShortName();
+            $schema[$property]['$ref'] = '#/components/schemas/' . $reflectionClass->getShortName();
 
             return;
         }
 
-        $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['type'] = $type->getBuiltinType();
-        $schema['documentation']['components']['schemas'][$shortClassName]['properties'][$property]['description'] = '';
+        $schema[$property]['type'] = $type->getBuiltinType();
+        $schema[$property]['description'] = '';
+    }
+
+    /**
+     * @param array<mixed> $array
+     */
+    public static function addRequirement(array &$array, string $property): void
+    {
+        $array[] = $property;
+    }
+
+    /**
+     * @param array<mixed> $array
+     * @param array<mixed> $requiredProperties
+     */
+    private static function addRequirementsToSchema(array &$array, array $requiredProperties, string $shortClassName): void
+    {
+        $array['documentation']['components']['schemas'][$shortClassName]['required'] = $requiredProperties;
+    }
+
+    /**
+     * @param array<mixed> $array
+     * @param array<mixed> $propertiesArray
+     */
+    private static function addPropertiesToSchema(array &$array, array $propertiesArray, string $shortClassName): void
+    {
+        $array['documentation']['components']['schemas'][$shortClassName]['properties'] = $propertiesArray;
     }
 }
