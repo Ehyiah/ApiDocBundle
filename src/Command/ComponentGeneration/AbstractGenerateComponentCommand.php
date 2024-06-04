@@ -102,13 +102,21 @@ abstract class AbstractGenerateComponentCommand extends Command
         ];
     }
 
-    /** @phpstan-ignore-next-line  */
-    protected function getReflectionClass(InputInterface $input): ReflectionClass
+    /**
+     * @phpstan-ignore-next-line
+     */
+    protected function getReflectionClass(?InputInterface $input = null): ReflectionClass
     {
-        /** @var class-string $fqcn */
-        $fqcn = $input->getArgument('class');
+        if (null !== $input) {
+            /* @var class-string $fqcn */
+            $fqcn = $input->getArgument('class');
+            if (null === $this->reflectionClass) {
+                $this->reflectionClass = new ReflectionClass($fqcn);
+            }
+        }
+
         if (null === $this->reflectionClass) {
-            $this->reflectionClass = new ReflectionClass($fqcn);
+            throw new LogicException('Class not found');
         }
 
         return $this->reflectionClass;
@@ -130,8 +138,8 @@ abstract class AbstractGenerateComponentCommand extends Command
     /**
      * @throws ReflectionException
      */
-    protected function getShortClassName(InputInterface $input): string
+    protected function getShortClassName(): string
     {
-        return $this->getReflectionClass($input)->getShortName();
+        return $this->getReflectionClass()->getShortName();
     }
 }

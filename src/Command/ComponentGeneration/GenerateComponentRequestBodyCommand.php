@@ -12,6 +12,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Form\AbstractType;
 use Symfony\Component\PropertyInfo\Type;
 
 #[AsCommand(
@@ -47,7 +48,7 @@ final class GenerateComponentRequestBodyCommand extends AbstractGenerateComponen
         if (!is_string($fullClassName)) {
             return Command::FAILURE;
         }
-        $shortClassName = $this->getShortClassName($input);
+        $shortClassName = $this->getShortClassName();
 
         $array = self::createComponentArray();
 
@@ -56,25 +57,26 @@ final class GenerateComponentRequestBodyCommand extends AbstractGenerateComponen
 
             $array['documentation']['components']['requestBodies'][$shortClassName]['content']['application/json']['schema'] = ['$ref' => '#/component/requestBodies/' . $shortClassName];
         } else {
-            // handle if a Class like entity or DTO
-            $properties = $this->propertyInfoExtractor->getProperties($fullClassName);
-            $propertiesArray = [];
-            $requiredProperties = [];
-            foreach ($properties as $property) {
-                $types = $this->propertyInfoExtractor->getTypes($fullClassName, $property);
-                /** @var Type $firstType */
-                $firstType = $types[0];
-                //             add a warning for this property at the end of the command if it has multiple types
-                self::addRequestBodyToSchema($array, $shortClassName);
-                self::addProperty($propertiesArray, $firstType, $property);
-                if (!$firstType->isNullable()) {
-                    self::addRequirement($requiredProperties, $shortClassName, $property);
+            if ($this->getReflectionClass()->newInstance() instanceof AbstractType) {
+                // todo check if generation from FormType is possible
+            } else {
+                $properties = $this->propertyInfoExtractor->getProperties($fullClassName);
+                $propertiesArray = [];
+                $requiredProperties = [];
+                foreach ($properties as $property) {
+                    $types = $this->propertyInfoExtractor->getTypes($fullClassName, $property);
+                    /** @var Type $firstType */
+                    $firstType = $types[0];
+                    //             add a warning for this property at the end of the command if it has multiple types
+                    self::addRequestBodyToSchema($array, $shortClassName);
+                    self::addProperty($propertiesArray, $firstType, $property);
+                    if (!$firstType->isNullable()) {
+                        self::addRequirement($requiredProperties, $shortClassName, $property);
+                    }
+                    self::addRequirementsToRequestBody($array, $requiredProperties, $shortClassName);
+                    self::addPropertiesToRequestBody($array, $propertiesArray, $shortClassName);
                 }
-                self::addRequirementsToRequestBody($array, $requiredProperties, $shortClassName);
-                self::addPropertiesToRequestBody($array, $propertiesArray, $shortClassName);
             }
-
-            // handle is a class is a FormType
         }
 
         if ($this->dumpLocation === $input->getOption('output')) {
