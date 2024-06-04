@@ -3,6 +3,8 @@
 namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
 use LogicException;
+use ReflectionClass;
+use ReflectionException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
@@ -65,7 +67,7 @@ abstract class AbstractGenerateComponentCommand extends Command
         $outputDir = $input->getOption('output');
         $outputDir = u($outputDir)->ensureStart('/')->ensureEnd('/');
 
-        $yaml = Yaml::dump($array, 8, 4, 1024);
+        $yaml = Yaml::dump($array, 12, 4, 1024);
         $dumpLocation = $this->kernel->getProjectDir() . $outputDir . $destination . $fileName . '.yaml';
 
         $fileSystem = new Filesystem();
@@ -96,5 +98,35 @@ abstract class AbstractGenerateComponentCommand extends Command
                 ],
             ],
         ];
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    protected function checkIfClassExists(InputInterface $input, OutputInterface $output): int|string
+    {
+        /** @var class-string $class */
+        $class = $input->getArgument('class');
+        $reflectionClass = new ReflectionClass($class);
+        $fullClassName = $reflectionClass->getName();
+
+        if (!class_exists($fullClassName)) {
+            $output->writeln(sprintf('Class "%s" not found', $fullClassName));
+
+            return Command::FAILURE;
+        }
+
+        return $fullClassName;
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    protected function getShortClassName(string $fullClassName): string
+    {
+        /** @var class-string $fullClassName */
+        $refectionClass = new ReflectionClass($fullClassName);
+
+        return $refectionClass->getShortName();
     }
 }
