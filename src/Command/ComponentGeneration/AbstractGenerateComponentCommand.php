@@ -3,6 +3,8 @@
 namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
 use LogicException;
+use ReflectionClass;
+use ReflectionException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
@@ -20,6 +22,8 @@ use function Symfony\Component\String\u;
 abstract class AbstractGenerateComponentCommand extends Command
 {
     protected ?string $dumpLocation = null;
+    /** @phpstan-ignore-next-line */
+    protected ?ReflectionClass $reflectionClass = null;
 
     public function __construct(
         protected readonly KernelInterface $kernel,
@@ -65,7 +69,7 @@ abstract class AbstractGenerateComponentCommand extends Command
         $outputDir = $input->getOption('output');
         $outputDir = u($outputDir)->ensureStart('/')->ensureEnd('/');
 
-        $yaml = Yaml::dump($array, 8, 4, 1024);
+        $yaml = Yaml::dump($array, 12, 4, 1024);
         $dumpLocation = $this->kernel->getProjectDir() . $outputDir . $destination . $fileName . '.yaml';
 
         $fileSystem = new Filesystem();
@@ -96,5 +100,46 @@ abstract class AbstractGenerateComponentCommand extends Command
                 ],
             ],
         ];
+    }
+
+    /**
+     * @phpstan-ignore-next-line
+     */
+    protected function getReflectionClass(?InputInterface $input = null): ReflectionClass
+    {
+        if (null !== $input) {
+            /* @var class-string $fqcn */
+            $fqcn = $input->getArgument('class');
+            if (null === $this->reflectionClass) {
+                $this->reflectionClass = new ReflectionClass($fqcn);
+            }
+        }
+
+        if (null === $this->reflectionClass) {
+            throw new LogicException('Class not found');
+        }
+
+        return $this->reflectionClass;
+    }
+
+    protected function checkIfClassExists(InputInterface $input, OutputInterface $output): int|string
+    {
+        $fullClassName = $this->getReflectionClass($input)->getName();
+
+        if (!class_exists($fullClassName)) {
+            $output->writeln(sprintf('Class "%s" not found', $fullClassName));
+
+            return Command::FAILURE;
+        }
+
+        return $fullClassName;
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    protected function getShortClassName(): string
+    {
+        return $this->getReflectionClass()->getShortName();
     }
 }

@@ -35,15 +35,11 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $fullClassName = (new ReflectionClass($input->getArgument('class')))->getName();
-
-        if (!class_exists($fullClassName)) {
-            $output->writeln(sprintf('Class "%s" not found', $fullClassName));
-
+        $fullClassName = $this->checkIfClassExists($input, $output);
+        if (!is_string($fullClassName)) {
             return Command::FAILURE;
         }
-
-        $shortClassName = (new ReflectionClass($fullClassName))->getShortName();
+        $shortClassName = $this->getShortClassName();
 
         $array = self::createComponentArray();
 
