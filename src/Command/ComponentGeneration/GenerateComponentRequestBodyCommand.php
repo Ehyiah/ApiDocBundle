@@ -2,6 +2,7 @@
 
 namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
+use ReflectionClass;
 use ReflectionException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -55,7 +56,34 @@ final class GenerateComponentRequestBodyCommand extends AbstractGenerateComponen
             $array['documentation']['components']['requestBodies'][$shortClassName]['content']['application/json']['schema'] = ['$ref' => '#/component/requestBodies/' . $shortClassName];
         } else {
             if ($this->getReflectionClass()->newInstance() instanceof AbstractType) {
-                // todo check if generation from FormType is possible
+                $form = $this->getReflectionClass()->getName();
+                /** @phpstan-ignore-next-line */
+                $form = $this->formFactory->create($form);
+                $dataClass = $form->getConfig()->getOption('data_class');
+
+                if (null !== $dataClass) {
+                    self::addRequestBodyToSchema($array, $shortClassName);
+                    /* @var class-string $dataClass */
+                    $dataClassReflectionClass = new ReflectionClass($dataClass);
+
+                    $array['documentation']['components']['requestBodies'][$shortClassName]['content']['application/json']['schema'] = ['$ref' => '#/component/requestBodies/' . $dataClassReflectionClass->getShortName()];
+                } else {
+                    $propertiesArray = [];
+                    $ignoredProperty = [];
+                    self::addRequestBodyToSchema($array, $shortClassName);
+
+                    foreach ($form->all() as $child) {
+                        $name = $child->getName();
+                        $typeInformations = self::guessTypeFromFormPrefix($child);
+
+                        if (!self::addPropertyFromFormType($propertiesArray, $name, $typeInformations)) {
+                            $ignoredProperty[] = $name;
+                        }
+                        self::addPropertiesToRequestBody($array, $propertiesArray, $shortClassName);
+                    }
+
+                    $output->writeln('<error>Properties ignored because no type can be guessed : ' . implode(' ,', $ignoredProperty) . ' Please edit these fields manually</error>');
+                }
             } else {
                 $properties = $this->propertyInfoExtractor->getProperties($fullClassName);
                 $propertiesArray = [];

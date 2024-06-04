@@ -78,10 +78,10 @@ So if you want to call your component ``MyAwesomeDto`` instad of default name, y
 Some commands are included in the bundle to pre-generate components.
 You will probably have to edit the generated files or at least check if everything is okay.
 
-| Command                       |                                   Arguments                                   |                                                   Options                                                    |                                      Generation type                                      |
-|:------------------------------|:-----------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------:|
-| apidocbundle:component:schema | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO) |    --output (-o) specify a custom output directory to dump the generated file from the kernel_project_dir    |          Generate a [schema](https://swagger.io/specification/v3/#schema-object)          |
-| apidocbundle:component:body   | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO) | --reference (-r) specify if a reference must be used instead of regenerating a new schema in the requestBody | Generate a [RequestBody](https://swagger.io/docs/specification/describing-request-body/)  |
+| Command                       |                                          Arguments                                          |                                                   Options                                                    |                                      Generation type                                      |
+|:------------------------------|:-------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------:|
+| apidocbundle:component:schema |        pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO)        |    --output (-o) specify a custom output directory to dump the generated file from the kernel_project_dir    |          Generate a [schema](https://swagger.io/specification/v3/#schema-object)          |
+| apidocbundle:component:body   | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO or a FormType) | --reference (-r) specify if a reference must be used instead of regenerating a new schema in the requestBody | Generate a [RequestBody](https://swagger.io/docs/specification/describing-request-body/)  |
 
 
 # ApiDoc Linting
