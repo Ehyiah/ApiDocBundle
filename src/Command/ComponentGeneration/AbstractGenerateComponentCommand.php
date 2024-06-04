@@ -2,6 +2,8 @@
 
 namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
+use BackedEnum;
+use DateTimeInterface;
 use LogicException;
 use ReflectionClass;
 use ReflectionException;
@@ -15,6 +17,7 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\PropertyInfo\PropertyInfoExtractorInterface;
+use Symfony\Component\PropertyInfo\Type;
 use Symfony\Component\Yaml\Yaml;
 
 use function Symfony\Component\String\u;
@@ -141,5 +144,97 @@ abstract class AbstractGenerateComponentCommand extends Command
     protected function getShortClassName(): string
     {
         return $this->getReflectionClass()->getShortName();
+    }
+
+    /**
+     * @param array<mixed> $schema
+     */
+    public static function addProperty(array &$schema, string $property, Type $type): void
+    {
+        if ('array' === $type->getBuiltinType()) {
+            $arrayType = $type->getCollectionValueTypes();
+            if (isset($arrayType[0])) {
+                /** @var class-string $itemClass */
+                $itemClass = $type->getCollectionValueTypes()[0]->getClassName();
+                $reflectionClass = (new ReflectionClass($itemClass));
+
+                if (in_array(BackedEnum::class, $reflectionClass->getInterfaceNames())) {
+                    self::handleEnum($schema, $reflectionClass, $property, 'array');
+
+                    return;
+                }
+
+                $schema[$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
+                $schema[$property]['type'] = 'array';
+
+                return;
+            }
+
+            $schema[$property]['type'] = 'array';
+
+            return;
+        }
+
+        if (null !== $type->getClassName()) {
+            /** @var class-string $className */
+            $className = $type->getClassName();
+            $reflectionClass = new ReflectionClass($className);
+            $interfaces = $reflectionClass->getInterfaceNames();
+
+            if (in_array(DateTimeInterface::class, $interfaces)) {
+                $schema[$property]['type'] = 'string';
+                $schema[$property]['format'] = 'date-time';
+
+                return;
+            }
+
+            if ($type->isCollection()) {
+                $collectionClass = $type->getCollectionValueTypes()[0]->getClassName();
+                /** @var class-string $collectionClass */
+                $reflectionClass = (new ReflectionClass($collectionClass));
+                $schema[$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
+                $schema[$property]['type'] = 'array';
+
+                return;
+            }
+
+            if (in_array(BackedEnum::class, $interfaces)) {
+                self::handleEnum($schema, $reflectionClass, $property);
+
+                return;
+            }
+
+            $schema[$property]['$ref'] = '#/components/schemas/' . $reflectionClass->getShortName();
+
+            return;
+        }
+
+        $schema[$property]['type'] = $type->getBuiltinType();
+        $schema[$property]['description'] = '';
+    }
+
+    /**
+     * @param array<mixed> $array
+     */
+    public static function addRequirement(array &$array, string $property): void
+    {
+        $array[] = $property;
+    }
+
+    /**
+     * @param array<mixed> $array
+     *
+     * @phpstan-ignore-next-line
+     */
+    public static function handleEnum(array &$array, ReflectionClass $reflectionClass, string $property, string $type = 'string'): void
+    {
+        $values = [];
+        $enumCases = $reflectionClass->getConstants();
+        /** @var BackedEnum $enumCase */
+        foreach ($enumCases as $enumCase) {
+            $values[] = $enumCase->value;
+        }
+        $array[$property]['type'] = $type;
+        $array[$property]['enum'] = $values;
     }
 }
