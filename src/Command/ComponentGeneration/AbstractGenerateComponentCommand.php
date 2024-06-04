@@ -15,6 +15,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\PropertyInfo\PropertyInfoExtractorInterface;
 use Symfony\Component\PropertyInfo\Type;
@@ -32,6 +34,7 @@ abstract class AbstractGenerateComponentCommand extends Command
         protected readonly KernelInterface $kernel,
         protected readonly ParameterBagInterface $parameterBag,
         protected readonly PropertyInfoExtractorInterface $propertyInfoExtractor,
+        protected readonly FormFactoryInterface $formFactory,
     ) {
         parent::__construct();
 
@@ -236,5 +239,109 @@ abstract class AbstractGenerateComponentCommand extends Command
         }
         $array[$property]['type'] = $type;
         $array[$property]['enum'] = $values;
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    public static function guessTypeFromFormPrefix(FormInterface $form): array
+    {
+        $config = $form->getConfig();
+        $type = $config->getType();
+        $blockPrefix = $type->getBlockPrefix();
+
+        $property = [];
+
+        if ('text' === $blockPrefix) {
+            $property['type'] = 'string';
+
+            return $property;
+        }
+
+        if ('number' === $blockPrefix) {
+            $property['type'] = 'number';
+
+            return $property;
+        }
+
+        if ('integer' === $blockPrefix) {
+            $property['type'] = 'integer';
+
+            return $property;
+        }
+
+        if ('date' === $blockPrefix) {
+            $property['type'] = 'string';
+            $property['format'] = 'date';
+
+            return $property;
+        }
+
+        if ('datetime' === $blockPrefix) {
+            $property['type'] = 'string';
+            $property['format'] = 'date-time';
+
+            return $property;
+        }
+
+        if ('checkbox' === $blockPrefix) {
+            $property['type'] = 'boolean';
+
+            return $property;
+        }
+
+        if ('password' === $blockPrefix) {
+            $property['type'] = 'string';
+            $property['format'] = 'password';
+
+            return $property;
+        }
+
+        if ('choice' === $blockPrefix) {
+            if (true === $config->getOption('multiple')) {
+                $property['type'] = 'array';
+                $property['enum'] = [];
+            } else {
+                $property['type'] = 'string';
+            }
+
+            return $property;
+        }
+
+        if ('repeated' === $blockPrefix) {
+            $property['type'] = 'object';
+            $property['properties']['first'] = [];
+            $property['properties']['second'] = [];
+
+            return $property;
+        }
+
+        if ('collection' === $blockPrefix) {
+            $property['type'] = 'array';
+            $property['items'] = [];
+
+            return $property;
+        }
+
+        return $property;
+    }
+
+    /**
+     * @param array<mixed> $array
+     * @param array<mixed> $informations
+     */
+    protected static function addPropertyFromFormType(array &$array, string $property, array $informations): bool
+    {
+        if (isset($informations['type'])) {
+            $type = $informations['type'];
+            $array[$property]['type'] = $type;
+
+            if (isset($informations['format'])) {
+                $format = $informations['format'];
+                $array[$property]['format'] = $format;
+            }
+        }
+
+        return false;
     }
 }
