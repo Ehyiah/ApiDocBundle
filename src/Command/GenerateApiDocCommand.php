@@ -2,6 +2,7 @@
 
 namespace Ehyiah\ApiDocBundle\Command;
 
+use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use LogicException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -10,7 +11,6 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Yaml\Yaml;
 
@@ -65,16 +65,6 @@ final class GenerateApiDocCommand extends Command
 
     private function loadConfigFiles(string $format, string $output, string $name): void
     {
-        $config = [];
-        $finder = new Finder();
-
-        /** @var string $baseUrlParameter */
-        $baseUrlParameter = $this->parameterBag->get('ehyiah_api_doc.site_urls');
-        $baseUrls = explode(',', $baseUrlParameter);
-        foreach ($baseUrls as $index => $url) {
-            $config['servers'][$index]['url'] = $url;
-        }
-
         $location = $this->parameterBag->get('ehyiah_api_doc.source_path');
         if (!is_string($location)) {
             throw new LogicException('Location must be a string');
@@ -85,18 +75,11 @@ final class GenerateApiDocCommand extends Command
             throw new LogicException('dumpLocation must be a string');
         }
 
-        $finder->files()->in($this->kernel->getProjectDir() . $location)
-            ->name(['*.yaml', '*.yml'])
-            ->exclude($dumpLocation)
-        ;
-
-        if ($finder->hasResults()) {
-            foreach ($finder->getIterator() as $import) {
-                foreach (Yaml::parseFile($import) as $item) {
-                    $config = array_merge_recursive($config, $item);
-                }
-            }
-        }
+        /** @var string $baseUrlParameter */
+        $baseUrlParameter = $this->parameterBag->get('ehyiah_api_doc.site_urls');
+        $urls = LoadApiDocConfigHelper::loadServerUrls($baseUrlParameter);
+        $config = LoadApiDocConfigHelper::loadApiDocConfig($location, $this->kernel->getProjectDir(), $dumpLocation);
+        $config = array_merge_recursive($config, $urls);
 
         $fileSystem = new Filesystem();
         $dumpLocation = $this->kernel->getProjectDir() . $location . '/' . $dumpLocation;
