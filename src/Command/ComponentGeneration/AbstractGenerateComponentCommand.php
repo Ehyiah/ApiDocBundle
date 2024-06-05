@@ -75,7 +75,7 @@ abstract class AbstractGenerateComponentCommand extends Command
     /**
      * @param array<mixed> $array
      */
-    protected function generateYamlFile(array $array, string $fileName, InputInterface $input, OutputInterface $output, ?string $destination = null, ?string $componentType = null): void
+    protected function generateYamlFile(array $array, string $componentName, InputInterface $input, OutputInterface $output, string $componentType, ?string $destination = null): void
     {
         $outputDir = $input->getOption('output');
         $outputDir = u($outputDir)->ensureStart('/')->ensureEnd('/');
@@ -91,10 +91,10 @@ abstract class AbstractGenerateComponentCommand extends Command
             $dumpPath,
         );
 
-        if (null !== $componentType && isset($existingConfigs['components'][$componentType][$fileName])) {
+        if (null !== $componentType && isset($existingConfigs['components'][$componentType][$componentName])) {
             // show differences in console ?
             // $componentAlreadyExists = $existingConfigs['components'][$componentType][$fileName];
-            $componentAlreadyExistFile = $this->apiDocConfigHelper->findComponentFile($fileName, $componentType);
+            $componentAlreadyExistFile = $this->apiDocConfigHelper->findComponentFile($componentName, $componentType);
 
             $output->writeln('<info>Component already exists in file : ' . $componentAlreadyExistFile->getPathname() . '</info>');
             /** @var QuestionHelper $helper */
@@ -109,7 +109,7 @@ abstract class AbstractGenerateComponentCommand extends Command
 
             $dumpLocation = $componentAlreadyExistFile->getPathname();
         } else {
-            $dumpLocation = $this->kernel->getProjectDir() . $outputDir . $destination . $fileName . '.yaml';
+            $dumpLocation = $this->kernel->getProjectDir() . $outputDir . u($destination)->ensureEnd('/') . $componentName . '.yaml';
         }
 
         $yaml = Yaml::dump($array, 12, 4, 1024);

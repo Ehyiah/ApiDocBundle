@@ -61,10 +61,10 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
         }
 
         if ($this->dumpLocation === $input->getOption('output')) {
-            $destination = self::COMPONENT_SCHEMAS . '/';
+            $destination = self::COMPONENT_SCHEMAS;
         }
 
-        $this->generateYamlFile($array, $shortClassName, $input, $output, $destination ?? null, self::COMPONENT_SCHEMAS);
+        $this->generateYamlFile($array, $shortClassName, $input, $output, self::COMPONENT_SCHEMAS, $destination ?? null);
 
         return Command::SUCCESS;
     }
