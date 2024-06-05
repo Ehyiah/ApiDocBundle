@@ -108,10 +108,10 @@ final class GenerateComponentRequestBodyCommand extends AbstractGenerateComponen
         }
 
         if ($this->dumpLocation === $input->getOption('output')) {
-            $destination = 'requestBody/';
+            $destination = self::COMPONENT_REQUEST_BODIES . '/';
         }
 
-        $this->generateYamlFile($array, $shortClassName, $input, $output, $destination ?? null);
+        $this->generateYamlFile($array, $shortClassName, $input, $output, $destination ?? null, self::COMPONENT_REQUEST_BODIES);
 
         return Command::SUCCESS;
     }
