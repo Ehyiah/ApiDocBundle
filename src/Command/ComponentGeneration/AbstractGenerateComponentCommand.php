@@ -4,6 +4,7 @@ namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
 use BackedEnum;
 use DateTimeInterface;
+use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use LogicException;
 use ReflectionClass;
 use ReflectionException;
@@ -26,6 +27,9 @@ use function Symfony\Component\String\u;
 
 abstract class AbstractGenerateComponentCommand extends Command
 {
+    public const COMPONENT_SCHEMAS = 'schemas';
+    public const COMPONENT_REQUEST_BODIES = 'requestBodies';
+
     protected ?string $dumpLocation = null;
     /** @phpstan-ignore-next-line */
     protected ?ReflectionClass $reflectionClass = null;
@@ -35,6 +39,7 @@ abstract class AbstractGenerateComponentCommand extends Command
         protected readonly ParameterBagInterface $parameterBag,
         protected readonly PropertyInfoExtractorInterface $propertyInfoExtractor,
         protected readonly FormFactoryInterface $formFactory,
+        protected readonly LoadApiDocConfigHelper $apiDocConfigHelper,
     ) {
         parent::__construct();
 
@@ -70,29 +75,48 @@ abstract class AbstractGenerateComponentCommand extends Command
     /**
      * @param array<mixed> $array
      */
-    protected function generateYamlFile(array $array, string $fileName, InputInterface $input, OutputInterface $output, ?string $destination = null): void
+    protected function generateYamlFile(array $array, string $fileName, InputInterface $input, OutputInterface $output, ?string $destination = null, ?string $componentType = null): void
     {
         $outputDir = $input->getOption('output');
         $outputDir = u($outputDir)->ensureStart('/')->ensureEnd('/');
 
-        $yaml = Yaml::dump($array, 12, 4, 1024);
-        $dumpLocation = $this->kernel->getProjectDir() . $outputDir . $destination . $fileName . '.yaml';
+        $dumpPath = $this->parameterBag->get('ehyiah_api_doc.dump_path');
+        if (!is_string($dumpPath)) {
+            throw new LogicException('dumpLocation must be a string');
+        }
 
-        $fileSystem = new Filesystem();
-        if ($fileSystem->exists($dumpLocation)) {
-            $output->writeln('File <question>' . $dumpLocation . '</question> already exists');
+        $existingConfigs = LoadApiDocConfigHelper::loadApiDocConfig(
+            $this->dumpLocation,
+            $this->kernel->getProjectDir(),
+            $dumpPath,
+        );
+
+        if (null !== $componentType && isset($existingConfigs['components'][$componentType][$fileName])) {
+            // show differences in console ?
+            // $componentAlreadyExists = $existingConfigs['components'][$componentType][$fileName];
+            $componentAlreadyExistFile = $this->apiDocConfigHelper->findComponentFile($fileName, $componentType);
+
+            $output->writeln('<info>Component already exists in file : ' . $componentAlreadyExistFile->getPathname() . '</info>');
             /** @var QuestionHelper $helper */
             $helper = $this->getHelper('question');
-            $question = new ConfirmationQuestion('Do you want to overwrite this file ? (yes or no, default is true)', true);
+            $question = new ConfirmationQuestion('<question>Do you want to overwrite this file with new values ? (yes or no, default is YES)</question>', true);
             if (!$helper->ask($input, $output, $question)) {
-                $output->writeln('<error>Aborting</error>');
+                $output->writeln('');
+                $output->writeln('<error>Aborting component generation</error>');
 
                 return;
             }
+
+            $dumpLocation = $componentAlreadyExistFile->getPathname();
+        } else {
+            $dumpLocation = $this->kernel->getProjectDir() . $outputDir . $destination . $fileName . '.yaml';
         }
 
+        $yaml = Yaml::dump($array, 12, 4, 1024);
+
+        $fileSystem = new Filesystem();
         $fileSystem->dumpFile($dumpLocation, $yaml);
-        $output->writeln('File generated at <info>' . $dumpLocation . '<info>');
+        $output->writeln('<comment>File generated at</comment> <info>' . $dumpLocation . '<info>');
     }
 
     /**
