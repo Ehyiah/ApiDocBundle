@@ -2,13 +2,12 @@
 
 namespace Ehyiah\ApiDocBundle\Controller;
 
+use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use LogicException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
-use Symfony\Component\Yaml\Yaml;
 
 class ApiDocController extends AbstractController
 {
@@ -29,16 +28,6 @@ class ApiDocController extends AbstractController
 
     private function loadConfigFiles(): string|false
     {
-        $config = [];
-        $finder = new Finder();
-
-        /** @var string $baseUrlParameter */
-        $baseUrlParameter = $this->parameterBag->get('ehyiah_api_doc.site_urls');
-        $baseUrls = explode(',', $baseUrlParameter);
-        foreach ($baseUrls as $index => $url) {
-            $config['servers'][$index]['url'] = $url;
-        }
-
         $location = $this->parameterBag->get('ehyiah_api_doc.source_path');
         if (!is_string($location)) {
             throw new LogicException('Location must be a string');
@@ -49,19 +38,11 @@ class ApiDocController extends AbstractController
             throw new LogicException('dumpLocation must be a string');
         }
 
-        $finder->files()
-            ->in($this->kernel->getProjectDir() . $location)
-            ->exclude($dumpLocation)
-            ->name(['*.yaml', '*.yml'])
-        ;
-
-        if ($finder->hasResults()) {
-            foreach ($finder->getIterator() as $import) {
-                foreach (Yaml::parseFile($import) as $item) {
-                    $config = array_merge_recursive($config, $item);
-                }
-            }
-        }
+        /** @var string $baseUrlParameter */
+        $baseUrlParameter = $this->parameterBag->get('ehyiah_api_doc.site_urls');
+        $urls = LoadApiDocConfigHelper::loadServerUrls($baseUrlParameter);
+        $config = LoadApiDocConfigHelper::loadApiDocConfig($location, $this->kernel->getProjectDir(), $dumpLocation);
+        $config = array_merge_recursive($config, $urls);
 
         return json_encode($config);
     }
