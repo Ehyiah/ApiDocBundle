@@ -65,9 +65,9 @@ jobs:
 #            - name: Load Doctrine fixtures
 #              run: |
 #                  bin/console .... load fixtures
-#
-#            - name: Run functionnal and unit tests
-#              run: ./vendor/bin/phpunit
+
+            - name: Run functionnal and unit tests
+              run: ./vendor/bin/phpunit
 
     security:
         name: composer security check (PHP ${{ matrix.php-versions }})
