@@ -13,7 +13,7 @@ use Symfony\Component\Yaml\Yaml;
 /**
  * @coversDefaultClass \Ehyiah\ApiDocBundle\Command\ComponentGeneration\GenerateComponentSchemaCommand
  */
-class GenerateComponentSchemaCommandTest extends TestCase
+final class GenerateComponentSchemaCommandTest extends TestCase
 {
     public function testSchemaGeneration(): void
     {

@@ -13,7 +13,7 @@ use Symfony\Component\Yaml\Yaml;
 /**
  * @coversDefaultClass \Ehyiah\ApiDocBundle\Command\ComponentGeneration\GenerateComponentRequestBodyCommand
  */
-class GenerateComponentRequestBodyCommandTest extends TestCase
+final class GenerateComponentRequestBodyCommandTest extends TestCase
 {
     public function testRequestBodyGeneration(): void
     {
