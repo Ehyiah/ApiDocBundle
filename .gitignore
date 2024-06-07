@@ -10,3 +10,5 @@
 ###< friendsofphp/php-cs-fixer ###
 
 docker-compose.override.yaml
+/.phpunit.result.cache
+/var/
