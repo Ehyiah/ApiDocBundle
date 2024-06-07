@@ -39,7 +39,6 @@
         "symfony/form": "^6.1|^7.0"
     },
     "require-dev": {
-        "symfony/console": "^7.0|^6.1",
         "symfony/framework-bundle": "^7.0|^6.1",
         "friendsofphp/php-cs-fixer": "^3.48",
         "phpstan/phpstan": "^1.10",

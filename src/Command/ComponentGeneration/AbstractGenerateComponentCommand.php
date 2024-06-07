@@ -85,6 +85,12 @@ abstract class AbstractGenerateComponentCommand extends Command
             throw new LogicException('dumpLocation must be a string');
         }
 
+        $fileSystem = new Filesystem();
+        $dumpDirectory = $this->kernel->getProjectDir() . $outputDir . u($destination)->ensureEnd('/');
+        if (!$fileSystem->exists($dumpDirectory)) {
+            $fileSystem->mkdir($dumpDirectory);
+        }
+
         $existingConfigs = LoadApiDocConfigHelper::loadApiDocConfig(
             $this->dumpLocation,
             $this->kernel->getProjectDir(),
@@ -113,9 +119,8 @@ abstract class AbstractGenerateComponentCommand extends Command
         }
 
         $yaml = Yaml::dump($array, 12, 4, 1024);
-
-        $fileSystem = new Filesystem();
         $fileSystem->dumpFile($dumpLocation, $yaml);
+
         $output->writeln('<comment>File generated at</comment> <info>' . $dumpLocation . '<info>');
     }
 
