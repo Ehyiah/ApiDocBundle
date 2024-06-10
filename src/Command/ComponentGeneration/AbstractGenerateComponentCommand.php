@@ -273,7 +273,7 @@ abstract class AbstractGenerateComponentCommand extends Command
     /**
      * @return array<mixed>
      */
-    public static function guessTypeFromFormPrefix(FormInterface $form): array
+    public function guessTypeFromFormPrefix(FormInterface $form): array
     {
         $config = $form->getConfig();
         $type = $config->getType();

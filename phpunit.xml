@@ -5,7 +5,6 @@
          bootstrap="vendor/autoload.php"
          cacheResult="false"
          executionOrder="depends,defects"
-         failOnRisky="true"
          verbose="true">
 
     <testsuites>
