@@ -329,9 +329,20 @@ abstract class AbstractGenerateComponentCommand extends Command
         if ('choice' === $blockPrefix) {
             if (true === $config->getOption('multiple')) {
                 $property['type'] = 'array';
-                $property['enum'] = [];
+                $choices = $config->getOption('choices');
+                if (is_array($choices) && count($choices) > 0) {
+                    $property['enum'] = $choices;
+                } else {
+                    $property['enum'] = [];
+                }
             } else {
                 $property['type'] = 'string';
+                $choices = $config->getOption('choices');
+                if (is_array($choices) && count($choices) > 0) {
+                    $property['enum'] = $choices;
+                } else {
+                    $property['enum'] = [];
+                }
             }
 
             return $property;
@@ -368,6 +379,11 @@ abstract class AbstractGenerateComponentCommand extends Command
             if (isset($informations['format'])) {
                 $format = $informations['format'];
                 $array[$property]['format'] = $format;
+            }
+
+            if (isset($informations['enum'])) {
+                $enum = $informations['enum'];
+                $array[$property]['enum'] = $enum;
             }
         }
 
