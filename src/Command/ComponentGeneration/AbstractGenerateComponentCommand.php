@@ -271,15 +271,19 @@ abstract class AbstractGenerateComponentCommand extends Command
     }
 
     /**
+     * @param array<mixed> $property
+     *
      * @return array<mixed>
      */
-    public function guessTypeFromFormPrefix(FormInterface $form): array
+    public function guessTypeFromFormPrefix(FormInterface $form, ?array &$property = null): array
     {
         $config = $form->getConfig();
         $type = $config->getType();
         $blockPrefix = $type->getBlockPrefix();
 
-        $property = [];
+        if (null === $property) {
+            $property = [];
+        }
 
         if ('text' === $blockPrefix) {
             $property['type'] = 'string';
@@ -384,6 +388,11 @@ abstract class AbstractGenerateComponentCommand extends Command
             if (isset($informations['enum'])) {
                 $enum = $informations['enum'];
                 $array[$property]['enum'] = $enum;
+            }
+
+            if (isset($informations['items'])) {
+                $enum = $informations['items'];
+                $array[$property]['items'] = $enum;
             }
         }
 

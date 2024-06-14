@@ -33,7 +33,7 @@ final class DummyType extends AbstractType
                 'multiple' => false,
             ])
             ->add('collectionField', CollectionType::class, [
-                'entry_type' => TextType::class,
+                'entry_type' => DummyNumberType::class,
             ])
         ;
     }
