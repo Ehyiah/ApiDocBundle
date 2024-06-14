@@ -271,15 +271,19 @@ abstract class AbstractGenerateComponentCommand extends Command
     }
 
     /**
+     * @param array<mixed> $property
+     *
      * @return array<mixed>
      */
-    public static function guessTypeFromFormPrefix(FormInterface $form): array
+    public function guessTypeFromFormPrefix(FormInterface $form, ?array &$property = null): array
     {
         $config = $form->getConfig();
         $type = $config->getType();
         $blockPrefix = $type->getBlockPrefix();
 
-        $property = [];
+        if (null === $property) {
+            $property = [];
+        }
 
         if ('text' === $blockPrefix) {
             $property['type'] = 'string';
@@ -329,9 +333,20 @@ abstract class AbstractGenerateComponentCommand extends Command
         if ('choice' === $blockPrefix) {
             if (true === $config->getOption('multiple')) {
                 $property['type'] = 'array';
-                $property['enum'] = [];
+                $choices = $config->getOption('choices');
+                if (is_array($choices) && count($choices) > 0) {
+                    $property['enum'] = $choices;
+                } else {
+                    $property['enum'] = [];
+                }
             } else {
                 $property['type'] = 'string';
+                $choices = $config->getOption('choices');
+                if (is_array($choices) && count($choices) > 0) {
+                    $property['enum'] = $choices;
+                } else {
+                    $property['enum'] = [];
+                }
             }
 
             return $property;
@@ -368,6 +383,16 @@ abstract class AbstractGenerateComponentCommand extends Command
             if (isset($informations['format'])) {
                 $format = $informations['format'];
                 $array[$property]['format'] = $format;
+            }
+
+            if (isset($informations['enum'])) {
+                $enum = $informations['enum'];
+                $array[$property]['enum'] = $enum;
+            }
+
+            if (isset($informations['items'])) {
+                $enum = $informations['items'];
+                $array[$property]['items'] = $enum;
             }
         }
 

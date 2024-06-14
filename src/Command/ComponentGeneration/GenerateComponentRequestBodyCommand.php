@@ -74,7 +74,7 @@ final class GenerateComponentRequestBodyCommand extends AbstractGenerateComponen
 
                     foreach ($form->all() as $child) {
                         $name = $child->getName();
-                        $typeInformations = self::guessTypeFromFormPrefix($child);
+                        $typeInformations = $this->guessTypeFromFormPrefix($child);
 
                         if (!self::addPropertyFromFormType($propertiesArray, $name, $typeInformations)) {
                             $ignoredProperty[] = $name;
