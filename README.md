@@ -1,6 +1,10 @@
 # ApiDocBundle
 Symfony Bundle to deal with api doc using SwaggerUI and yaml/yml files without annotations/attributes.
 
+what this bundle does: 
+- display api doc with SwaggerUI
+- generate some schemas, bodies and more to come with commands
+
 If you just want to write simple yaml/yml files to create your api doc, this bundle is made for you.
 Install, create your api doc with yaml/yml files in the source directory, it's done!
 You can create as many files as you want and organize them in a subdirectory as well to your needs.
@@ -11,8 +15,14 @@ This bundle uses the [Swagger UI](https://swagger.io/tools/swagger-ui/) to rende
 
 You will find some example after the bundle is installed in the default directory /src/Swagger.
 
+---
+- [Installation](#installation)
+- [Usage](#usage)
+- [Components generation via commands](#generating-apidoc-components)
+---
+
+
 # Installation
-## Installation for usage purpose
 This bundle does not have a flex recipe (at the moment), so if you want an "auto-installation" :
 
 **On the project you want to use this bundle:**
@@ -31,33 +41,15 @@ If you want the project to install every file automatically add these lines
 
 2. Run ``composer require ehyiah/apidoc-bundle``
 
-On a composer remove, the files you have created will not be deleted.
-
-
-## Installation for development purpose on this bundle
-1. clone this project wherever you want.
-2. **On the project you want to use this bundle:**
-    1. On *composer.json*, please add these lines :
-   ``` json
-   "repositories": [
-           {
-               "type": "path",
-               "url": "LINK_TO_BUNDLE_PROJECT_DIRECTORY",
-               "options": {
-                   "symlink": true
-               }
-           }
-       ],
-   ```
-    2. Run ``composer require ehyiah/apidoc-bundle:@dev``
+_On a composer remove, the files you have created will not be deleted._
 
 # Usage
-- In your .env file, update the site_url variable to use it in your Swagger UI interface.
+- In your .env file, update the site_urls variable to use it in your Swagger UI interface.
 
-- In the src/Swagger, add the YAML files that you want to be parsed and displayed on the Swagger UI interface.
-the directory can be modified in the .env file with the source_path variable.
+- In the src/Swagger directory, add the YAML files that you want to be parsed and displayed on the Swagger UI interface.
+**the directory can be modified in the .env file with the source_path variable.**
 
-- the default route is ehyiah/api/doc example: localhost/ehyiah/api/doc, you can modify this route in the config/routes/ehyiah_api_doc.yaml file.
+- the default route is ehyiah/api/doc example: localhost/ehyiah/api/doc, **you can modify this route in the config/routes/ehyiah_api_doc.yaml file.**
 
 ## Recommended directory structure
 If you want to use generation commands (see below) but do not want to use Auto-generated components names, 
@@ -68,20 +60,20 @@ So if you want to call your component ``MyAwesomeDto`` instead of default name, 
 
 ```{SOURCE_PATH}``` => is the env variable used as source directory for your api doc default is ```src/Swagger```
 
-| Type of Components |   Default directory   |     |
-|:------------------:|:---------------------:|:---:|
-|      Schemas       | {SOURCE_PATH}/schemas |     |
-|                    |                       |     |
+| Type of Components |   Default directory   |
+|:------------------:|:---------------------:|
+|      Schemas       | {SOURCE_PATH}/schemas |
+|                    |                       |
 
 
 # Generating ApiDoc Components
 Some commands are included in the bundle to pre-generate components.
 You will probably have to edit the generated files or at least check if everything is okay.
 
-| Command                       |                                          Arguments                                          |                                                   Options                                                    |                                      Generation type                                      |
-|:------------------------------|:-------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------:|
-| apidocbundle:component:schema |        pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO)        |    --output (-o) specify a custom output directory to dump the generated file from the kernel_project_dir    |          Generate a [schema](https://swagger.io/specification/v3/#schema-object)          |
-| apidocbundle:component:body   | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO or a FormType) | --reference (-r) specify if a reference must be used instead of regenerating a new schema in the requestBody | Generate a [RequestBody](https://swagger.io/docs/specification/describing-request-body/)  |
+| Command                       | Arguments                                                                                   | Options                                                                                                      | Generation type                                                                          |
+|:------------------------------|:--------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------|
+| apidocbundle:component:schema | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO)               | --output (-o) specify a custom output directory to dump the generated file from the kernel_project_dir       | Generate a [schema](https://swagger.io/specification/v3/#schema-object)                  |
+| apidocbundle:component:body   | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO or a FormType) | --reference (-r) specify if a reference must be used instead of regenerating a new schema in the requestBody | Generate a [RequestBody](https://swagger.io/docs/specification/describing-request-body/) |
 
 
 # ApiDoc Linting
