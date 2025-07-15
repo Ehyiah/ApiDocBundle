@@ -9,6 +9,7 @@ use Doctrine\Common\Collections\Collection;
 class DummyObject
 {
     public string $stringNotNullable;
+    public int $intNotNullable;
     public bool $booleanNotNullable;
     public ?bool $booleanNullable = null;
     public ?string $stringNullable = null;

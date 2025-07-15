@@ -1,10 +1,10 @@
-## Makefile env vars
 ENV?= dev
 BRANCH?= dev
 DOCKER_COMPOSE?= docker compose
 EXEC?= $(DOCKER_COMPOSE) exec
 PHP?= $(EXEC) php_api_doc_bundle
 COMPOSER?= $(PHP) composer
+PHPUNIT?= $(PHP) php bin/phpunit
 
 help:  ## Display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
@@ -58,3 +58,9 @@ fixer-php: ## Launch csfixer no dry
 	$(COMPOSER) phpcsfixer
 
 .PHONY: fixer-php ci
+
+##@ PHP TEST Commands
+phptests:  ## Execute phpunit
+	$(PHP) vendor/bin/phpunit
+
+.PHONY: phptests

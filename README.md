@@ -2,21 +2,21 @@
 Symfony Bundle to deal with api doc using SwaggerUI and yaml/yml files without annotations/attributes.
 
 If you just want to write simple yaml/yml files to create your api doc, this bundle is made for you.
-Install, create your api doc with yaml/yml files in the source directory, it's done !
-You can create as many files as you want and organize them in subdirectory as well to your needs.
+Install, create your api doc with yaml/yml files in the source directory, it's done!
+You can create as many files as you want and organize them in a subdirectory as well to your needs.
 
 to write files Check the openapi specifications [OpenApi](https://swagger.io/specification/v3/)
 
-The bundle use the [Swagger UI](https://swagger.io/tools/swagger-ui/) to render the final result.
+This bundle uses the [Swagger UI](https://swagger.io/tools/swagger-ui/) to render the final result.
 
-You will find some exemple after the bundle is installed in the default directory /src/Swagger.
+You will find some example after the bundle is installed in the default directory /src/Swagger.
 
 # Installation
 ## Installation for usage purpose
 This bundle does not have a flex recipe (at the moment), so if you want an "auto-installation" :
 
 **On the project you want to use this bundle:**
-If you want the project to install every files automatically add these lines
+If you want the project to install every file automatically add these lines
 1. On *composer.json*, please add these lines :
    ``` json
    "scripts": {
@@ -54,17 +54,17 @@ On a composer remove, the files you have created will not be deleted.
 # Usage
 - In your .env file, update the site_url variable to use it in your Swagger UI interface.
 
-- In the src/Swagger, just add the yaml files that you want to be parsed and displayed on the Swagger UI interface.
+- In the src/Swagger, add the YAML files that you want to be parsed and displayed on the Swagger UI interface.
 the directory can be modified in the .env file with the source_path variable.
 
-- the default route is ehyiah/api/doc exemple : localhost/ehyiah/api/doc, you can modify this route in the config/routes/ehyiah_api_doc.yaml file.
+- the default route is ehyiah/api/doc example: localhost/ehyiah/api/doc, you can modify this route in the config/routes/ehyiah_api_doc.yaml file.
 
 ## Recommended directory structure
 If you want to use generation commands (see below) but do not want to use Auto-generated components names, 
 you will have to check and update all ``$ref`` used in the generated yaml/yml files by the commands.
 
-**exemple**: You got a DTO class called ``MyDto``, a schema named ``MyDto`` will be created and used everywhere a reference to this class is created. 
-So if you want to call your component ``MyAwesomeDto`` instad of default name, you will have to update the reference (``$ref``) in every file.
+**Exemple**: You got a DTO class called ``MyDto``, a schema named ``MyDto`` will be created and used everywhere a reference to this class is created. 
+So if you want to call your component ``MyAwesomeDto`` instead of default name, you will have to update the reference (``$ref``) in every file.
 
 ```{SOURCE_PATH}``` => is the env variable used as source directory for your api doc default is ```src/Swagger```
 
@@ -85,8 +85,8 @@ You will probably have to edit the generated files or at least check if everythi
 
 
 # ApiDoc Linting
-If needed, there is a command to generate your apidoc into a single file in yaml or json format.
+If needed, there is a command to generate your api doc into a single file in YAML or JSON format.
 
 ``` bin/console apidocbundle:api-doc:generate ```
 
-You can use this command for exemple to generate a yaml file and use [vacuum](https://quobix.com/vacuum/api/getting-started) to lint your file.
+You can use this command, for example, to generate a YAML file and use [vacuum](https://quobix.com/vacuum/api/getting-started) to lint your file.
