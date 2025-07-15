@@ -7,6 +7,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\PropertyInfo\Type;
 
@@ -23,7 +24,14 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
         $this->addArgument(
             name: 'class',
             mode: InputArgument::REQUIRED,
-            description: 'name of the file do not add the extension (with the namespace exemple : App\\\DTO\\\PostDTO)',
+            description: 'name of the file do not add the extension (with the namespace exemple : "App\DTO\PostDTO")',
+        );
+        $this->addOption(
+            name: 'skip',
+            shortcut: 's',
+            mode: InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
+            description: 'list of properties to skip when generating',
+            default: [],
         );
     }
 
@@ -41,9 +49,13 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
         $array = self::createComponentArray();
 
         $properties = $this->propertyInfoExtractor->getProperties($fullClassName);
+        $propertiesToSkip = $input->getOption('skip');
         $propertiesArray = [];
         $requiredProperties = [];
         foreach ($properties as $property) {
+            if (in_array($property, $propertiesToSkip, true)) {
+                continue;
+            }
             $types = $this->propertyInfoExtractor->getTypes($fullClassName, $property);
             /** @var Type $firstType */
             $firstType = $types[0];

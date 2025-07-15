@@ -8,6 +8,8 @@ use Doctrine\Common\Collections\Collection;
 
 class DummyObject
 {
+    public string $id;
+    public string $skipedValue;
     public string $stringNotNullable;
     public int $intNotNullable;
     public bool $booleanNotNullable;
