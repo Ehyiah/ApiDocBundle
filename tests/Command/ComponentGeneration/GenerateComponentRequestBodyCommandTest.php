@@ -24,7 +24,7 @@ final class GenerateComponentRequestBodyCommandTest extends TestCase
         $command = $application->find('apidocbundle:component:body');
         $commandTester = new CommandTester($command);
         $commandTester->execute([
-            'class' => 'Ehyiah\\ApiDocBundle\\Tests\\Dummy\\DummyObject',
+            'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
         ]);
 
         $commandTester->assertCommandIsSuccessful();
@@ -56,7 +56,7 @@ final class GenerateComponentRequestBodyCommandTest extends TestCase
         $command = $application->find('apidocbundle:component:body');
         $commandTester = new CommandTester($command);
         $commandTester->execute([
-            'class' => 'Ehyiah\\ApiDocBundle\\Tests\\Dummy\\DummyType',
+            'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyType',
         ]);
 
         $commandTester->assertCommandIsSuccessful();

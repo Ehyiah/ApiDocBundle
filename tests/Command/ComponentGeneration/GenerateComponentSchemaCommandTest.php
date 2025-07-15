@@ -24,7 +24,7 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $command = $application->find('apidocbundle:component:schema');
         $commandTester = new CommandTester($command);
         $commandTester->execute([
-            'class' => 'Ehyiah\\ApiDocBundle\\Tests\\Dummy\\DummyObject',
+            'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
         ]);
 
         $commandTester->assertCommandIsSuccessful();
@@ -45,5 +45,14 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $this->assertIsArray($arrayFromYaml['documentation']['components']['schemas']['DummyObject']['required']);
         $this->assertArrayHasKey('properties', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']);
         $this->assertIsArray($arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']);
+
+        $this->assertSame('string', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['stringNotNullable']['type']);
+        $this->assertSame('integer', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['intNotNullable']['type']);
+        $this->assertSame('boolean', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['booleanNotNullable']['type']);
+        $this->assertSame('string', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['datetimeNullable']['type']);
+        $this->assertSame('date-time', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['datetimeNullable']['format']);
+        $this->assertSame('string', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['enumNotNullable']['type']);
+        $this->assertArrayHasKey('enum', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['enumNotNullable']);
+        $this->assertArrayHasKey('$ref', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['objectNotNullable']);
     }
 }

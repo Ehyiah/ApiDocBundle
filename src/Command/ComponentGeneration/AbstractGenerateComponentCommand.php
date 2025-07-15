@@ -241,6 +241,20 @@ abstract class AbstractGenerateComponentCommand extends Command
             return;
         }
 
+        if ('bool' === $type->getBuiltinType()) {
+            $schema[$property]['type'] = 'boolean';
+            $schema[$property]['description'] = '';
+
+            return;
+        }
+
+        if ('int' === $type->getBuiltinType()) {
+            $schema[$property]['type'] = 'integer';
+            $schema[$property]['description'] = '';
+
+            return;
+        }
+
         $schema[$property]['type'] = $type->getBuiltinType();
         $schema[$property]['description'] = '';
     }
