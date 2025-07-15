@@ -24,7 +24,7 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $command = $application->find('apidocbundle:component:schema');
         $commandTester = new CommandTester($command);
         $commandTester->execute([
-            'class' => 'Ehyiah\\ApiDocBundle\\Tests\\Dummy\\DummyObject',
+            'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
         ]);
 
         $commandTester->assertCommandIsSuccessful();
