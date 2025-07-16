@@ -21,6 +21,10 @@ class DummyObject
     public ?DummyEnum $enumNullable = null;
     public DummyObject2 $objectNotNullable;
     public ?DummyObject2 $objectNullable = null;
+    /** @var string[] */
+    public ?array $arrayString = null;
+    /** @var array<int>> */
+    public ?array $arrayInteger = null;
     /**
      * @var Collection<DummyObject2>
      */

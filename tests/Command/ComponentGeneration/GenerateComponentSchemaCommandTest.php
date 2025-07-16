@@ -46,8 +46,11 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $this->assertArrayHasKey('properties', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']);
         $this->assertIsArray($arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']);
 
-        $this->assertCount(14, $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']);
+        $this->assertCount(16, $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']);
+        $this->assertCount(9, $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['required']);
 
+        $this->assertSame('array', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['arrayString']['type']);
+        $this->assertSame('string', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['arrayString']['items']['type']);
         $this->assertSame('string', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['id']['type']);
         $this->assertSame('string', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['skipedValue']['type']);
         $this->assertSame('string', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['stringNotNullable']['type']);
@@ -58,6 +61,9 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $this->assertSame('string', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['enumNotNullable']['type']);
         $this->assertArrayHasKey('enum', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['enumNotNullable']);
         $this->assertArrayHasKey('$ref', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['objectNotNullable']);
+
+        $this->assertSame('array', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['collectionOfDummyObject2']['type']);
+        $this->assertSame('#/components/schemas/Collection', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['collectionOfDummyObject2']['items']['$ref']);
     }
 
     public function testSchemaGenerationWithSkipOption(): void
@@ -92,7 +98,7 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $this->assertArrayHasKey('properties', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']);
         $this->assertIsArray($arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']);
 
-        $this->assertCount(12, $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']);
+        $this->assertCount(14, $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']);
 
         $this->assertSame('string', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['stringNotNullable']['type']);
         $this->assertSame('integer', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['intNotNullable']['type']);

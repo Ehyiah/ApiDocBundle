@@ -4,6 +4,7 @@ namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
 use BackedEnum;
 use DateTimeInterface;
+use Doctrine\Common\Collections\Collection;
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use LogicException;
 use ReflectionClass;
@@ -188,19 +189,32 @@ abstract class AbstractGenerateComponentCommand extends Command
             if (isset($arrayType[0])) {
                 /** @var class-string $itemClass */
                 $itemClass = $type->getCollectionValueTypes()[0]->getClassName();
-                $reflectionClass = (new ReflectionClass($itemClass));
+                if (null !== $itemClass) {
+                    $reflectionClass = (new ReflectionClass($itemClass));
 
-                if (in_array(BackedEnum::class, $reflectionClass->getInterfaceNames())) {
-                    self::handleEnum($schema, $reflectionClass, $property, 'array');
+                    if (in_array(BackedEnum::class, $reflectionClass->getInterfaceNames())) {
+                        self::handleEnum($schema, $reflectionClass, $property, 'array');
 
-                    return;
+                        return;
+                    }
+
+                    $schema[$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
                 }
 
-                $schema[$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
                 $schema[$property]['type'] = 'array';
+                if (!isset($schema[$property]['items'])) {
+                    if ('bool' === $arrayType[0]->getBuiltinType()) {
+                        $schema[$property]['items']['type'] = 'boolean';
+                    } elseif ('int' === $arrayType[0]->getBuiltinType()) {
+                        $schema[$property]['items']['type'] = 'integer';
+                    } else {
+                        $schema[$property]['items']['type'] = $arrayType[0]->getBuiltinType();
+                    }
+                }
 
                 return;
             }
+            $schema[$property]['items']['type'] = 'string';
 
             $schema[$property]['type'] = 'array';
 
@@ -226,6 +240,13 @@ abstract class AbstractGenerateComponentCommand extends Command
                 $reflectionClass = (new ReflectionClass($collectionClass));
                 $schema[$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
                 $schema[$property]['type'] = 'array';
+
+                return;
+            }
+
+            if (Collection::class === $type->getClassName()) {
+                $schema[$property]['type'] = 'array';
+                $schema[$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
 
                 return;
             }
