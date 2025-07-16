@@ -60,6 +60,7 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $this->assertSame('date-time', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['datetimeNullable']['format']);
         $this->assertSame('string', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['enumNotNullable']['type']);
         $this->assertArrayHasKey('enum', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['enumNotNullable']);
+        $this->assertIsArray($arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['enumNotNullable']['enum']);
         $this->assertArrayHasKey('$ref', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['objectNotNullable']);
 
         $this->assertSame('array', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['collectionOfDummyObject2']['type']);
