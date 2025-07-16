@@ -23,25 +23,10 @@ You will find some example after the bundle is installed in the default director
 
 
 # Installation
-This bundle does not have a flex recipe (at the moment), so if you want an "auto-installation" :
-
-**On the project you want to use this bundle:**
-If you want the project to install every file automatically add these lines
-1. On *composer.json*, please add these lines :
-   ``` json
-   "scripts": {
-        "post-package-install": [
-            "Ehyiah\\ApiDocBundle\\Composer\\ComposerScript::postPackageInstall"
-        ],
-        "pre-package-uninstall": [
-            "Ehyiah\\ApiDocBundle\\Composer\\ComposerScript::prePackageUninstall"
-        ]
-    }
-   ```
-
-2. Run ``composer require ehyiah/apidoc-bundle``
-
-_On a composer remove, the files you have created will not be deleted._
+Run 
+```sh
+  composer require ehyiah/apidoc-bundle
+```
 
 # Usage
 - In your .env file, update the site_urls variable to use it in your Swagger UI interface.
