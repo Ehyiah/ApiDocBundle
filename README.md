@@ -23,7 +23,12 @@ You will find some example after the bundle is installed in the default director
 
 
 # Installation
-Run 
+Be sure that contrib recipes are allowed in your project 
+```sh
+    composer config extra.symfony.allow-contrib true
+```
+
+Then Run 
 ```sh
   composer require ehyiah/apidoc-bundle
 ```
