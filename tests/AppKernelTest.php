@@ -5,7 +5,6 @@ namespace Ehyiah\ApiDocBundle\Tests;
 use Ehyiah\ApiDocBundle\EhyiahApiDocBundle;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
-use Symfony\Bundle\MonologBundle\MonologBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\HttpKernel\Kernel;
 
@@ -20,7 +19,6 @@ class AppKernelTest extends Kernel
     {
         return [
             new FrameworkBundle(),
-            new MonologBundle(),
             new EhyiahApiDocBundle(),
         ];
     }
