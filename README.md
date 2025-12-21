@@ -1,23 +1,29 @@
 # ApiDocBundle
-Symfony Bundle to deal with api doc using SwaggerUI and yaml/yml files without annotations/attributes.
+Symfony Bundle to deal with API documentation using SwaggerUI with **YAML files** or **PHP configuration classes**.
 
-what this bundle does: 
-- display api doc with SwaggerUI
-- generate some schemas, bodies and more to come with commands
+## What this bundle does
+- Display API documentation with SwaggerUI
+- Generate schemas, request bodies and more via commands
+- **NEW**: Define API documentation programmatically using PHP classes
+- Support both YAML and PHP configuration (or mix both!)
 
-If you just want to write simple yaml/yml files to create your api doc, this bundle is made for you.
-Install, create your api doc with yaml/yml files in the source directory, it's done!
-You can create as many files as you want and organize them in a subdirectory as well to your needs.
+If you want to write simple YAML files to create your API doc, this bundle is made for you.
+Or, if you prefer a programmatic approach with PHP classes and IDE autocompletion, we've got you covered too!
 
-to write files Check the openapi specifications [OpenApi](https://swagger.io/specification/v3/)
+Install, create your API doc with YAML files or PHP configuration classes, and you're done!
+You can create as many files/classes as you want and organize them to your needs.
+
+To write YAML files, check the OpenAPI specifications: [OpenApi](https://swagger.io/specification/v3/)
 
 This bundle uses the [Swagger UI](https://swagger.io/tools/swagger-ui/) to render the final result.
 
-You will find some example after the bundle is installed in the default directory /src/Swagger.
+You will find examples after the bundle is installed in the default directory /src/Swagger.
 
 ---
 - [Installation](#installation)
 - [Usage](#usage)
+  - [YAML Configuration](#yaml-configuration)
+  - [PHP Configuration Classes](#php-configuration-classes-new)
 - [Components generation via commands](#generating-apidoc-components)
 ---
 
@@ -34,12 +40,79 @@ Then Run
 ```
 
 # Usage
+
+## YAML Configuration
+
 - In your .env file, update the site_urls variable to use it in your Swagger UI interface.
 
 - In the src/Swagger directory, add the YAML files that you want to be parsed and displayed on the Swagger UI interface.
 **the directory can be modified in the .env file with the source_path variable.**
 
 - the default route is ehyiah/api/doc example: localhost/ehyiah/api/doc, **you can modify this route in the config/routes/ehyiah_api_doc.yaml file.**
+
+## PHP Configuration Classes (NEW)
+
+You can now define your API documentation using PHP classes instead of (or in addition to) YAML files!
+
+### Quick Example
+
+```php
+<?php
+namespace App\ApiDoc;
+
+use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
+use Ehyiah\ApiDocBundle\Config\ApiDocConfigInterface;
+
+class UserApiDocConfig implements ApiDocConfigInterface
+{
+    public function configure(ApiDocBuilder $builder): void
+    {
+        $builder
+            ->addRoute()
+                ->path('/api/users/{id}')
+                ->method('GET')
+                ->summary('Get user by ID')
+                ->tag('Users')
+                ->parameter()
+                    ->name('id')
+                    ->in('path')
+                    ->required()
+                    ->schema(['type' => 'integer'])
+                ->end()
+                ->response(200)
+                    ->description('User found')
+                    ->jsonContent()
+                        ->ref('#/components/schemas/User')
+                    ->end()
+                ->end()
+            ->end();
+    }
+}
+```
+
+### Register Your Config Class
+
+In your `config/services.yaml`:
+
+```yaml
+services:
+    _instanceof:
+        Ehyiah\ApiDocBundle\Config\ApiDocConfigInterface:
+            tags: ['ehyiah_api_doc.config_provider']
+```
+
+### Learn More
+
+📚 **See [docs/PHP_CONFIG_CLASSES.md](docs/PHP_CONFIG_CLASSES.md) for complete documentation with examples.**
+
+### Benefits
+
+- ✅ **Type safety** - IDE autocompletion and type hints
+- ✅ **Flexible** - Generate documentation dynamically
+- ✅ **Reusable** - Share common patterns across routes
+- ✅ **Hybrid** - Works alongside YAML files
+
+## YAML Directory Structure
 
 ## Recommended directory structure
 If you want to use generation commands (see below) but do not want to use Auto-generated components names, 

@@ -14,6 +14,7 @@ class ApiDocController extends AbstractController
     public function __construct(
         private readonly KernelInterface $kernel,
         private readonly ParameterBagInterface $parameterBag,
+        private readonly LoadApiDocConfigHelper $loadApiDocConfigHelper,
     ) {
     }
 
@@ -40,8 +41,16 @@ class ApiDocController extends AbstractController
 
         /** @var string $baseUrlParameter */
         $baseUrlParameter = $this->parameterBag->get('ehyiah_api_doc.site_urls');
-        $urls = LoadApiDocConfigHelper::loadServerUrls($baseUrlParameter);
+
+        // Load from YAML files
         $config = LoadApiDocConfigHelper::loadApiDocConfig($location, $this->kernel->getProjectDir(), $dumpLocation);
+
+        // Load from PHP config classes and merge
+        $phpConfig = $this->loadApiDocConfigHelper->loadPhpConfigDoc();
+        $config = array_merge_recursive($config, $phpConfig);
+
+        // Add server URLs
+        $urls = LoadApiDocConfigHelper::loadServerUrls($baseUrlParameter);
         $config = array_merge_recursive($config, $urls);
 
         return json_encode($config);

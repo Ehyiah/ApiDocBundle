@@ -2,6 +2,7 @@
 
 namespace Ehyiah\ApiDocBundle;
 
+use Ehyiah\ApiDocBundle\DependencyInjection\Compiler\ApiDocConfigPass;
 use Exception;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Config\FileLocator;
@@ -35,6 +36,7 @@ class EhyiahApiDocBundle extends AbstractBundle
         $container->parameters()->set('ehyiah_api_doc.site_urls', $config['site_urls']);
         $container->parameters()->set('ehyiah_api_doc.source_path', $config['source_path']);
         $container->parameters()->set('ehyiah_api_doc.dump_path', $config['dump_path']);
+        $container->parameters()->set('ehyiah_api_doc.enable_php_config', $config['enable_php_config'] ?? true);
     }
 
     public function configure(DefinitionConfigurator $definition): void
@@ -55,7 +57,19 @@ class EhyiahApiDocBundle extends AbstractBundle
                     ->isRequired()
                     ->defaultValue('src/Swagger/dump')
                 ->end()
+                ->booleanNode('enable_php_config')
+                    ->defaultTrue()
+                    ->info('Enable PHP configuration classes for API documentation')
+                ->end()
             ->end()
         ;
+    }
+
+    public function build(ContainerBuilder $container): void
+    {
+        parent::build($container);
+
+        // Register the compiler pass to collect config providers
+        $container->addCompilerPass(new ApiDocConfigPass());
     }
 }

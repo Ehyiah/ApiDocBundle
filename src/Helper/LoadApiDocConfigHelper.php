@@ -2,6 +2,7 @@
 
 namespace Ehyiah\ApiDocBundle\Helper;
 
+use Ehyiah\ApiDocBundle\Loader\PhpConfigLoader;
 use LogicException;
 use SplFileInfo;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
@@ -14,6 +15,7 @@ final class LoadApiDocConfigHelper
     public function __construct(
         private readonly KernelInterface $kernel,
         private readonly ParameterBagInterface $parameterBag,
+        private readonly ?PhpConfigLoader $phpConfigLoader = null,
     ) {
     }
 
@@ -40,6 +42,25 @@ final class LoadApiDocConfigHelper
         }
 
         return $config;
+    }
+
+    /**
+     * Load API documentation from PHP config classes.
+     *
+     * @return array<mixed>
+     */
+    public function loadPhpConfigDoc(): array
+    {
+        if (null === $this->phpConfigLoader) {
+            return [];
+        }
+
+        $enablePhpConfig = $this->parameterBag->get('ehyiah_api_doc.enable_php_config');
+        if (!$enablePhpConfig) {
+            return [];
+        }
+
+        return $this->phpConfigLoader->load();
     }
 
     /**
