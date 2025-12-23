@@ -6,6 +6,7 @@ $finder = PhpCsFixer\Finder::create()
     ->notPath('Migrations/')
     ->in(__DIR__ . '/src')
     ->in(__DIR__ . '/tests')
+    ->exclude('App/var')
 ;
 
 return (new \PhpCsFixer\Config())

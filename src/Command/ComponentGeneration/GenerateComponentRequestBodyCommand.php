@@ -111,7 +111,15 @@ final class GenerateComponentRequestBodyCommand extends AbstractGenerateComponen
             $destination = self::COMPONENT_REQUEST_BODIES;
         }
 
-        $this->generateYamlFile($array, $shortClassName, $input, $output, self::COMPONENT_REQUEST_BODIES, $destination ?? null);
+        $format = $input->getOption('format');
+
+        if ('yaml' === $format || 'both' === $format) {
+            $this->generateYamlFile($array, $shortClassName, $input, $output, self::COMPONENT_REQUEST_BODIES, $destination ?? null);
+        }
+
+        if ('php' === $format || 'both' === $format) {
+            $this->generatePhpFile($array, $shortClassName, $input, $output, self::COMPONENT_REQUEST_BODIES, $destination ?? null);
+        }
 
         return Command::SUCCESS;
     }

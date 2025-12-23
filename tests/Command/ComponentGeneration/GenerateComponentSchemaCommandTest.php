@@ -110,4 +110,65 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $this->assertArrayHasKey('enum', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['enumNotNullable']);
         $this->assertArrayHasKey('$ref', $arrayFromYaml['documentation']['components']['schemas']['DummyObject']['properties']['objectNotNullable']);
     }
+
+    public function testSchemaGenerationWithPhpFormat(): void
+    {
+        $kernel = new AppKernelTest('test', true);
+        $application = new Application($kernel);
+        $kernel->boot();
+
+        $command = $application->find('apidocbundle:component:schema');
+        $commandTester = new CommandTester($command);
+        $commandTester->execute([
+            'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
+            '--format' => 'php',
+        ]);
+
+        $commandTester->assertCommandIsSuccessful();
+
+        $output = $commandTester->getDisplay();
+        $this->assertStringContainsString('PHP file generated', $output);
+
+        $filePath = $kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.php';
+        $this->assertFileExists($filePath);
+
+        $content = file_get_contents($filePath);
+        $this->assertStringContainsString('use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;', $content);
+        $this->assertStringContainsString('use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;', $content);
+        $this->assertStringContainsString('class implements ApiDocConfigInterface', $content);
+        $this->assertStringContainsString("->addSchema('DummyObject')", $content);
+        $this->assertStringContainsString("->type('object')", $content);
+        $this->assertStringContainsString("->addProperty('id')", $content);
+        $this->assertStringContainsString("->type('string')", $content);
+        $this->assertStringContainsString('->required()', $content);
+        $this->assertStringContainsString("->format('date-time')", $content);
+        $this->assertStringContainsString('->enum(', $content);
+        $this->assertStringContainsString("->ref('#/components/schemas/DummyObject2')", $content);
+    }
+
+    public function testSchemaGenerationWithBothFormats(): void
+    {
+        $kernel = new AppKernelTest('test', true);
+        $application = new Application($kernel);
+        $kernel->boot();
+
+        $command = $application->find('apidocbundle:component:schema');
+        $commandTester = new CommandTester($command);
+        $commandTester->execute([
+            'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
+            '--format' => 'both',
+        ]);
+
+        $commandTester->assertCommandIsSuccessful();
+
+        $output = $commandTester->getDisplay();
+        $this->assertStringContainsString('File generated', $output);
+        $this->assertStringContainsString('PHP file generated', $output);
+
+        $yamlPath = $kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.yaml';
+        $phpPath = $kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.php';
+
+        $this->assertFileExists($yamlPath);
+        $this->assertFileExists($phpPath);
+    }
 }

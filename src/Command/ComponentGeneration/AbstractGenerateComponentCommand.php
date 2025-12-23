@@ -71,6 +71,13 @@ abstract class AbstractGenerateComponentCommand extends Command
             description: 'Output dir, pass a relative path to the kernel_project_dir',
             default: $this->dumpLocation,
         );
+        $this->addOption(
+            name: 'format',
+            shortcut: 'f',
+            mode: InputOption::VALUE_OPTIONAL,
+            description: 'Output format: yaml, php, or both',
+            default: 'yaml',
+        );
     }
 
     /**
@@ -92,7 +99,7 @@ abstract class AbstractGenerateComponentCommand extends Command
             $fileSystem->mkdir($dumpDirectory);
         }
 
-        $existingConfigs = LoadApiDocConfigHelper::loadApiDocConfig(
+        $existingConfigs = LoadApiDocConfigHelper::loadYamlConfigDoc(
             $this->dumpLocation,
             $this->kernel->getProjectDir(),
             $dumpPath,
@@ -432,5 +439,183 @@ abstract class AbstractGenerateComponentCommand extends Command
         }
 
         return false;
+    }
+
+    /**
+     * @param array<mixed> $array
+     */
+    protected function generatePhpFile(array $array, string $componentName, InputInterface $input, OutputInterface $output, string $componentType, ?string $destination = null): void
+    {
+        $outputDir = $input->getOption('output');
+        $outputDir = u($outputDir)->ensureStart('/')->ensureEnd('/');
+
+        $fileSystem = new Filesystem();
+        $dumpDirectory = $this->kernel->getProjectDir() . $outputDir . u($destination)->ensureEnd('/');
+        if (!$fileSystem->exists($dumpDirectory)) {
+            $fileSystem->mkdir($dumpDirectory);
+        }
+
+        $dumpLocation = $dumpDirectory . $componentName . '.php';
+
+        $phpCode = $this->generatePhpBuilderCode($array, $componentName, $componentType);
+        $fileSystem->dumpFile($dumpLocation, $phpCode);
+
+        $output->writeln('<comment>PHP file generated at</comment> <info>' . $dumpLocation . '</info>');
+    }
+
+    /**
+     * @param array<mixed> $array
+     */
+    protected function generatePhpBuilderCode(array $array, string $componentName, string $componentType): string
+    {
+        $code = "<?php\n\n";
+        $code .= "use Ehyiah\\ApiDocBundle\\Builder\\ApiDocBuilder;\n";
+        $code .= "use Ehyiah\\ApiDocBundle\\Interfaces\\ApiDocConfigInterface;\n\n";
+        $code .= "return new class implements ApiDocConfigInterface {\n";
+        $code .= "    public function configure(ApiDocBuilder \$builder): void\n";
+        $code .= "    {\n";
+
+        if (self::COMPONENT_SCHEMAS === $componentType) {
+            $schema = $array['documentation']['components']['schemas'][$componentName] ?? [];
+            $code .= $this->buildSchemaCode($componentName, $schema, 2);
+        } elseif (self::COMPONENT_REQUEST_BODIES === $componentType) {
+            $requestBody = $array['documentation']['components']['requestBodies'][$componentName] ?? [];
+            $code .= $this->buildRequestBodyCode($componentName, $requestBody, 2);
+        }
+
+        $code .= "    }\n";
+        $code .= "};\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $schema
+     */
+    protected function buildSchemaCode(string $name, array $schema, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addSchema('{$name}')\n";
+
+        if (isset($schema['type'])) {
+            $code .= "{$pad}    ->type('{$schema['type']}')\n";
+        }
+
+        if (isset($schema['description'])) {
+            $description = addslashes($schema['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($schema['properties']) && is_array($schema['properties'])) {
+            foreach ($schema['properties'] as $propName => $propDef) {
+                $code .= $this->buildPropertyCode($propName, $propDef, $schema['required'] ?? [], $indent + 1);
+            }
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $propDef
+     * @param array<string> $requiredFields
+     */
+    protected function buildPropertyCode(string $name, array $propDef, array $requiredFields, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}->addProperty('{$name}')\n";
+
+        if (isset($propDef['$ref'])) {
+            $ref = $propDef['$ref'];
+            $code .= "{$pad}    ->ref('{$ref}')\n";
+        } else {
+            if (isset($propDef['type'])) {
+                $code .= "{$pad}    ->type('{$propDef['type']}')\n";
+            }
+
+            if (isset($propDef['format'])) {
+                $code .= "{$pad}    ->format('{$propDef['format']}')\n";
+            }
+
+            if (isset($propDef['description']) && '' !== $propDef['description']) {
+                $description = addslashes($propDef['description']);
+                $code .= "{$pad}    ->description('{$description}')\n";
+            }
+
+            if (isset($propDef['enum'])) {
+                $enumValues = array_map(function ($v) {
+                    return is_string($v) ? "'" . addslashes($v) . "'" : $v;
+                }, $propDef['enum']);
+                $code .= "{$pad}    ->enum([" . implode(', ', $enumValues) . "])\n";
+            }
+
+            if (isset($propDef['items'])) {
+                if (isset($propDef['items']['$ref'])) {
+                    $code .= "{$pad}    ->items(['\$ref' => '{$propDef['items']['$ref']}'])\n";
+                } elseif (isset($propDef['items']['type'])) {
+                    $code .= "{$pad}    ->items(['type' => '{$propDef['items']['type']}'])\n";
+                }
+            }
+
+            if (isset($propDef['nullable']) && $propDef['nullable']) {
+                $code .= "{$pad}    ->nullable()\n";
+            }
+        }
+
+        if (in_array($name, $requiredFields, true)) {
+            $code .= "{$pad}    ->required()\n";
+        }
+
+        $code .= "{$pad}->end()\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $requestBody
+     */
+    protected function buildRequestBodyCode(string $name, array $requestBody, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addRequestBody('{$name}')\n";
+
+        if (isset($requestBody['description'])) {
+            $description = addslashes($requestBody['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($requestBody['required']) && $requestBody['required']) {
+            $code .= "{$pad}    ->required()\n";
+        }
+
+        if (isset($requestBody['content'])) {
+            foreach ($requestBody['content'] as $mediaType => $content) {
+                if ('application/json' === $mediaType) {
+                    $code .= "{$pad}    ->jsonContent()\n";
+                } else {
+                    $code .= "{$pad}    ->content('{$mediaType}')\n";
+                }
+
+                if (isset($content['schema'])) {
+                    if (isset($content['schema']['$ref'])) {
+                        $code .= "{$pad}        ->ref('{$content['schema']['$ref']}')\n";
+                    } elseif (isset($content['schema']['properties'])) {
+                        $code .= "{$pad}        ->schema()\n";
+                        $code .= "{$pad}            ->type('object')\n";
+                        foreach ($content['schema']['properties'] as $propName => $propDef) {
+                            $code .= $this->buildPropertyCode($propName, $propDef, $content['schema']['required'] ?? [], $indent + 3);
+                        }
+                        $code .= "{$pad}        ->end()\n";
+                    }
+                }
+
+                $code .= "{$pad}    ->end()\n";
+            }
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
     }
 }

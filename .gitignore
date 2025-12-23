@@ -12,3 +12,4 @@
 docker-compose.override.yaml
 /.phpunit.result.cache
 /var/
+/tests/App/var/

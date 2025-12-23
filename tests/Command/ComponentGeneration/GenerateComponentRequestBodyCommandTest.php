@@ -100,4 +100,33 @@ final class GenerateComponentRequestBodyCommandTest extends TestCase
         $this->assertArrayHasKey('collectionField', $properties);
         $this->assertEquals('array', $properties['collectionField']['type']);
     }
+
+    public function testRequestBodyGenerationWithPhpFormat(): void
+    {
+        $kernel = new AppKernelTest('test', true);
+        $application = new Application($kernel);
+        $kernel->boot();
+
+        $command = $application->find('apidocbundle:component:body');
+        $commandTester = new CommandTester($command);
+        $commandTester->execute([
+            'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
+            '--format' => 'php',
+        ]);
+
+        $commandTester->assertCommandIsSuccessful();
+
+        $output = $commandTester->getDisplay();
+        $this->assertStringContainsString('PHP file generated', $output);
+
+        $filePath = $kernel->getProjectDir() . '/var/Swagger/requestBodies/DummyObject.php';
+        $this->assertFileExists($filePath);
+
+        $content = file_get_contents($filePath);
+        $this->assertStringContainsString('use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;', $content);
+        $this->assertStringContainsString('use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;', $content);
+        $this->assertStringContainsString('class implements ApiDocConfigInterface', $content);
+        $this->assertStringContainsString("->addRequestBody('DummyObject')", $content);
+        $this->assertStringContainsString('->jsonContent()', $content);
+    }
 }

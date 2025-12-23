@@ -1,0 +1,5 @@
+ehyiah_api_doc:
+    site_urls: 'http://localhost:8000'
+    source_path: '/Swagger'
+    dump_path: '/Swagger/dump'
+    enable_php_config: true
