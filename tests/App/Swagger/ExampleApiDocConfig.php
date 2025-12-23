@@ -59,106 +59,106 @@ class ExampleApiDocConfig implements ApiDocConfigInterface
         // Define a GET endpoint with security
         $builder
             ->addRoute()
-            ->path('/api/users2/{id}')
-            ->method('GET')
-            ->operationId('getUser')
-            ->summary('Get user by ID')
-            ->description('Returns a single user with all details')
-            ->tag('Users')
-            ->security('Bearer')
-            ->parameter()
-            ->name('id')
-            ->in('path')
-            ->description('User ID')
-            ->required()
-            ->schema(['type' => 'integer'])
-            ->end()
-            ->response(200)
-            ->description('Successful response')
-            ->jsonContent()
-            ->ref('#/components/schemas/User')
-            ->end()
-            ->end()
-            ->response(404)
-            ->description('User not found')
-            ->end()
+                ->path('/api/users2/{id}')
+                ->method('GET')
+                ->operationId('getUser')
+                ->summary('Get user by ID')
+                ->description('Returns a single user with all details')
+                ->tag('Users')
+                ->security('Bearer')
+                ->parameter()
+                    ->name('id')
+                    ->in('path')
+                    ->description('User ID')
+                    ->required()
+                    ->schema(['type' => 'integer'])
+                ->end()
+                ->response(200)
+                    ->description('Successful response')
+                    ->jsonContent()
+                        ->ref('#/components/schemas/User')
+                    ->end()
+                ->end()
+                ->response(404)
+                    ->description('User not found')
+                ->end()
             ->end()
         ;
 
         // Define a POST endpoint with inline schema
         $builder
             ->addRoute()
-            ->path('/api/users')
-            ->method('POST')
-            ->operationId('createUser')
-            ->summary('Create a new user')
-            ->tag('Users')
-            ->requestBody()
-            ->description('User data to create')
-            ->required()
-            ->jsonContent()
-            ->schema()
-            ->type('object')
-            ->property('name', [
-                'type' => 'string',
-                'minLength' => 2,
-                'maxLength' => 100,
-            ])
-            ->property('email', [
-                'type' => 'string',
-                'format' => 'email',
-            ])
-            ->property('age', [
-                'type' => 'integer',
-                'minimum' => 18,
-                'maximum' => 120,
-            ])
-            ->required(['name', 'email'])
-            ->end()
-            ->end()
-            ->end()
-            ->response(201)
-            ->description('User created successfully')
-            ->jsonContent()
-            ->ref('#/components/schemas/User')
-            ->end()
-            ->end()
-            ->response(400)
-            ->description('Invalid input')
-            ->end()
+                ->path('/api/users2')
+                ->method('POST')
+                ->operationId('createUser2')
+                ->summary('Create a new user')
+                ->tag('Users')
+                ->requestBody()
+                    ->description('User data to create')
+                    ->required()
+                    ->jsonContent()
+                        ->schema()
+                            ->type('object')
+                            ->property('name', [
+                                'type' => 'string',
+                                'minLength' => 2,
+                                'maxLength' => 100,
+                            ])
+                            ->property('email', [
+                                'type' => 'string',
+                                'format' => 'email',
+                            ])
+                            ->property('age', [
+                                'type' => 'integer',
+                                'minimum' => 18,
+                                'maximum' => 120,
+                            ])
+                            ->required(['name', 'email'])
+                        ->end()
+                    ->end()
+                ->end()
+                ->response(201)
+                    ->description('User created successfully')
+                    ->jsonContent()
+                        ->ref('#/components/schemas/User')
+                    ->end()
+                ->end()
+                ->response(400)
+                    ->description('Invalid input')
+                ->end()
             ->end()
         ;
 
         // Define a schema component
         $builder
             ->addSchema('User')
-            ->type('object')
-            ->description('User entity')
-            ->property('id', [
-                'type' => 'integer',
-                'readOnly' => true,
-                'example' => 123,
-            ])
-            ->property('name', [
-                'type' => 'string',
-                'example' => 'John Doe',
-            ])
-            ->property('email', [
-                'type' => 'string',
-                'format' => 'email',
-                'example' => 'john.doe@example.com',
-            ])
-            ->property('age', [
-                'type' => 'integer',
-                'nullable' => true,
-                'example' => 30,
-            ])
-            ->property('createdAt', [
-                'type' => 'string',
-                'format' => 'date-time',
-                'readOnly' => true,
-            ])
-            ->required(['id', 'name', 'email'])
+                ->type('object')
+                ->description('User entity')
+                ->property('id', [
+                    'type' => 'integer',
+                    'readOnly' => true,
+                    'example' => 123,
+                ])
+                ->property('name', [
+                    'type' => 'string',
+                    'example' => 'John Doe',
+                ])
+                ->property('email', [
+                    'type' => 'string',
+                    'format' => 'email',
+                    'example' => 'john.doe@example.com',
+                ])
+                ->property('age', [
+                    'type' => 'integer',
+                    'nullable' => true,
+                    'example' => 30,
+                ])
+                ->property('createdAt', [
+                    'type' => 'string',
+                    'format' => 'date-time',
+                    'readOnly' => true,
+                ])
+                ->required(['id', 'name', 'email'])
             ->end()
         ;
     }
