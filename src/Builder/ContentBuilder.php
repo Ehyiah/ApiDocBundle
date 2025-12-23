@@ -22,6 +22,9 @@ class ContentBuilder
 
     private ?ApiDocBuilder $apiDocBuilder = null;
 
+    /** @var array<ExampleBuilder> */
+    private array $exampleBuilders = [];
+
     /**
      * @param RequestBodyBuilder|ResponseBuilder $parentBuilder
      */
@@ -123,6 +126,36 @@ class ContentBuilder
     }
 
     /**
+     * Add a named example for this content.
+     * Use this method to add multiple examples with summary and description.
+     *
+     * OpenAPI allows multiple named examples, each with optional summary,
+     * description, and either a value or externalValue.
+     *
+     * Example usage:
+     *   ->addExample('success')
+     *       ->summary('Successful response')
+     *       ->description('A complete user object')
+     *       ->value(['id' => 1, 'name' => 'John'])
+     *   ->end()
+     *   ->addExample('minimal')
+     *       ->summary('Minimal response')
+     *       ->value(['id' => 2])
+     *   ->end()
+     *
+     * @param string $name The name/key for this example
+     *
+     * @return ExampleBuilder<self>
+     */
+    public function addExample(string $name): ExampleBuilder
+    {
+        $exampleBuilder = new ExampleBuilder($this, $name);
+        $this->exampleBuilders[] = $exampleBuilder;
+
+        return $exampleBuilder;
+    }
+
+    /**
      * Finish building this content and return to the parent builder.
      */
     public function end(): RequestBodyBuilder|ResponseBuilder
@@ -152,6 +185,15 @@ class ContentBuilder
         // Build inline schema if present
         if (null !== $this->schemaBuilder) {
             $this->definition['schema'] = $this->schemaBuilder->buildSchemaArray();
+        }
+
+        // Build examples if present
+        if (!empty($this->exampleBuilders)) {
+            $examples = [];
+            foreach ($this->exampleBuilders as $exampleBuilder) {
+                $examples[$exampleBuilder->getName()] = $exampleBuilder->buildArray();
+            }
+            $this->definition['examples'] = $examples;
         }
 
         return $this->definition;

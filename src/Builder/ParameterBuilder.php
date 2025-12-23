@@ -12,6 +12,9 @@ class ParameterBuilder
     /** @var array<string, mixed> */
     private array $definition = [];
 
+    /** @var array<ExampleBuilder> */
+    private array $exampleBuilders = [];
+
     public function __construct(RouteBuilder $routeBuilder)
     {
         $this->routeBuilder = $routeBuilder;
@@ -105,6 +108,35 @@ class ParameterBuilder
     }
 
     /**
+     * Add a named example for this parameter.
+     * Use this method to add multiple examples with summary and description.
+     *
+     * OpenAPI allows multiple named examples, each with optional summary,
+     * description, and either a value or externalValue.
+     *
+     * Example usage:
+     *   ->addExample('default')
+     *       ->summary('Default ID')
+     *       ->value(1)
+     *   ->end()
+     *   ->addExample('admin')
+     *       ->summary('Admin user ID')
+     *       ->value(999)
+     *   ->end()
+     *
+     * @param string $name The name/key for this example
+     *
+     * @return ExampleBuilder<self>
+     */
+    public function addExample(string $name): ExampleBuilder
+    {
+        $exampleBuilder = new ExampleBuilder($this, $name);
+        $this->exampleBuilders[] = $exampleBuilder;
+
+        return $exampleBuilder;
+    }
+
+    /**
      * Finish building this parameter and return to the route builder.
      */
     public function end(): RouteBuilder
@@ -121,6 +153,15 @@ class ParameterBuilder
      */
     public function buildArray(): array
     {
+        // Build examples if present
+        if (!empty($this->exampleBuilders)) {
+            $examples = [];
+            foreach ($this->exampleBuilders as $exampleBuilder) {
+                $examples[$exampleBuilder->getName()] = $exampleBuilder->buildArray();
+            }
+            $this->definition['examples'] = $examples;
+        }
+
         return $this->definition;
     }
 }

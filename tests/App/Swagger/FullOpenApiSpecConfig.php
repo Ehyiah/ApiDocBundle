@@ -812,6 +812,26 @@ class FullOpenApiSpecConfig implements ApiDocConfigInterface
                                 ->example('Bearer')
                             ->end()
                         ->end()
+                        ->addExample('standard')
+                            ->summary('Standard token response')
+                            ->description('Token with default expiration (1 hour)')
+                            ->value([
+                                'accessToken' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                                'refreshToken' => 'dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...',
+                                'expiresIn' => 3600,
+                                'tokenType' => 'Bearer',
+                            ])
+                        ->end()
+                        ->addExample('rememberMe')
+                            ->summary('Extended token response')
+                            ->description('Token with extended expiration when rememberMe is true (30 days)')
+                            ->value([
+                                'accessToken' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                                'refreshToken' => 'bG9uZyBsaXZlZCByZWZyZXNoIHRva2Vu...',
+                                'expiresIn' => 2592000,
+                                'tokenType' => 'Bearer',
+                            ])
+                        ->end()
                     ->end()
                 ->end()
                 ->response(401)
@@ -966,7 +986,21 @@ class FullOpenApiSpecConfig implements ApiDocConfigInterface
                     ->header('X-Rate-Limit-Limit')
                         ->description('The maximum number of requests allowed in the current period')
                         ->typeInteger('int32')
-                        ->example(1000)
+                        ->addExample('freeUser')
+                            ->summary('Free tier limit')
+                            ->description('Rate limit for free tier users')
+                            ->value(100)
+                        ->end()
+                        ->addExample('proUser')
+                            ->summary('Pro tier limit')
+                            ->description('Rate limit for pro subscription users')
+                            ->value(1000)
+                        ->end()
+                        ->addExample('enterpriseUser')
+                            ->summary('Enterprise tier limit')
+                            ->description('Rate limit for enterprise customers')
+                            ->value(10000)
+                        ->end()
                     ->end()
                     ->header('X-Rate-Limit-Remaining')
                         ->description('The number of remaining requests in the current period')
@@ -1084,7 +1118,21 @@ class FullOpenApiSpecConfig implements ApiDocConfigInterface
                     ->description('User ID')
                     ->required()
                     ->schema(['type' => 'integer', 'format' => 'int64', 'minimum' => 1])
-                    ->example(12345)
+                    ->addExample('regularUser')
+                        ->summary('Regular user')
+                        ->description('A typical user ID')
+                        ->value(12345)
+                    ->end()
+                    ->addExample('adminUser')
+                        ->summary('Admin user')
+                        ->description('The main administrator account')
+                        ->value(1)
+                    ->end()
+                    ->addExample('testUser')
+                        ->summary('Test user')
+                        ->description('User account reserved for testing')
+                        ->value(99999)
+                    ->end()
                 ->end()
                 ->parameter()
                     ->name('include')
@@ -1337,6 +1385,30 @@ class FullOpenApiSpecConfig implements ApiDocConfigInterface
                             ->addProperty('meta')
                                 ->ref('#/components/schemas/PaginationMeta')
                             ->end()
+                        ->end()
+                        ->addExample('electronics')
+                            ->summary('Electronics category')
+                            ->description('Sample response with electronics products')
+                            ->value([
+                                'data' => [
+                                    ['id' => 1, 'sku' => 'PRD-000001', 'name' => 'Laptop Pro', 'price' => 1299.99],
+                                    ['id' => 2, 'sku' => 'PRD-000002', 'name' => 'Wireless Mouse', 'price' => 49.99],
+                                ],
+                                'meta' => ['currentPage' => 1, 'perPage' => 20, 'totalItems' => 2, 'totalPages' => 1],
+                            ])
+                        ->end()
+                        ->addExample('emptyResult')
+                            ->summary('Empty result')
+                            ->description('Response when no products match the filters')
+                            ->value([
+                                'data' => [],
+                                'meta' => ['currentPage' => 1, 'perPage' => 20, 'totalItems' => 0, 'totalPages' => 0],
+                            ])
+                        ->end()
+                        ->addExample('fullCatalog')
+                            ->summary('Full catalog example')
+                            ->description('Complete product catalog example (external file)')
+                            ->externalValue('https://example.com/examples/products-full-catalog.json')
                         ->end()
                     ->end()
                     // XML response as alternative

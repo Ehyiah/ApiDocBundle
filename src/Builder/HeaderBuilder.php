@@ -16,6 +16,9 @@ class HeaderBuilder
     /** @var array<string, mixed> */
     private array $definition = [];
 
+    /** @var array<ExampleBuilder> */
+    private array $exampleBuilders = [];
+
     public function __construct(ResponseBuilder $responseBuilder, string $name)
     {
         $this->responseBuilder = $responseBuilder;
@@ -165,6 +168,35 @@ class HeaderBuilder
     }
 
     /**
+     * Add a named example for this header.
+     * Use this method to add multiple examples with summary and description.
+     *
+     * OpenAPI allows multiple named examples, each with optional summary,
+     * description, and either a value or externalValue.
+     *
+     * Example usage:
+     *   ->addExample('standard')
+     *       ->summary('Standard rate limit')
+     *       ->value('1000')
+     *   ->end()
+     *   ->addExample('premium')
+     *       ->summary('Premium rate limit')
+     *       ->value('10000')
+     *   ->end()
+     *
+     * @param string $name The name/key for this example
+     *
+     * @return ExampleBuilder<self>
+     */
+    public function addExample(string $name): ExampleBuilder
+    {
+        $exampleBuilder = new ExampleBuilder($this, $name);
+        $this->exampleBuilders[] = $exampleBuilder;
+
+        return $exampleBuilder;
+    }
+
+    /**
      * Set enum values for the header.
      *
      * @param array<mixed> $values Allowed values
@@ -266,6 +298,15 @@ class HeaderBuilder
      */
     public function buildArray(): array
     {
+        // Build examples if present
+        if (!empty($this->exampleBuilders)) {
+            $examples = [];
+            foreach ($this->exampleBuilders as $exampleBuilder) {
+                $examples[$exampleBuilder->getName()] = $exampleBuilder->buildArray();
+            }
+            $this->definition['examples'] = $examples;
+        }
+
         return $this->definition;
     }
 }
