@@ -66,13 +66,20 @@ final class LoadApiDocConfigHelper
     /**
      * @return array<mixed>
      */
-    public static function loadServerUrls(string $envUrls): array
+    public static function loadServerUrls(?string $envUrls): array
     {
+        if (null === $envUrls || '' === $envUrls) {
+            return [];
+        }
+
         $urls = [];
 
         $baseUrls = explode(',', $envUrls);
         foreach ($baseUrls as $index => $url) {
-            $urls['servers'][$index]['url'] = $url;
+            $url = trim($url);
+            if ('' !== $url) {
+                $urls['servers'][$index]['url'] = $url;
+            }
         }
 
         return $urls;

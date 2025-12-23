@@ -3,8 +3,7 @@ Symfony Bundle to deal with API documentation using SwaggerUI with **YAML files*
 
 ## What this bundle does
 - Display API documentation with SwaggerUI
-- Generate schemas, request bodies and more via commands
-- **NEW**: Define API documentation programmatically using PHP classes
+- Generate schemas, request bodies and more via commands (currently WIP, only supports YAML dump file)
 - Support both YAML and PHP configuration (or mix both!)
 
 If you want to write simple YAML files to create your API doc, this bundle is made for you.
@@ -43,16 +42,16 @@ Then Run
 
 ## YAML Configuration
 
-- In your .env file, update the site_urls variable to use it in your Swagger UI interface.
+- In your .env file, you can update the site_urls variable to use it in your Swagger UI interface (or define yourself via PHP classes or directly inside YAML files)
 
-- In the src/Swagger directory, add the YAML files that you want to be parsed and displayed on the Swagger UI interface.
+- In the src/Swagger (default directory) directory, add the YAML files that you want to be parsed and displayed on the Swagger UI interface.
 **the directory can be modified in the .env file with the source_path variable.**
 
 - the default route is ehyiah/api/doc example: localhost/ehyiah/api/doc, **you can modify this route in the config/routes/ehyiah_api_doc.yaml file.**
 
-## PHP Configuration Classes (NEW)
+## PHP Configuration Classes
 
-You can now define your API documentation using PHP classes instead of (or in addition to) YAML files!
+You can define your API documentation using PHP classes instead of (or in addition to) YAML files!
 
 ### Quick Example
 
@@ -88,17 +87,6 @@ class UserApiDocConfig implements ApiDocConfigInterface
             ->end();
     }
 }
-```
-
-### Register Your Config Class
-
-In your `config/services.yaml`:
-
-```yaml
-services:
-    _instanceof:
-        Ehyiah\ApiDocBundle\Config\ApiDocConfigInterface:
-            tags: ['ehyiah_api_doc.config_provider']
 ```
 
 ### Learn More

@@ -75,7 +75,7 @@ final class GenerateApiDocCommand extends Command
             throw new LogicException('dumpLocation must be a string');
         }
 
-        /** @var string $baseUrlParameter */
+        /** @var string|null $baseUrlParameter */
         $baseUrlParameter = $this->parameterBag->get('ehyiah_api_doc.site_urls');
         $urls = LoadApiDocConfigHelper::loadServerUrls($baseUrlParameter);
         $config = LoadApiDocConfigHelper::loadApiDocConfig($location, $this->kernel->getProjectDir(), $dumpLocation);

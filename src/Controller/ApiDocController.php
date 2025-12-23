@@ -39,7 +39,7 @@ class ApiDocController extends AbstractController
             throw new LogicException('dumpLocation must be a string');
         }
 
-        /** @var string $baseUrlParameter */
+        /** @var string|null $baseUrlParameter */
         $baseUrlParameter = $this->parameterBag->get('ehyiah_api_doc.site_urls');
 
         // Load from YAML files
