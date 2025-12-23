@@ -47,11 +47,11 @@ class ApiDocController extends AbstractController
 
         // Load from PHP config classes and merge
         $phpConfig = $this->loadApiDocConfigHelper->loadPhpConfigDoc();
-        $config = array_merge_recursive($config, $phpConfig);
+        $config = LoadApiDocConfigHelper::mergeConfigs($config, $phpConfig);
 
         // Add server URLs
         $urls = LoadApiDocConfigHelper::loadServerUrls($baseUrlParameter);
-        $config = array_merge_recursive($config, $urls);
+        $config = LoadApiDocConfigHelper::mergeConfigs($config, $urls);
 
         return json_encode($config);
     }

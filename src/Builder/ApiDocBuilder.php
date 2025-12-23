@@ -22,6 +22,15 @@ class ApiDocBuilder
     /** @var array<string, string> Schema reference registry: [refName => schemaName] */
     private array $schemaRefRegistry = [];
 
+    /** @var array<string, mixed> */
+    private array $info = [];
+
+    /** @var array<array<string, mixed>> */
+    private array $tags = [];
+
+    /** @var array<string, array<string, mixed>> */
+    private array $securitySchemes = [];
+
     /**
      * Start building a new route/path definition.
      */
@@ -38,6 +47,34 @@ class ApiDocBuilder
     public function addSchema(string $name): SchemaBuilder
     {
         return new SchemaBuilder($this, $name);
+    }
+
+    /**
+     * Start building the OpenAPI base configuration (openapi, info, servers, global security).
+     */
+    public function info(): InfoBuilder
+    {
+        return new InfoBuilder($this);
+    }
+
+    /**
+     * Start building a new security scheme definition.
+     *
+     * @param string $name The security scheme name (e.g., 'Bearer', 'ApiKey')
+     */
+    public function addSecurityScheme(string $name): SecuritySchemeBuilder
+    {
+        return new SecuritySchemeBuilder($this, $name);
+    }
+
+    /**
+     * Start building a new tag definition.
+     *
+     * @param string $name The tag name
+     */
+    public function addTag(string $name): TagBuilder
+    {
+        return new TagBuilder($this, $name);
     }
 
     /**
@@ -116,6 +153,43 @@ class ApiDocBuilder
     }
 
     /**
+     * Internal method to register info configuration.
+     *
+     * @param array<string, mixed> $info The info configuration
+     *
+     * @internal
+     */
+    public function registerInfo(array $info): void
+    {
+        $this->info = array_merge_recursive($this->info, $info);
+    }
+
+    /**
+     * Internal method to register a tag definition.
+     *
+     * @param array<string, mixed> $tag The tag definition
+     *
+     * @internal
+     */
+    public function registerTag(array $tag): void
+    {
+        $this->tags[] = $tag;
+    }
+
+    /**
+     * Internal method to register a security scheme definition.
+     *
+     * @param string $name The security scheme name
+     * @param array<string, mixed> $definition The security scheme definition
+     *
+     * @internal
+     */
+    public function registerSecurityScheme(string $name, array $definition): void
+    {
+        $this->securitySchemes[$name] = $definition;
+    }
+
+    /**
      * Get all paths (routes) as an array.
      *
      * @return array<string, mixed>
@@ -144,12 +218,40 @@ class ApiDocBuilder
     {
         $spec = [];
 
+        // Add openapi version and info
+        if (!empty($this->info)) {
+            if (isset($this->info['openapi'])) {
+                $spec['openapi'] = $this->info['openapi'];
+            }
+            if (isset($this->info['info'])) {
+                $spec['info'] = $this->info['info'];
+            }
+            if (isset($this->info['servers'])) {
+                $spec['servers'] = $this->info['servers'];
+            }
+            if (isset($this->info['security'])) {
+                $spec['security'] = $this->info['security'];
+            }
+        }
+
+        // Add tags
+        if (!empty($this->tags)) {
+            $spec['tags'] = $this->tags;
+        }
+
+        // Add paths
         if (!empty($this->paths)) {
             $spec['paths'] = $this->paths;
         }
 
-        if (!empty($this->schemas)) {
-            $spec['components']['schemas'] = $this->schemas;
+        // Add components (schemas and securitySchemes)
+        if (!empty($this->schemas) || !empty($this->securitySchemes)) {
+            if (!empty($this->schemas)) {
+                $spec['components']['schemas'] = $this->schemas;
+            }
+            if (!empty($this->securitySchemes)) {
+                $spec['components']['securitySchemes'] = $this->securitySchemes;
+            }
         }
 
         return $spec;

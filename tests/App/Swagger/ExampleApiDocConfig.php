@@ -21,7 +21,42 @@ class ExampleApiDocConfig implements ApiDocConfigInterface
 {
     public function configure(ApiDocBuilder $builder): void
     {
-        // Define a GET endpoint
+        // Configure OpenAPI base info
+        $builder
+            ->info()
+                ->openApiVersion('3.0.0')
+                ->title('My API Documentation')
+                ->description('This is an example API documentation built with PHP classes')
+                ->version('2.0.0')
+                ->contact('API Support', 'support@example.com', 'https://example.com/support')
+                ->license('MIT', 'https://opensource.org/licenses/MIT')
+            ->end()
+        ;
+
+        // Define security schemes
+        $builder
+            ->addSecurityScheme('Bearer')
+                ->bearer('JWT')
+                ->description('JWT token authentication')
+            ->end()
+            ->addSecurityScheme('ApiKey')
+                ->apiKey('X-API-KEY', 'header')
+                ->description('API Key authentication')
+            ->end()
+        ;
+
+        // Define tags
+        $builder
+            ->addTag('Users')
+                ->description('User management endpoints')
+            ->end()
+            ->addTag('Products')
+                ->description('Product management endpoints')
+                ->externalDocs('https://example.com/docs/products', 'Product documentation')
+            ->end()
+        ;
+
+        // Define a GET endpoint with security
         $builder
             ->addRoute()
             ->path('/api/users2/{id}')
@@ -30,6 +65,7 @@ class ExampleApiDocConfig implements ApiDocConfigInterface
             ->summary('Get user by ID')
             ->description('Returns a single user with all details')
             ->tag('Users')
+            ->security('Bearer')
             ->parameter()
             ->name('id')
             ->in('path')
@@ -125,8 +161,5 @@ class ExampleApiDocConfig implements ApiDocConfigInterface
             ->required(['id', 'name', 'email'])
             ->end()
         ;
-
-        // You can define as many routes and schemas as needed
-        // Everything will be merged with YAML documentation automatically
     }
 }

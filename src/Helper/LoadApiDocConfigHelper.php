@@ -78,6 +78,108 @@ final class LoadApiDocConfigHelper
         return $urls;
     }
 
+    /**
+     * Merge two OpenAPI configurations.
+     *
+     * - Scalar values: second array overwrites first
+     * - Sequential arrays (tags, servers): merged and deduplicated by 'name' or 'url' key
+     * - Associative arrays (paths, components): recursively merged
+     *
+     * @param array<string, mixed> $base Base configuration
+     * @param array<string, mixed> $override Override configuration
+     *
+     * @return array<string, mixed>
+     */
+    public static function mergeConfigs(array $base, array $override): array
+    {
+        $result = $base;
+
+        foreach ($override as $key => $value) {
+            if (!array_key_exists($key, $result)) {
+                $result[$key] = $value;
+                continue;
+            }
+
+            $baseValue = $result[$key];
+
+            if (!is_array($value)) {
+                $result[$key] = $value;
+                continue;
+            }
+
+            if (!is_array($baseValue)) {
+                $result[$key] = $value;
+                continue;
+            }
+
+            if (self::isSequentialArray($value) && self::isSequentialArray($baseValue)) {
+                $result[$key] = self::mergeSequentialArrays($baseValue, $value, $key);
+            } else {
+                $result[$key] = self::mergeConfigs($baseValue, $value);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<mixed> $array
+     */
+    private static function isSequentialArray(array $array): bool
+    {
+        if ([] === $array) {
+            return true;
+        }
+
+        return array_keys($array) === range(0, count($array) - 1);
+    }
+
+    /**
+     * Merge sequential arrays, deduplicating by a key based on the context.
+     *
+     * @param array<int, mixed> $base
+     * @param array<int, mixed> $override
+     * @param string $contextKey The parent key to determine deduplication strategy
+     *
+     * @return array<int, mixed>
+     */
+    private static function mergeSequentialArrays(array $base, array $override, string $contextKey): array
+    {
+        $uniqueKey = match ($contextKey) {
+            'tags' => 'name',
+            'servers' => 'url',
+            'security' => null,
+            default => null,
+        };
+
+        if (null === $uniqueKey) {
+            return array_merge($base, $override);
+        }
+
+        $existing = [];
+        foreach ($base as $index => $item) {
+            if (is_array($item) && isset($item[$uniqueKey])) {
+                $existing[$item[$uniqueKey]] = $index;
+            }
+        }
+
+        $result = $base;
+        foreach ($override as $item) {
+            if (is_array($item) && isset($item[$uniqueKey])) {
+                $key = $item[$uniqueKey];
+                if (isset($existing[$key])) {
+                    $result[$existing[$key]] = array_merge($result[$existing[$key]], $item);
+                } else {
+                    $result[] = $item;
+                }
+            } else {
+                $result[] = $item;
+            }
+        }
+
+        return array_values($result);
+    }
+
     public function findComponentFile(string $componentName, string $componentType): ?SplFileInfo
     {
         $finder = new Finder();

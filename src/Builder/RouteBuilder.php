@@ -17,6 +17,9 @@ class RouteBuilder
     /** @var array<string> */
     private array $tags = [];
 
+    /** @var array<array<string, array<string>>> */
+    private array $security = [];
+
     /** @var array<ParameterBuilder> */
     private array $parameterBuilders = [];
 
@@ -103,6 +106,30 @@ class RouteBuilder
     }
 
     /**
+     * Add a security requirement to this route.
+     *
+     * @param string $schemeName The security scheme name (must match a scheme defined in securitySchemes)
+     * @param array<string> $scopes Required scopes (for OAuth2), empty array for other schemes
+     */
+    public function security(string $schemeName, array $scopes = []): self
+    {
+        $this->security[] = [$schemeName => $scopes];
+
+        return $this;
+    }
+
+    /**
+     * Mark this route as not requiring any authentication.
+     * Useful to override global security for public endpoints.
+     */
+    public function noSecurity(): self
+    {
+        $this->security = [[]];
+
+        return $this;
+    }
+
+    /**
      * Start building a parameter for this route.
      */
     public function parameter(): ParameterBuilder
@@ -144,6 +171,11 @@ class RouteBuilder
         // Build tags
         if (!empty($this->tags)) {
             $this->definition['tags'] = $this->tags;
+        }
+
+        // Build security
+        if (!empty($this->security)) {
+            $this->definition['security'] = $this->security;
         }
 
         // Build parameters
