@@ -61,7 +61,7 @@ You can now define your API documentation using PHP classes instead of (or in ad
 namespace App\ApiDoc;
 
 use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Config\ApiDocConfigInterface;
+use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 
 class UserApiDocConfig implements ApiDocConfigInterface
 {

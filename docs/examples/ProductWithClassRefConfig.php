@@ -2,7 +2,7 @@
 
 /**
  * Example: Using refClass() to reference PHP classes automatically
- * 
+ *
  * This example shows how to use the refClass() method to reference
  * schemas by their PHP class name instead of manually writing the $ref path.
  */
@@ -13,7 +13,7 @@ use App\Entity\Product;
 use App\Entity\Category;
 use App\DTO\CreateProductRequest;
 use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Config\ApiDocConfigInterface;
+use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 
 class ProductWithClassRefConfig implements ApiDocConfigInterface
 {

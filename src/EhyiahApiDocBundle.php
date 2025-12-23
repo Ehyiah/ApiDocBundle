@@ -3,6 +3,7 @@
 namespace Ehyiah\ApiDocBundle;
 
 use Ehyiah\ApiDocBundle\DependencyInjection\Compiler\ApiDocConfigPass;
+use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 use Exception;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Config\FileLocator;
@@ -69,7 +70,10 @@ class EhyiahApiDocBundle extends AbstractBundle
     {
         parent::build($container);
 
-        // Register the compiler pass to collect config providers
+        $container->registerForAutoconfiguration(ApiDocConfigInterface::class)
+            ->addTag('ehyiah_api_doc.config_provider')
+        ;
+
         $container->addCompilerPass(new ApiDocConfigPass());
     }
 }

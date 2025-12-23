@@ -23,5 +23,4 @@ services:
         autowire: true
         autoconfigure: true
 
-    Ehyiah\ApiDocBundle\Tests\App\Swagger\ExampleApiDocConfig:
-        tags: ['ehyiah_api_doc.config_provider']
+    Ehyiah\ApiDocBundle\Tests\App\Swagger\ExampleApiDocConfig: ~

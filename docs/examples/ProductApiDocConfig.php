@@ -2,14 +2,14 @@
 
 /**
  * Example: PHP Configuration Class that complements YAML documentation
- * 
+ *
  * This class adds additional routes to the API documentation that are NOT defined in YAML.
  * When merged, the final API doc will contain routes from BOTH sources.
- * 
+ *
  * YAML File: docs/examples/products.yaml
  * - Defines: GET /api/products (list)
  * - Defines: Product schema
- * 
+ *
  * This PHP Class adds:
  * - POST /api/products (create)
  * - GET /api/products/{id} (get one)
@@ -21,7 +21,7 @@
 namespace App\ApiDoc;
 
 use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Config\ApiDocConfigInterface;
+use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 
 class ProductApiDocConfig implements ApiDocConfigInterface
 {

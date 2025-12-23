@@ -1,6 +1,6 @@
 <?php
 
-namespace Ehyiah\ApiDocBundle\Config;
+namespace Ehyiah\ApiDocBundle\Interfaces;
 
 use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
 

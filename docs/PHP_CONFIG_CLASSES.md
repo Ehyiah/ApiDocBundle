@@ -23,7 +23,7 @@ Create a class that implements `ApiDocConfigInterface`:
 namespace App\ApiDoc;
 
 use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Config\ApiDocConfigInterface;
+use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 
 class UserApiDocConfig implements ApiDocConfigInterface
 {

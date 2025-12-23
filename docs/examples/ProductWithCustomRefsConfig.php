@@ -2,7 +2,7 @@
 
 /**
  * Example: Using Custom Reference Names with setRefName() and refByName()
- * 
+ *
  * This example demonstrates how to create custom aliases for schemas
  * and reference them easily throughout your API documentation.
  */
@@ -10,14 +10,14 @@
 namespace App\ApiDoc;
 
 use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Config\ApiDocConfigInterface;
+use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 
 class ProductWithCustomRefsConfig implements ApiDocConfigInterface
 {
     public function configure(ApiDocBuilder $builder): void
     {
         // ✨ Step 1: Define schemas with custom reference names
-        
+
         // Product schema with alias 'Product  '
         $builder
             ->addSchema('ProductEntity')  // Real component name in OpenAPI
@@ -52,7 +52,7 @@ class ProductWithCustomRefsConfig implements ApiDocConfigInterface
             ->end();
 
         // ✨ Step 2: Reference schemas using custom names
-        
+
         // GET /api/products/{id} - Returns a Product
         $builder
             ->addRoute()

@@ -3,7 +3,7 @@
 namespace Ehyiah\ApiDocBundle\Loader;
 
 use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Config\ApiDocConfigInterface;
+use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 
 /**
  * Loader for PHP configuration classes.
