@@ -4,4 +4,6 @@ services:
             context: docker/php
         volumes:
             - .:/var/www/bundle:cached
+        ports:
+            - "8000:8000"
         tty: true

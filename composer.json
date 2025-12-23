@@ -40,6 +40,8 @@
     },
     "require-dev": {
         "symfony/framework-bundle": "^7.0|^6.1",
+        "symfony/twig-bundle": "^7.0|^6.1",
+        "symfony/routing": "^7.0|^6.1",
         "friendsofphp/php-cs-fixer": "^3.48",
         "phpstan/phpstan": "^1.10",
         "phpstan/phpstan-symfony": "^1.3",
@@ -56,7 +58,8 @@
         "ci": [
             "@phpcsfixer-lint",
             "@phpstan"
-        ]
+        ],
+        "serve": "php -S localhost:8000 -t tests/App/public"
     },
     "config": {
         "allow-plugins": {
