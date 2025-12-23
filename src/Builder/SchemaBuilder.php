@@ -34,7 +34,15 @@ class SchemaBuilder
     /**
      * Set the schema type.
      *
-     * @param string $type Type: 'object', 'array', 'string', 'integer', 'number', 'boolean'
+     * OpenAPI types:
+     * - 'string': Text data
+     * - 'integer': Whole numbers (use format 'int32' or 'int64' for precision)
+     * - 'number': Floating-point numbers (use format 'float' or 'double' for precision)
+     * - 'boolean': true/false values
+     * - 'array': List of items (define items schema with items() method)
+     * - 'object': Key-value structure (define properties with addProperty() or property())
+     *
+     * @param string $type Type: 'string', 'integer', 'number', 'boolean', 'array', 'object'
      */
     public function type(string $type): self
     {
@@ -80,7 +88,8 @@ class SchemaBuilder
     }
 
     /**
-     * Add a property to the schema.
+     * Add a property to the schema using an array definition.
+     * Use this for complex cases or when you need full control over the schema.
      *
      * @param string $name Property name
      * @param array<string, mixed> $schema Property schema definition
@@ -90,6 +99,24 @@ class SchemaBuilder
         $this->properties[$name] = $schema;
 
         return $this;
+    }
+
+    /**
+     * Add a property to the schema using a fluent builder.
+     * Provides IDE autocompletion for property definition.
+     *
+     * Example:
+     *   ->addProperty('age')
+     *       ->type('integer')
+     *       ->nullable()
+     *       ->example(30)
+     *   ->end()
+     *
+     * @param string $name Property name
+     */
+    public function addProperty(string $name): PropertyBuilder
+    {
+        return new PropertyBuilder($this, $name);
     }
 
     /**
@@ -107,7 +134,12 @@ class SchemaBuilder
     /**
      * Set the format for this schema.
      *
-     * @param string $format Format (e.g., 'email', 'date-time', 'uuid')
+     * Common formats by type:
+     * - string: 'date', 'date-time', 'password', 'byte', 'binary', 'email', 'uuid', 'uri', 'hostname', 'ipv4', 'ipv6'
+     * - integer: 'int32', 'int64'
+     * - number: 'float', 'double'
+     *
+     * @param string $format Format: 'date', 'date-time', 'password', 'byte', 'binary', 'email', 'uuid', 'uri', 'hostname', 'ipv4', 'ipv6', 'int32', 'int64', 'float', 'double'
      */
     public function format(string $format): self
     {

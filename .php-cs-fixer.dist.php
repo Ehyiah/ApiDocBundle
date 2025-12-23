@@ -4,7 +4,7 @@ $finder = PhpCsFixer\Finder::create()
     ->notPath('Kernel.php')
     ->notPath('bootstrap.php')
     ->notPath('Migrations/')
-    ->notPath('/tests/App/var')
+    ->notPath('tests/App/var')
     ->in(__DIR__ . '/src')
     ->in(__DIR__ . '/tests')
 ;
