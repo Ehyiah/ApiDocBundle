@@ -61,7 +61,7 @@ class ExampleApiDocConfig implements ApiDocConfigInterface
             ->addRoute()
                 ->path('/api/users2/{id}')
                 ->method('GET')
-                ->operationId('getUser')
+                ->operationId('getUser2')
                 ->summary('Get user by ID')
                 ->description('Returns a single user with all details')
                 ->tag('Users')

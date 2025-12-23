@@ -7,7 +7,7 @@ namespace Ehyiah\ApiDocBundle\Builder;
  */
 class SchemaBuilder
 {
-    /** @var ApiDocBuilder|ContentBuilder|null */
+    /** @var ApiDocBuilder|ContentBuilder|ResponseBuilder|null */
     private $parentBuilder;
 
     private ?string $schemaName = null;
@@ -22,8 +22,8 @@ class SchemaBuilder
     private array $requiredFields = [];
 
     /**
-     * @param ApiDocBuilder|ContentBuilder|null $parentBuilder
      * @param string|null $schemaName Optional schema name (for component schemas)
+     * @param mixed|null $parentBuilder
      */
     public function __construct($parentBuilder = null, ?string $schemaName = null)
     {
@@ -306,10 +306,8 @@ class SchemaBuilder
 
     /**
      * Finish building this schema and return to the parent builder.
-     *
-     * @return ApiDocBuilder|ContentBuilder
      */
-    public function end()
+    public function end(): ApiDocBuilder|ContentBuilder|ResponseBuilder|null
     {
         if ($this->parentBuilder instanceof ApiDocBuilder && null !== $this->schemaName) {
             $this->parentBuilder->registerSchema($this->schemaName, $this->buildSchemaArray());

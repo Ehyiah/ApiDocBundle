@@ -124,10 +124,8 @@ class ContentBuilder
 
     /**
      * Finish building this content and return to the parent builder.
-     *
-     * @return RequestBodyBuilder|ResponseBuilder
      */
-    public function end()
+    public function end(): RequestBodyBuilder|ResponseBuilder
     {
         return $this->parentBuilder;
     }
