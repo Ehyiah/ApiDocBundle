@@ -5,7 +5,6 @@ namespace Ehyiah\ApiDocBundle\Tests\App;
 use Ehyiah\ApiDocBundle\EhyiahApiDocBundle;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
-use Symfony\Bundle\MonologBundle\MonologBundle;
 use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
@@ -18,7 +17,6 @@ class TestKernel extends Kernel
     {
         return [
             new FrameworkBundle(),
-            new MonologBundle(),
             new TwigBundle(),
             new EhyiahApiDocBundle(),
         ];

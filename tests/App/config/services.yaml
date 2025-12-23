@@ -11,13 +11,6 @@ twig:
     paths:
         '%kernel.project_dir%/../../templates': EhyiahApiDoc
 
-monolog:
-    handlers:
-        main:
-            type: stream
-            path: '%kernel.logs_dir%/%kernel.environment%.log'
-            level: debug
-
 services:
     _defaults:
         autowire: true
