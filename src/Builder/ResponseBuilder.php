@@ -16,6 +16,9 @@ class ResponseBuilder
     /** @var array<ContentBuilder> */
     private array $contentBuilders = [];
 
+    /** @var array<HeaderBuilder> */
+    private array $headerBuilders = [];
+
     public function __construct(RouteBuilder $routeBuilder, int $statusCode)
     {
         $this->routeBuilder = $routeBuilder;
@@ -61,6 +64,37 @@ class ResponseBuilder
     }
 
     /**
+     * Start building a response header using the fluent builder.
+     *
+     * Common headers: X-Rate-Limit-Limit, X-Rate-Limit-Remaining, X-Rate-Limit-Reset,
+     * X-Request-ID, ETag, Last-Modified, Location, Retry-After, X-Total-Count
+     *
+     * @param string $name Header name (e.g., 'X-Rate-Limit-Remaining')
+     */
+    public function header(string $name): HeaderBuilder
+    {
+        $builder = new HeaderBuilder($this, $name);
+        $this->headerBuilders[] = $builder;
+
+        return $builder;
+    }
+
+    /**
+     * Add a response header using an array definition.
+     *
+     * @param string $name Header name
+     * @param array<string, mixed> $definition Header definition
+     */
+    public function headerArray(string $name, array $definition): self
+    {
+        $builder = new HeaderBuilder($this, $name);
+        // We need to store the raw definition, so we'll handle this differently
+        $this->definition['headers'][$name] = $definition;
+
+        return $this;
+    }
+
+    /**
      * Finish building this response and return to the route builder.
      */
     public function end(): RouteBuilder
@@ -87,6 +121,17 @@ class ResponseBuilder
      */
     public function buildArray(): array
     {
+        // Build headers from HeaderBuilder instances
+        if (!empty($this->headerBuilders)) {
+            if (!isset($this->definition['headers'])) {
+                $this->definition['headers'] = [];
+            }
+            foreach ($this->headerBuilders as $headerBuilder) {
+                $headerName = $headerBuilder->getName();
+                $this->definition['headers'][$headerName] = $headerBuilder->buildArray();
+            }
+        }
+
         // Build content
         if (!empty($this->contentBuilders)) {
             $this->definition['content'] = [];

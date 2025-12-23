@@ -161,7 +161,50 @@ class ApiDocBuilder
      */
     public function registerInfo(array $info): void
     {
-        $this->info = array_merge_recursive($this->info, $info);
+        $this->info = $this->mergeConfig($this->info, $info);
+    }
+
+    /**
+     * Deep merge two arrays, with later values overwriting earlier ones for scalar values.
+     * Unlike array_merge_recursive, this does not convert scalar values to arrays.
+     *
+     * @param array<string, mixed> $base Base array
+     * @param array<string, mixed> $override Array to merge (values take precedence)
+     *
+     * @return array<string, mixed>
+     */
+    private function mergeConfig(array $base, array $override): array
+    {
+        foreach ($override as $key => $value) {
+            if (is_array($value) && isset($base[$key]) && is_array($base[$key])) {
+                // Both are arrays - merge recursively (but only for associative arrays)
+                if ($this->isAssociativeArray($value) && $this->isAssociativeArray($base[$key])) {
+                    $base[$key] = $this->mergeConfig($base[$key], $value);
+                } else {
+                    // Sequential arrays (like servers, tags) - append
+                    $base[$key] = array_merge($base[$key], $value);
+                }
+            } else {
+                // Scalar or new key - override
+                $base[$key] = $value;
+            }
+        }
+
+        return $base;
+    }
+
+    /**
+     * Check if an array is associative (has string keys).
+     *
+     * @param array<mixed> $array
+     */
+    private function isAssociativeArray(array $array): bool
+    {
+        if ([] === $array) {
+            return false;
+        }
+
+        return array_keys($array) !== range(0, count($array) - 1);
     }
 
     /**
