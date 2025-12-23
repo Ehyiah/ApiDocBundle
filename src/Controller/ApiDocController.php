@@ -42,10 +42,7 @@ class ApiDocController extends AbstractController
         /** @var string|null $baseUrlParameter */
         $baseUrlParameter = $this->parameterBag->get('ehyiah_api_doc.site_urls');
 
-        // Load from YAML files
-        $config = LoadApiDocConfigHelper::loadApiDocConfig($location, $this->kernel->getProjectDir(), $dumpLocation);
-
-        // Load from PHP config classes and merge
+        $config = LoadApiDocConfigHelper::loadYamlConfigDoc($location, $this->kernel->getProjectDir(), $dumpLocation);
         $phpConfig = $this->loadApiDocConfigHelper->loadPhpConfigDoc();
         $config = LoadApiDocConfigHelper::mergeConfigs($config, $phpConfig);
 

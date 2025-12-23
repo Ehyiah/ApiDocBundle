@@ -92,7 +92,7 @@ abstract class AbstractGenerateComponentCommand extends Command
             $fileSystem->mkdir($dumpDirectory);
         }
 
-        $existingConfigs = LoadApiDocConfigHelper::loadApiDocConfig(
+        $existingConfigs = LoadApiDocConfigHelper::loadYamlConfigDoc(
             $this->dumpLocation,
             $this->kernel->getProjectDir(),
             $dumpPath,

@@ -22,7 +22,7 @@ final class LoadApiDocConfigHelper
     /**
      * @return array<mixed>
      */
-    public static function loadApiDocConfig(string $location, string $kernelProjectDir, string $dumpLocation): array
+    public static function loadYamlConfigDoc(string $location, string $kernelProjectDir, string $dumpLocation): array
     {
         $config = [];
         $finder = new Finder();
