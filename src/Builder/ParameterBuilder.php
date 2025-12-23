@@ -12,7 +12,7 @@ class ParameterBuilder
     /** @var array<string, mixed> */
     private array $definition = [];
 
-    /** @var array<ExampleBuilder> */
+    /** @var ExampleBuilder[] */
     private array $exampleBuilders = [];
 
     public function __construct(RouteBuilder $routeBuilder)
@@ -125,8 +125,6 @@ class ParameterBuilder
      *   ->end()
      *
      * @param string $name The name/key for this example
-     *
-     * @return ExampleBuilder<self>
      */
     public function addExample(string $name): ExampleBuilder
     {

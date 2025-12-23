@@ -16,7 +16,7 @@ class HeaderBuilder
     /** @var array<string, mixed> */
     private array $definition = [];
 
-    /** @var array<ExampleBuilder> */
+    /** @var ExampleBuilder[] */
     private array $exampleBuilders = [];
 
     public function __construct(ResponseBuilder $responseBuilder, string $name)
@@ -185,8 +185,6 @@ class HeaderBuilder
      *   ->end()
      *
      * @param string $name The name/key for this example
-     *
-     * @return ExampleBuilder<self>
      */
     public function addExample(string $name): ExampleBuilder
     {

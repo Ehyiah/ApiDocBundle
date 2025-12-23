@@ -9,12 +9,10 @@ use InvalidArgumentException;
  *
  * OpenAPI 3.0 Example Object specification.
  * Can be used with MediaType (Content), Parameter, and Header objects.
- *
- * @template T of ContentBuilder|ParameterBuilder|HeaderBuilder
  */
 class ExampleBuilder
 {
-    /** @var T */
+    /** @var ContentBuilder|ParameterBuilder|HeaderBuilder */
     private $parentBuilder;
 
     private string $name;
@@ -23,7 +21,7 @@ class ExampleBuilder
     private array $definition = [];
 
     /**
-     * @param T $parentBuilder The parent builder
+     * @param ContentBuilder|ParameterBuilder|HeaderBuilder $parentBuilder The parent builder
      * @param string $name The name/key for this example
      */
     public function __construct($parentBuilder, string $name)
@@ -92,7 +90,7 @@ class ExampleBuilder
     /**
      * Finish building this example and return to the parent builder.
      *
-     * @return T
+     * @return ContentBuilder|ParameterBuilder|HeaderBuilder
      */
     public function end()
     {

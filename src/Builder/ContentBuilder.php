@@ -22,7 +22,7 @@ class ContentBuilder
 
     private ?ApiDocBuilder $apiDocBuilder = null;
 
-    /** @var array<ExampleBuilder> */
+    /** @var ExampleBuilder[] */
     private array $exampleBuilders = [];
 
     /**
@@ -144,8 +144,6 @@ class ContentBuilder
      *   ->end()
      *
      * @param string $name The name/key for this example
-     *
-     * @return ExampleBuilder<self>
      */
     public function addExample(string $name): ExampleBuilder
     {
