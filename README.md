@@ -22,7 +22,8 @@ You will find examples after the bundle is installed in the default directory /s
 - [Installation](#installation)
 - [Usage](#usage)
   - [YAML Configuration](#yaml-configuration)
-  - [PHP Configuration Classes](#php-configuration-classes-new)
+  - [PHP Configuration Classes](#php-configuration-classes)
+  - [IDE Navigation with ApiDoc Attribute](#ide-navigation-with-apidoc-attribute)
 - [Components generation via commands](#generating-apidoc-components)
 ---
 
@@ -99,6 +100,39 @@ class UserApiDocConfig implements ApiDocConfigInterface
 - ✅ **Flexible** - Generate documentation dynamically
 - ✅ **Reusable** - Share common patterns across routes
 - ✅ **Hybrid** - Works alongside YAML files
+
+## IDE Navigation with ApiDoc Attribute
+
+To improve navigation between your controllers and their API documentation, you can use the `#[ApiDoc]` attribute.
+This attribute creates a direct link from your controller methods to the PHP configuration class where the documentation is defined.
+
+**Ctrl+Click** on the class reference in your IDE to navigate directly to the documentation!
+
+```php
+<?php
+namespace App\Controller;
+
+use Ehyiah\ApiDocBundle\Attributes\ApiDoc;
+use App\ApiDoc\UserApiDocConfig;
+
+class UserController
+{
+    #[ApiDoc(UserApiDocConfig::class)]
+    public function getUser(int $id): Response
+    {
+        // Ctrl+Click on UserApiDocConfig::class to navigate to the documentation
+    }
+
+    // You can also reference a specific method in the config class
+    #[ApiDoc(UserApiDocConfig::class, 'configureCreateUser')]
+    public function createUser(Request $request): Response
+    {
+        // ...
+    }
+}
+```
+
+This attribute is purely for IDE navigation - it has no runtime behavior but makes it easy to find and maintain your API documentation.
 
 ## YAML Directory Structure
 
