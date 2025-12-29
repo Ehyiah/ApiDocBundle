@@ -174,7 +174,7 @@ class UserController
 
 This attribute is purely for IDE navigation - it has no runtime behavior but makes it easy to find and maintain your API documentation.
 
-## YAML Directory Structure
+## Directory Structure
 
 ## Recommended directory structure
 If you want to use generation commands (see below) but do not want to use Auto-generated components names, 
@@ -192,30 +192,29 @@ So if you want to call your component ``MyAwesomeDto`` instead of default name, 
 
 
 # Generating ApiDoc Components
-**WARNING** : this is still a work in progress feature. You can use it but always check if the generated componant is good.
-
+**WARNING**: this is still a work in progress feature. You can use it but always check if the generated componant is good.
 
 ### Scan Directories for Component Generation
 
 You can configure which directories are scanned when using the component generation commands (e.g. `apidocbundle:component:schema`).
-By default, only `src\Entity` is scanned.
+By default, only `src/Entity` is scanned.
 
 ```yaml
 ehyiah_api_doc:
     # ...
     scan_directories:
-        - 'src\Entity'
-        - 'src\DTO' ...
+        - 'src/Entity'
+        - 'src/DTO' ...
 ```
 
 Some commands are included in the bundle to pre-generate components.
 You will probably have to edit the generated files or at least check if everything is okay.
 
-| Command                       | Arguments                                                                                   | Options                                                                                                                                                                                                                          | Generation type                                                                          |
-|:------------------------------|:--------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------|
-| apidocbundle:component:schema | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO)               | **--output** (-o) specify a custom output directory to dump the generated file from the kernel_project_dir<br/> **--skip** (-s) list of properties to skip _(you can pass multiple times this option to skip many properties)_ **--format** (-f) output format: `yaml`, `php`, or `both` (default: `yaml`)  | Generate a [schema](https://swagger.io/specification/v3/#schema-object)                  |
-| apidocbundle:component:body   | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO or a FormType) | **--reference** (-r) specify if a reference must be used instead of regenerating a new schema in the requestBody **--format** (-f) output format: `yaml`, `php`, or `both` (default: `yaml`)                                                                                                               | Generate a [RequestBody](https://swagger.io/docs/specification/describing-request-body/) |
-| apidocbundle:route:generate   | **route**: Chemin de la route (exemple: /api/users)<br/>**method**: Méthode HTTP (GET, POST, PUT, DELETE...) | **--tag** (-t) Tags à associer à la route<br/>**--description** (-d) Description de la route<br/>**--response-schema** (-rs) Nom du schéma à utiliser pour la réponse<br/>**--request-body** (-rb) Nom du requestBody à utiliser<br/>**--output** (-o) Répertoire de sortie<br/>**--filename** (-f) Nom du fichier à générer | Generate a [Path Item Object](https://swagger.io/specification/v3/#path-item-object)     |
+| Command                       | Arguments                                                                                               | Options                                                                                                                                                                                                                          | Generation type                                                                          |
+|:------------------------------|:--------------------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------|
+| apidocbundle:component:schema | (optionnal) pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO)               | **--output** (-o) specify a custom output directory to dump the generated file from the kernel_project_dir<br/> **--skip** (-s) list of properties to skip _(you can pass multiple times this option to skip many properties)_ **--format** (-f) output format: `yaml`, `php`, or `both` (default: `yaml`)  | Generate a [schema](https://swagger.io/specification/v3/#schema-object)                  |
+| apidocbundle:component:body   | (optionnal) pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO or a FormType) | **--reference** (-r) specify if a reference must be used instead of regenerating a new schema in the requestBody **--format** (-f) output format: `yaml`, `php`, or `both` (default: `yaml`)                                                                                                               | Generate a [RequestBody](https://swagger.io/docs/specification/describing-request-body/) |
+| apidocbundle:route:generate   | **route**: route path (exemple: /api/users)<br/>**method**: Méthode HTTP (GET, POST, PUT, DELETE...)    | **--tag** (-t) Tags à associer à la route<br/>**--description** (-d) Description de la route<br/>**--response-schema** (-rs) Nom du schéma à utiliser pour la réponse<br/>**--request-body** (-rb) Nom du requestBody à utiliser<br/>**--output** (-o) Répertoire de sortie<br/>**--filename** (-f) Nom du fichier à générer | Generate a [Path Item Object](https://swagger.io/specification/v3/#path-item-object)     |
 
 ### Output Format
 
