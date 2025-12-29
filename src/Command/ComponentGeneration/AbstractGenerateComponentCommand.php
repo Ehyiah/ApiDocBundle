@@ -123,7 +123,7 @@ abstract class AbstractGenerateComponentCommand extends Command
         }
 
         // Check if component already exists in YAML file (using trait for consistent interaction)
-        if (!$this->checkExistingYamlFile($dumpLocation, $input, $output)) {
+        if (!$this->checkExistingYamlFile($dumpLocation, $input, $output, $array)) {
             return;
         }
 
@@ -467,8 +467,10 @@ abstract class AbstractGenerateComponentCommand extends Command
             $dumpLocation = $dumpDirectory . $componentName . '.php';
         }
 
+        $phpCode = $this->generatePhpBuilderCode($array, $componentName, $componentType);
+
         // Check if component already exists in PHP file (using trait)
-        if (!$this->checkExistingPhpFile($dumpLocation, $input, $output)) {
+        if (!$this->checkExistingPhpFile($dumpLocation, $input, $output, $phpCode)) {
             return;
         }
 
@@ -480,7 +482,6 @@ abstract class AbstractGenerateComponentCommand extends Command
             }
         }
 
-        $phpCode = $this->generatePhpBuilderCode($array, $componentName, $componentType);
         $this->writePhpFile($phpCode, $dumpLocation, $output);
     }
 

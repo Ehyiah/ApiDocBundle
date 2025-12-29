@@ -205,7 +205,7 @@ final class GenerateRouteCommand extends Command
         $phpPath = $this->buildOutputPath($outputDir, $filename, 'php');
 
         // Check if YAML file already exists
-        if (!$this->checkExistingYamlFile($yamlPath, $input, $output)) {
+        if (!$this->checkExistingYamlFile($yamlPath, $input, $output, $array)) {
             return false;
         }
 
@@ -235,8 +235,10 @@ final class GenerateRouteCommand extends Command
         $phpPath = $this->buildOutputPath($outputDir, $filename, 'php');
         $yamlPath = $this->buildOutputPath($outputDir, $filename, 'yaml');
 
+        $phpCode = $this->generatePhpBuilderCode($array, $route, $method);
+
         // Check if PHP file already exists
-        if (!$this->checkExistingPhpFile($phpPath, $input, $output)) {
+        if (!$this->checkExistingPhpFile($phpPath, $input, $output, $phpCode)) {
             return false;
         }
 
@@ -245,7 +247,6 @@ final class GenerateRouteCommand extends Command
             return false;
         }
 
-        $phpCode = $this->generatePhpBuilderCode($array, $route, $method);
         $this->writePhpFile($phpCode, $phpPath, $output);
 
         return true;
