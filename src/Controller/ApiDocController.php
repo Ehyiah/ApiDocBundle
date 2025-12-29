@@ -24,7 +24,7 @@ class ApiDocController extends AbstractController
         $json = $this->loadConfigFiles();
         $ui = $request->query->getString('ui') ?: $this->parameterBag->get('ehyiah_api_doc.ui');
 
-        if (!in_array($ui, ['swagger', 'redoc'], true)) {
+        if (!in_array($ui, ['swagger', 'redoc', 'stoplight', 'rapidoc', 'scalar'], true)) {
             $ui = 'swagger';
         }
 

@@ -1,8 +1,8 @@
 # ApiDocBundle
-Symfony Bundle to deal with API documentation using **Swagger UI** or **Redoc** with **YAML files** or **PHP classes**.
+Symfony Bundle to deal with API documentation using multiple UI options with **YAML files** or **PHP classes**.
 
 ## What this bundle does
-- Display API documentation with Swagger UI or Redoc
+- Display API documentation with Swagger UI, Redoc, Stoplight Elements, RapiDoc or Scalar
 - Generate schemas, request bodies and more via commands (currently WIP, only supports YAML dump file)
 - Support both YAML and PHP configuration (or mix both!)
 
@@ -14,7 +14,7 @@ You can create as many files/classes as you want and organize them to your needs
 
 To write YAML files, check the OpenAPI specifications: [OpenApi](https://swagger.io/specification/v3/)
 
-This bundle uses [Swagger UI](https://swagger.io/tools/swagger-ui/) or [Redoc](https://redocly.com/redoc) to render the final result.
+This bundle uses [Swagger UI](https://swagger.io/tools/swagger-ui/), [Redoc](https://redocly.com/redoc), [Stoplight Elements](https://stoplight.io/open-source/elements), [RapiDoc](https://rapidocweb.com/) or [Scalar](https://scalar.com/) to render the final result.
 
 You will find examples after the bundle is installed in the default directory /src/Swagger.
 
@@ -45,12 +45,15 @@ Then Run
 
 ## UI Selection
 
-This bundle supports two documentation UIs:
+This bundle supports five documentation UIs:
 
-| UI | Description | Try it out |
-|:---|:------------|:-----------|
-| **Swagger UI** | Interactive API documentation | ✅ Yes |
-| **Redoc** | Clean, elegant documentation | ❌ No |
+| UI | Value | Description | Try it out | Links |
+|:---|:------|:------------|:-----------|:------|
+| **Swagger UI** | `swagger` | The standard, widely used | ✅ Yes | [GitHub](https://github.com/swagger-api/swagger-ui) - [Demo](https://petstore.swagger.io/) |
+| **Redoc** | `redoc` | Clean, elegant 3-column layout | ❌ No | [GitHub](https://github.com/Redocly/redoc) - [Demo](https://redocly.github.io/redoc/) |
+| **Stoplight Elements** | `stoplight` | Modern, customizable | ✅ Yes | [GitHub](https://github.com/stoplightio/elements) - [Demo](https://elements-demo.stoplight.io/) |
+| **RapiDoc** | `rapidoc` | Lightweight, dark/light themes | ✅ Yes | [GitHub](https://github.com/rapi-doc/RapiDoc) - [Demo](https://rapidocweb.com/examples.html) |
+| **Scalar** | `scalar` | Beautiful, modern design | ✅ Yes | [GitHub](https://github.com/scalar/scalar) - [Demo](https://docs.scalar.com/swagger-editor) |
 
 ### Default UI
 
@@ -58,7 +61,7 @@ Configure the default UI in your bundle configuration (`config/packages/ehyiah_a
 
 ```yaml
 ehyiah_api_doc:
-    ui: swagger  # or 'redoc'
+    ui: swagger  # swagger, redoc, stoplight, rapidoc or scalar
 ```
 
 ### Switching UI via Query Parameter
@@ -66,10 +69,13 @@ ehyiah_api_doc:
 You can switch between UIs on the fly using the `ui` query parameter:
 
 - `/api/doc` → Uses the default UI (from config)
-- `/api/doc?ui=swagger` → Forces Swagger UI (with "Try it out" feature)
-- `/api/doc?ui=redoc` → Forces Redoc (elegant documentation)
+- `/api/doc?ui=swagger` → Swagger UI
+- `/api/doc?ui=redoc` → Redoc
+- `/api/doc?ui=stoplight` → Stoplight Elements
+- `/api/doc?ui=rapidoc` → RapiDoc
+- `/api/doc?ui=scalar` → Scalar
 
-This is useful if you want to use Redoc for public documentation but need Swagger UI for testing API calls.
+This is useful if you want to use one UI for public documentation and another for testing API calls.
 
 ---
 

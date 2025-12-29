@@ -57,9 +57,9 @@ class EhyiahApiDocBundle extends AbstractBundle
                     ->info('Enable PHP configuration classes for API documentation')
                 ->end()
                 ->enumNode('ui')
-                    ->values(['swagger', 'redoc'])
+                    ->values(['swagger', 'redoc', 'stoplight', 'rapidoc', 'scalar'])
                     ->defaultValue('swagger')
-                    ->info('Choose the UI to render the documentation: swagger or redoc')
+                    ->info('Choose the UI to render the documentation: swagger, redoc, stoplight, rapidoc or scalar')
                 ->end()
             ->end()
         ;

@@ -9,6 +9,9 @@ use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Kernel;
 
+/**
+ * @coversNothing
+ */
 class BundleConfigurationTest extends TestCase
 {
     public function testDefaultUiIsSwagger(): void
@@ -40,8 +43,8 @@ class ApiDocTestKernel extends Kernel
     public function __construct(array $apiDocConfig = [])
     {
         parent::__construct('test', true);
-        
-        // Add required defaults 
+
+        // Add required defaults
         $this->apiDocConfig = array_merge([
             'source_path' => 'src/Swagger',
             'dump_path' => 'var/Swagger',
@@ -62,7 +65,7 @@ class ApiDocTestKernel extends Kernel
             'test' => true,
             'secret' => 'test',
         ]);
-        
+
         $container->extension('ehyiah_api_doc', $this->apiDocConfig);
     }
 
