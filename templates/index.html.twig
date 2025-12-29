@@ -3,22 +3,73 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="SwaggerUI" />
+    <meta name="description" content="API Documentation" />
     <title>API doc Bundle</title>
 
-    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui.css" />
-    <script src="https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-bundle.js" crossorigin></script>
+    {% if ui == 'swagger' %}
+        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui.css" />
+        <script src="https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-bundle.js" crossorigin></script>
+    {% elseif ui == 'redoc' %}
+        <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+    {% elseif ui == 'stoplight' %}
+        <link rel="stylesheet" href="https://unpkg.com/@stoplight/elements@8/styles.min.css" />
+        <script src="https://unpkg.com/@stoplight/elements@8/web-components.min.js" crossorigin></script>
+    {% elseif ui == 'rapidoc' %}
+        <script type="module" src="https://unpkg.com/rapidoc@9/dist/rapidoc-min.js"></script>
+    {% elseif ui == 'scalar' %}
+        <style>
+            body { margin: 0; }
+        </style>
+    {% endif %}
   </head>
 
   <body>
-    <div id="swagger-ui"></div>
-    <script>
-      window.onload = () => {
-        window.ui = SwaggerUIBundle({
-          spec: {{ json|raw }},
-          dom_id: '#swagger-ui',
-        });
-      };
-    </script>
+    {% if ui == 'swagger' %}
+        <div id="swagger-ui"></div>
+        <script>
+            window.onload = () => {
+                window.ui = SwaggerUIBundle({
+                    spec: {{ json|raw }},
+                    dom_id: '#swagger-ui',
+                });
+            };
+        </script>
+    {% elseif ui == 'redoc' %}
+        <div id="redoc-container"></div>
+        <script>
+            Redoc.init({{ json|raw }}, {
+                scrollYOffset: 50
+            }, document.getElementById('redoc-container'));
+        </script>
+    {% elseif ui == 'stoplight' %}
+        <elements-api
+            id="docs"
+            router="hash"
+            layout="sidebar"
+        ></elements-api>
+        <script>
+            const spec = {{ json|raw }};
+            document.getElementById('docs').apiDescriptionDocument = JSON.stringify(spec);
+        </script>
+    {% elseif ui == 'rapidoc' %}
+        <rapi-doc
+            id="rapidoc"
+            theme="light"
+            render-style="read"
+            show-header="false"
+            allow-try="true"
+        ></rapi-doc>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const spec = {{ json|raw }};
+                document.getElementById('rapidoc').loadSpec(spec);
+            });
+        </script>
+    {% elseif ui == 'scalar' %}
+        <script id="api-reference" type="application/json">
+            {{ json|raw }}
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    {% endif %}
   </body>
 </html>

@@ -6,6 +6,7 @@ use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use LogicException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
 
@@ -18,12 +19,18 @@ class ApiDocController extends AbstractController
     ) {
     }
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $json = $this->loadConfigFiles();
+        $ui = $request->query->getString('ui') ?: $this->parameterBag->get('ehyiah_api_doc.ui');
+
+        if (!in_array($ui, ['swagger', 'redoc', 'stoplight', 'rapidoc', 'scalar'], true)) {
+            $ui = 'swagger';
+        }
 
         return $this->render('@EhyiahApiDoc/index.html.twig', [
             'json' => $json,
+            'ui' => $ui,
         ]);
     }
 

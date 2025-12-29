@@ -1,8 +1,8 @@
 # ApiDocBundle
-Symfony Bundle to deal with API documentation using SwaggerUI with **YAML files** or **PHP classes**.
+Symfony Bundle to deal with API documentation using multiple UI options with **YAML files** or **PHP classes**.
 
 ## What this bundle does
-- Display API documentation with SwaggerUI
+- Display API documentation with Swagger UI, Redoc, Stoplight Elements, RapiDoc or Scalar
 - Generate schemas, request bodies and more via commands (currently WIP, only supports YAML dump file)
 - Support both YAML and PHP configuration (or mix both!)
 
@@ -14,12 +14,14 @@ You can create as many files/classes as you want and organize them to your needs
 
 To write YAML files, check the OpenAPI specifications: [OpenApi](https://swagger.io/specification/v3/)
 
-This bundle uses the [Swagger UI](https://swagger.io/tools/swagger-ui/) to render the final result.
+This bundle uses [Swagger UI](https://swagger.io/tools/swagger-ui/), [Redoc](https://redocly.com/redoc), [Stoplight Elements](https://stoplight.io/open-source/elements), [RapiDoc](https://rapidocweb.com/) or [Scalar](https://scalar.com/) to render the final result.
 
 You will find examples after the bundle is installed in the default directory /src/Swagger.
 
 ---
 - [Installation](#installation)
+- [Configuration](#configuration)
+  - [UI Selection](#ui-selection)
 - [Usage](#usage)
   - [YAML Configuration](#yaml-configuration)
   - [PHP Configuration Classes](#php-configuration-classes)
@@ -38,6 +40,44 @@ Then Run
 ```sh
   composer require ehyiah/apidoc-bundle
 ```
+
+# Configuration
+
+## UI Selection
+
+This bundle supports five documentation UIs:
+
+| UI | Value | Description | Try it out | Links |
+|:---|:------|:------------|:-----------|:------|
+| **Swagger UI** | `swagger` | The standard, widely used | ✅ Yes | [GitHub](https://github.com/swagger-api/swagger-ui) - [Demo](https://petstore.swagger.io/) |
+| **Redoc** | `redoc` | Clean, elegant 3-column layout | ❌ No | [GitHub](https://github.com/Redocly/redoc) - [Demo](https://redocly.github.io/redoc/) |
+| **Stoplight Elements** | `stoplight` | Modern, customizable | ✅ Yes | [GitHub](https://github.com/stoplightio/elements) - [Demo](https://elements-demo.stoplight.io/) |
+| **RapiDoc** | `rapidoc` | Lightweight, dark/light themes | ✅ Yes | [GitHub](https://github.com/rapi-doc/RapiDoc) - [Demo](https://rapidocweb.com/examples.html) |
+| **Scalar** | `scalar` | Beautiful, modern design | ✅ Yes | [GitHub](https://github.com/scalar/scalar) - [Demo](https://docs.scalar.com/swagger-editor) |
+
+### Default UI
+
+Configure the default UI in your bundle configuration (`config/packages/ehyiah_api_doc.yaml`):
+
+```yaml
+ehyiah_api_doc:
+    ui: swagger  # swagger, redoc, stoplight, rapidoc or scalar
+```
+
+### Switching UI via Query Parameter
+
+You can switch between UIs on the fly using the `ui` query parameter:
+
+- `/api/doc` → Uses the default UI (from config)
+- `/api/doc?ui=swagger` → Swagger UI
+- `/api/doc?ui=redoc` → Redoc
+- `/api/doc?ui=stoplight` → Stoplight Elements
+- `/api/doc?ui=rapidoc` → RapiDoc
+- `/api/doc?ui=scalar` → Scalar
+
+This is useful if you want to use one UI for public documentation and another for testing API calls.
+
+---
 
 # Usage
 
@@ -159,6 +199,7 @@ You will probably have to edit the generated files or at least check if everythi
 |:------------------------------|:--------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------|
 | apidocbundle:component:schema | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO)               | **--output** (-o) specify a custom output directory to dump the generated file from the kernel_project_dir<br/> **--skip** (-s) list of properties to skip _(you can pass multiple times this option to skip many properties)_ **--format** (-f) output format: `yaml`, `php`, or `both` (default: `yaml`)  | Generate a [schema](https://swagger.io/specification/v3/#schema-object)                  |
 | apidocbundle:component:body   | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO or a FormType) | **--reference** (-r) specify if a reference must be used instead of regenerating a new schema in the requestBody **--format** (-f) output format: `yaml`, `php`, or `both` (default: `yaml`)                                                                                                               | Generate a [RequestBody](https://swagger.io/docs/specification/describing-request-body/) |
+| apidocbundle:route:generate   | **route**: Chemin de la route (exemple: /api/users)<br/>**method**: Méthode HTTP (GET, POST, PUT, DELETE...) | **--tag** (-t) Tags à associer à la route<br/>**--description** (-d) Description de la route<br/>**--response-schema** (-rs) Nom du schéma à utiliser pour la réponse<br/>**--request-body** (-rb) Nom du requestBody à utiliser<br/>**--output** (-o) Répertoire de sortie<br/>**--filename** (-f) Nom du fichier à générer | Generate a [Path Item Object](https://swagger.io/specification/v3/#path-item-object)     |
 
 ### Output Format
 
