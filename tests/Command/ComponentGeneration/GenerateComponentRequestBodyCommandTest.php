@@ -62,6 +62,7 @@ final class GenerateComponentRequestBodyCommandTest extends TestCase
         $commandTester->setInputs(['yes', 'yes', 'yes']);
         $commandTester->execute([
             'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
+            '--format' => 'yaml',
         ]);
 
         $commandTester->assertCommandIsSuccessful();
@@ -93,6 +94,7 @@ final class GenerateComponentRequestBodyCommandTest extends TestCase
         $commandTester->setInputs(['yes', 'yes', 'yes']);
         $commandTester->execute([
             'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyType',
+            '--format' => 'yaml',
         ]);
 
         $commandTester->assertCommandIsSuccessful();

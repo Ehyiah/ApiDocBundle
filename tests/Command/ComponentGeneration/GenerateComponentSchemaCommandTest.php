@@ -61,6 +61,7 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $commandTester->setInputs(['yes', 'yes', 'yes']);
         $commandTester->execute([
             'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
+            '--format' => 'yaml',
         ]);
 
         $commandTester->assertCommandIsSuccessful();
@@ -113,6 +114,7 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $commandTester->execute([
             'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
             '--skip' => ['id', 'skipedValue'],
+            '--format' => 'yaml',
         ]);
 
         $commandTester->assertCommandIsSuccessful();

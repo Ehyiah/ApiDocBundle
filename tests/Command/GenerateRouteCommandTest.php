@@ -60,6 +60,7 @@ class GenerateRouteCommandTest extends TestCase
             '--response-schema' => 'User',
             '--output' => '/src/Swagger',
             '--filename' => 'users_route',
+            '--format' => 'yaml',
         ]);
 
         $this->assertEquals(0, $this->commandTester->getStatusCode());
@@ -86,6 +87,7 @@ class GenerateRouteCommandTest extends TestCase
             'method' => 'POST',
             '--request-body' => 'UserCreate',
             '--filename' => 'create_user',
+            '--format' => 'yaml',
         ]);
 
         $this->assertEquals(0, $this->commandTester->getStatusCode());
@@ -102,6 +104,7 @@ class GenerateRouteCommandTest extends TestCase
     {
         $this->commandTester->execute([
             'route' => '/api/minimal',
+            '--format' => 'yaml',
         ]);
 
         $this->assertEquals(0, $this->commandTester->getStatusCode());
