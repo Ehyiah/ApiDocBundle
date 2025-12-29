@@ -2,6 +2,7 @@
 
 namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
+use ReflectionClass;
 use ReflectionException;
 use ReflectionNamedType;
 use ReflectionProperty;
@@ -11,7 +12,11 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\PropertyInfo\Type;
+
+use function Symfony\Component\String\u;
 
 #[AsCommand(
     name: 'apidocbundle:component:schema',
@@ -25,7 +30,7 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
 
         $this->addArgument(
             name: 'class',
-            mode: InputArgument::REQUIRED,
+            mode: InputArgument::OPTIONAL,
             description: 'name of the file do not add the extension (with the namespace exemple : "App\DTO\PostDTO")',
         );
         $this->addOption(
@@ -42,6 +47,20 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        if (!$input->getArgument('class')) {
+            $io = new SymfonyStyle($input, $output);
+            $classes = $this->getAllClasses();
+
+            if (empty($classes)) {
+                $io->error('No classes found in configured directories.');
+
+                return Command::FAILURE;
+            }
+
+            $fullClassName = $io->choice('Select a class to generate schema for', $classes);
+            $this->reflectionClass = new ReflectionClass($fullClassName);
+        }
+
         $fullClassName = $this->checkIfClassExists($input, $output);
         if (!is_string($fullClassName)) {
             return Command::FAILURE;
@@ -180,5 +199,52 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
     private static function addPropertiesToSchema(array &$array, array $propertiesArray, string $shortClassName): void
     {
         $array['documentation']['components']['schemas'][$shortClassName]['properties'] = $propertiesArray;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getAllClasses(): array
+    {
+        $classes = [];
+        $scanDirectories = $this->parameterBag->get('ehyiah_api_doc.scan_directories');
+
+        if (!is_array($scanDirectories)) {
+            $scanDirectories = ['src'];
+        }
+
+        $finder = new Finder();
+        $projectDir = $this->getKernel()->getProjectDir();
+
+        $directoriesToScan = [];
+        foreach ($scanDirectories as $dir) {
+            $path = $projectDir . '/' . u($dir)->trim('/');
+            if (is_dir($path)) {
+                $directoriesToScan[] = $path;
+            }
+        }
+
+        if (empty($directoriesToScan)) {
+            return [];
+        }
+
+        $finder->in($directoriesToScan)->files()->name('*.php');
+
+        foreach ($finder as $file) {
+            $content = file_get_contents($file->getRealPath());
+            if (false === $content) {
+                continue;
+            }
+            if (preg_match('/namespace\s+(.+?);/', $content, $matches)) {
+                $namespace = $matches[1];
+                if (preg_match('/class\s+(\w+)/', $content, $matches)) {
+                    $className = $matches[1];
+                    $classes[] = $namespace . '\\' . $className;
+                }
+            }
+        }
+        sort($classes);
+
+        return $classes;
     }
 }

@@ -25,6 +25,7 @@ class EhyiahApiDocBundle extends AbstractBundle
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.dump_path', $config['dump_path']);
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.enable_php_config', $config['enable_php_config'] ?? true);
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.ui', $config['ui']);
+        $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.scan_directories', $config['scan_directories']);
     }
 
     private function setParameterIfNotExists(ContainerBuilder $builder, ContainerConfigurator $container, string $name, mixed $value): void
@@ -58,6 +59,11 @@ class EhyiahApiDocBundle extends AbstractBundle
                     ->values(['swagger', 'redoc', 'stoplight', 'rapidoc', 'scalar'])
                     ->defaultValue('swagger')
                     ->info('Choose the UI to render the documentation: swagger, redoc, stoplight, rapidoc or scalar')
+                ->end()
+                ->arrayNode('scan_directories')
+                    ->defaultValue(['src/Entity'])
+                    ->scalarPrototype()->end()
+                    ->info('Directories to scan for classes when generating components')
                 ->end()
             ->end()
         ;

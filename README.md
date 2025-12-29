@@ -194,6 +194,20 @@ So if you want to call your component ``MyAwesomeDto`` instead of default name, 
 # Generating ApiDoc Components
 **WARNING** : this is still a work in progress feature. You can use it but always check if the generated componant is good.
 
+
+### Scan Directories for Component Generation
+
+You can configure which directories are scanned when using the component generation commands (e.g. `apidocbundle:component:schema`).
+By default, only `src\Entity` is scanned.
+
+```yaml
+ehyiah_api_doc:
+    # ...
+    scan_directories:
+        - 'src\Entity'
+        - 'src\DTO' ...
+```
+
 Some commands are included in the bundle to pre-generate components.
 You will probably have to edit the generated files or at least check if everything is okay.
 
