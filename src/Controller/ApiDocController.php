@@ -14,6 +14,7 @@ class ApiDocController extends AbstractController
     public function __construct(
         private readonly KernelInterface $kernel,
         private readonly ParameterBagInterface $parameterBag,
+        private readonly LoadApiDocConfigHelper $loadApiDocConfigHelper,
     ) {
     }
 
@@ -38,11 +39,16 @@ class ApiDocController extends AbstractController
             throw new LogicException('dumpLocation must be a string');
         }
 
-        /** @var string $baseUrlParameter */
+        /** @var string|null $baseUrlParameter */
         $baseUrlParameter = $this->parameterBag->get('ehyiah_api_doc.site_urls');
+
+        $config = LoadApiDocConfigHelper::loadYamlConfigDoc($location, $this->kernel->getProjectDir(), $dumpLocation);
+        $phpConfig = $this->loadApiDocConfigHelper->loadPhpConfigDoc();
+        $config = LoadApiDocConfigHelper::mergeConfigs($config, $phpConfig);
+
+        // Add server URLs
         $urls = LoadApiDocConfigHelper::loadServerUrls($baseUrlParameter);
-        $config = LoadApiDocConfigHelper::loadApiDocConfig($location, $this->kernel->getProjectDir(), $dumpLocation);
-        $config = array_merge_recursive($config, $urls);
+        $config = LoadApiDocConfigHelper::mergeConfigs($config, $urls);
 
         return json_encode($config);
     }

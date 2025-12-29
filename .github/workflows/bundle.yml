@@ -1,5 +1,5 @@
 # https://help.github.com/en/actions
-name: CI process for Symfony
+name: CI process for Symfony Bundle ApiDoc
 on:
     push:
     pull_request:
@@ -10,11 +10,11 @@ on:
 jobs:
     quality:
         name: Symfony Api Doc Bundle (PHP ${{ matrix.php-versions }})
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: true
             matrix:
-                php-versions: ['8.1', '8.2', '8.3']
+                php-versions: ['8.4']
 
         steps:
             # —— Setup Github actions 🐙 —————————————————————————————————————————————
@@ -76,7 +76,7 @@ jobs:
         strategy:
             fail-fast: true
             matrix:
-                php-versions: [ '8.1', '8.2', '8.3' ]
+                php-versions: [ '8.4' ]
         steps:
             - uses: actions/checkout@v4
             - uses: symfonycorp/security-checker-action@v4

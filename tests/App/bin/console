@@ -1,0 +1,11 @@
+#!/usr/bin/env php
+<?php
+
+use Ehyiah\ApiDocBundle\Tests\App\TestKernel;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
+
+require_once dirname(__DIR__, 3) . '/vendor/autoload.php';
+
+$kernel = new TestKernel('dev', true);
+$application = new Application($kernel);
+$application->run();

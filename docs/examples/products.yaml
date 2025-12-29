@@ -1,0 +1,54 @@
+paths:
+  /api/products:
+    get:
+      operationId: listProducts
+      summary: List all products
+      description: Returns a paginated list of products
+      tags:
+        - Products
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  total:
+                    type: integer
+
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+        price:
+          type: number
+          format: float
+        category:
+          type: string
+      required:
+        - name
+        - price

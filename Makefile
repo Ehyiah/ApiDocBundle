@@ -64,3 +64,9 @@ phptests:  ## Execute phpunit
 	$(PHP) vendor/bin/phpunit
 
 .PHONY: phptests
+
+##@ Test App Server
+serve: ## Start the test app server on port 8000
+	$(PHP) php -S 0.0.0.0:8000 -t tests/App/public
+
+.PHONY: serve
