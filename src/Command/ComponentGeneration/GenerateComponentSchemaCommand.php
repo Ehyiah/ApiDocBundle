@@ -57,7 +57,39 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
                 return Command::FAILURE;
             }
 
-            $fullClassName = $io->choice('Select a class to generate schema for', $classes);
+            $choices = [];
+            $classMap = [];
+
+            foreach ($classes as $className) {
+                $parts = explode('\\', $className);
+                $shortName = end($parts);
+
+                $formats = [];
+                if ($this->getApiDocConfigHelper()->findYamlComponentFile($shortName, self::COMPONENT_SCHEMAS)) {
+                    $formats[] = 'YAML';
+                }
+                if ($this->getApiDocConfigHelper()->findPhpComponentFile($shortName, self::COMPONENT_SCHEMAS)) {
+                    $formats[] = 'PHP';
+                }
+
+                $label = $className;
+                if (!empty($formats)) {
+                    $label .= sprintf(' <fg=yellow>(Already exists in: %s)</>', implode(', ', $formats));
+                }
+
+                $choices[] = $label;
+                $classMap[$label] = $className;
+            }
+
+            $selectedLabel = $io->choice('Select a class to generate schema for', $choices);
+            $fullClassName = $classMap[$selectedLabel];
+
+            if (!class_exists($fullClassName)) {
+                $io->error(sprintf('Class "%s" not found.', $fullClassName));
+
+                return Command::FAILURE;
+            }
+
             $this->reflectionClass = new ReflectionClass($fullClassName);
         }
 
