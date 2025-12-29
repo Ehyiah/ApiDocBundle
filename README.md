@@ -1,5 +1,5 @@
 # ApiDocBundle
-Symfony Bundle to deal with API documentation using SwaggerUI with **YAML files** or **PHP configuration classes**.
+Symfony Bundle to deal with API documentation using SwaggerUI with **YAML files** or **PHP classes**.
 
 ## What this bundle does
 - Display API documentation with SwaggerUI
@@ -151,14 +151,50 @@ So if you want to call your component ``MyAwesomeDto`` instead of default name, 
 |                    |                       |
 
 
-# Generating ApiDoc Components
+# Generating ApiDoc Components (WIP)
 Some commands are included in the bundle to pre-generate components.
 You will probably have to edit the generated files or at least check if everything is okay.
 
 | Command                       | Arguments                                                                                   | Options                                                                                                                                                                                                                          | Generation type                                                                          |
 |:------------------------------|:--------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------|
-| apidocbundle:component:schema | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO)               | **--output** (-o) specify a custom output directory to dump the generated file from the kernel_project_dir<br/> **--skip** (-s) list of properties to skip _(you can pass multiple times this option to skip many properties)_   | Generate a [schema](https://swagger.io/specification/v3/#schema-object)                  |
-| apidocbundle:component:body   | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO or a FormType) | **--reference** (-r) specify if a reference must be used instead of regenerating a new schema in the requestBody                                                                                                                 | Generate a [RequestBody](https://swagger.io/docs/specification/describing-request-body/) |
+| apidocbundle:component:schema | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO)               | **--output** (-o) specify a custom output directory to dump the generated file from the kernel_project_dir<br/> **--skip** (-s) list of properties to skip _(you can pass multiple times this option to skip many properties)_ **--format** (-f) output format: `yaml`, `php`, or `both` (default: `yaml`)  | Generate a [schema](https://swagger.io/specification/v3/#schema-object)                  |
+| apidocbundle:component:body   | pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO or a FormType) | **--reference** (-r) specify if a reference must be used instead of regenerating a new schema in the requestBody **--format** (-f) output format: `yaml`, `php`, or `both` (default: `yaml`)                                                                                                               | Generate a [RequestBody](https://swagger.io/docs/specification/describing-request-body/) |
+
+### Output Format
+
+You can choose the output format using the `--format` option:
+
+```bash
+# Generate PHP file (default)
+bin/console apidocbundle:component:schema "App\DTO\UserDTO"
+
+OR bin/console apidocbundle:component:schema "App\DTO\UserDTO" --format=php
+
+# Generate YAML file
+bin/console apidocbundle:component:schema "App\DTO\UserDTO" --format=yaml
+
+# Generate both YAML and PHP files
+bin/console apidocbundle:component:schema "App\DTO\UserDTO" --format=both
+```
+
+### Duplicate Component Detection
+
+When generating a component, the command will automatically check if a component with the same name already exists in your codebase:
+
+1. **Same format exists**: If you're generating a YAML file and a YAML file with the same component already exists (or PHP for PHP), you will be prompted to confirm if you want to overwrite it.
+
+2. **Different format exists**: If you're generating a YAML file but a PHP file with the same component already exists (or vice versa), you will be warned about potential duplicate definitions and asked to confirm before continuing.
+
+**Example output:**
+```
+Component already exists in YAML file: /path/to/schemas/UserDTO.yaml
+Do you want to overwrite this file with new values ? (yes or no, default is YES)
+
+Component also exists in PHP file: /path/to/schemas/UserDTO.php
+Do you want to continue generating the YAML file? This may cause duplicate definitions. (yes or no, default is YES)
+```
+
+This helps prevent accidental overwrites and warns you about duplicate component definitions that could cause conflicts in your API documentation.
 
 
 # ApiDoc Linting

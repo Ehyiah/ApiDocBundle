@@ -187,7 +187,7 @@ final class LoadApiDocConfigHelper
         return array_values($result);
     }
 
-    public function findComponentFile(string $componentName, string $componentType): ?SplFileInfo
+    public function findYamlComponentFile(string $componentName, string $componentType): ?SplFileInfo
     {
         $finder = new Finder();
         $sourcePath = $this->parameterBag->get('ehyiah_api_doc.source_path');
@@ -211,6 +211,46 @@ final class LoadApiDocConfigHelper
                     if (isset($item['components'][$componentType][$componentName])) {
                         return $import;
                     }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public function findPhpComponentFile(string $componentName, string $componentType): ?SplFileInfo
+    {
+        $finder = new Finder();
+        $sourcePath = $this->parameterBag->get('ehyiah_api_doc.source_path');
+        if (!is_string($sourcePath)) {
+            throw new LogicException('Location must be a string');
+        }
+        $dumpPath = $this->parameterBag->get('ehyiah_api_doc.dump_path');
+        if (!is_string($dumpPath)) {
+            throw new LogicException('dumpLocation must be a string');
+        }
+
+        $finder->files()
+            ->in($this->kernel->getProjectDir() . $sourcePath)
+            ->exclude($dumpPath)
+            ->name('*.php')
+        ;
+
+        if ($finder->hasResults()) {
+            foreach ($finder->getIterator() as $file) {
+                $content = file_get_contents($file->getPathname());
+                if (false === $content) {
+                    continue;
+                }
+
+                // Check for schema component: ->addSchema('ComponentName')
+                if ('schemas' === $componentType && preg_match('/->addSchema\s*\(\s*[\'"]' . preg_quote($componentName, '/') . '[\'"]\s*\)/', $content)) {
+                    return $file;
+                }
+
+                // Check for requestBody component: ->addRequestBody('ComponentName')
+                if ('requestBodies' === $componentType && preg_match('/->addRequestBody\s*\(\s*[\'"]' . preg_quote($componentName, '/') . '[\'"]\s*\)/', $content)) {
+                    return $file;
                 }
             }
         }

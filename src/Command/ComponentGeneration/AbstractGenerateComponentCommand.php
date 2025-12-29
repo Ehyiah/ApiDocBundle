@@ -76,7 +76,7 @@ abstract class AbstractGenerateComponentCommand extends Command
             shortcut: 'f',
             mode: InputOption::VALUE_OPTIONAL,
             description: 'Output format: yaml, php, or both',
-            default: 'yaml',
+            default: 'php',
         );
     }
 
@@ -105,12 +105,11 @@ abstract class AbstractGenerateComponentCommand extends Command
             $dumpPath,
         );
 
+        // Check if component already exists in YAML format
         if (null !== $componentType && isset($existingConfigs['components'][$componentType][$componentName])) {
-            // show differences in console ?
-            // $componentAlreadyExists = $existingConfigs['components'][$componentType][$fileName];
-            $componentAlreadyExistFile = $this->apiDocConfigHelper->findComponentFile($componentName, $componentType);
+            $componentAlreadyExistFile = $this->apiDocConfigHelper->findYamlComponentFile($componentName, $componentType);
 
-            $output->writeln('<info>Component already exists in file : ' . $componentAlreadyExistFile->getPathname() . '</info>');
+            $output->writeln('<info>Component already exists in YAML file: ' . $componentAlreadyExistFile->getPathname() . '</info>');
             /** @var QuestionHelper $helper */
             $helper = $this->getHelper('question');
             $question = new ConfirmationQuestion('<question>Do you want to overwrite this file with new values ? (yes or no, default is YES)</question>', true);
@@ -124,6 +123,21 @@ abstract class AbstractGenerateComponentCommand extends Command
             $dumpLocation = $componentAlreadyExistFile->getPathname();
         } else {
             $dumpLocation = $this->kernel->getProjectDir() . $outputDir . u($destination)->ensureEnd('/') . $componentName . '.yaml';
+        }
+
+        // Check if component already exists in PHP format
+        $phpComponentFile = $this->apiDocConfigHelper->findPhpComponentFile($componentName, $componentType);
+        if (null !== $phpComponentFile) {
+            $output->writeln('<warning>Component also exists in PHP file: ' . $phpComponentFile->getPathname() . '</warning>');
+            /** @var QuestionHelper $helper */
+            $helper = $this->getHelper('question');
+            $question = new ConfirmationQuestion('<question>Do you want to continue generating the YAML file? This may cause duplicate definitions. (yes or no, default is YES)</question>', true);
+            if (!$helper->ask($input, $output, $question)) {
+                $output->writeln('');
+                $output->writeln('<error>Aborting component generation</error>');
+
+                return;
+            }
         }
 
         $yaml = Yaml::dump($array, 12, 4, 1024);
@@ -455,7 +469,39 @@ abstract class AbstractGenerateComponentCommand extends Command
             $fileSystem->mkdir($dumpDirectory);
         }
 
-        $dumpLocation = $dumpDirectory . $componentName . '.php';
+        // Check if component already exists in PHP format
+        $phpComponentFile = $this->apiDocConfigHelper->findPhpComponentFile($componentName, $componentType);
+        if (null !== $phpComponentFile) {
+            $output->writeln('<info>Component already exists in PHP file: ' . $phpComponentFile->getPathname() . '</info>');
+            /** @var QuestionHelper $helper */
+            $helper = $this->getHelper('question');
+            $question = new ConfirmationQuestion('<question>Do you want to overwrite this file with new values ? (yes or no, default is YES)</question>', true);
+            if (!$helper->ask($input, $output, $question)) {
+                $output->writeln('');
+                $output->writeln('<error>Aborting component generation</error>');
+
+                return;
+            }
+
+            $dumpLocation = $phpComponentFile->getPathname();
+        } else {
+            $dumpLocation = $dumpDirectory . $componentName . '.php';
+        }
+
+        // Check if component already exists in YAML format
+        $yamlComponentFile = $this->apiDocConfigHelper->findYamlComponentFile($componentName, $componentType);
+        if (null !== $yamlComponentFile) {
+            $output->writeln('<warning>Component also exists in YAML file: ' . $yamlComponentFile->getPathname() . '</warning>');
+            /** @var QuestionHelper $helper */
+            $helper = $this->getHelper('question');
+            $question = new ConfirmationQuestion('<question>Do you want to continue generating the PHP file? This may cause duplicate definitions. (yes or no, default is YES)</question>', true);
+            if (!$helper->ask($input, $output, $question)) {
+                $output->writeln('');
+                $output->writeln('<error>Aborting component generation</error>');
+
+                return;
+            }
+        }
 
         $phpCode = $this->generatePhpBuilderCode($array, $componentName, $componentType);
         $fileSystem->dumpFile($dumpLocation, $phpCode);
