@@ -6,19 +6,32 @@
     <meta name="description" content="SwaggerUI" />
     <title>API doc Bundle</title>
 
-    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui.css" />
-    <script src="https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-bundle.js" crossorigin></script>
+    {% if ui == 'swagger' %}
+        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui.css" />
+        <script src="https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-bundle.js" crossorigin></script>
+    {% elseif ui == 'redoc' %}
+        <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+    {% endif %}
   </head>
 
   <body>
-    <div id="swagger-ui"></div>
-    <script>
-      window.onload = () => {
-        window.ui = SwaggerUIBundle({
-          spec: {{ json|raw }},
-          dom_id: '#swagger-ui',
-        });
-      };
-    </script>
+    {% if ui == 'swagger' %}
+        <div id="swagger-ui"></div>
+        <script>
+            window.onload = () => {
+                window.ui = SwaggerUIBundle({
+                    spec: {{ json|raw }},
+                    dom_id: '#swagger-ui',
+                });
+            };
+        </script>
+    {% elseif ui == 'redoc' %}
+        <div id="redoc-container"></div>
+        <script>
+            Redoc.init({{ json|raw }}, {
+                scrollYOffset: 50
+            }, document.getElementById('redoc-container'));
+        </script>
+    {% endif %}
   </body>
 </html>

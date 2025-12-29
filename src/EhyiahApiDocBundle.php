@@ -20,10 +20,18 @@ class EhyiahApiDocBundle extends AbstractBundle
 
         $container->import('../config/services.yaml');
 
-        $container->parameters()->set('ehyiah_api_doc.site_urls', $config['site_urls']);
-        $container->parameters()->set('ehyiah_api_doc.source_path', $config['source_path']);
-        $container->parameters()->set('ehyiah_api_doc.dump_path', $config['dump_path']);
-        $container->parameters()->set('ehyiah_api_doc.enable_php_config', $config['enable_php_config'] ?? true);
+        $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.site_urls', $config['site_urls']);
+        $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.source_path', $config['source_path']);
+        $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.dump_path', $config['dump_path']);
+        $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.enable_php_config', $config['enable_php_config'] ?? true);
+        $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.ui', $config['ui']);
+    }
+
+    private function setParameterIfNotExists(ContainerBuilder $builder, ContainerConfigurator $container, string $name, mixed $value): void
+    {
+        if (!$builder->hasParameter($name)) {
+            $container->parameters()->set($name, $value);
+        }
     }
 
     public function configure(DefinitionConfigurator $definition): void
@@ -47,6 +55,11 @@ class EhyiahApiDocBundle extends AbstractBundle
                 ->booleanNode('enable_php_config')
                     ->defaultTrue()
                     ->info('Enable PHP configuration classes for API documentation')
+                ->end()
+                ->enumNode('ui')
+                    ->values(['swagger', 'redoc'])
+                    ->defaultValue('swagger')
+                    ->info('Choose the UI to render the documentation: swagger or redoc')
                 ->end()
             ->end()
         ;

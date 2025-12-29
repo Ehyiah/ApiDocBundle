@@ -21,9 +21,11 @@ class ApiDocController extends AbstractController
     public function index(): Response
     {
         $json = $this->loadConfigFiles();
+        $ui = $this->parameterBag->get('ehyiah_api_doc.ui');
 
         return $this->render('@EhyiahApiDoc/index.html.twig', [
             'json' => $json,
+            'ui' => $ui,
         ]);
     }
 
