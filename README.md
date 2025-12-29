@@ -1,8 +1,8 @@
 # ApiDocBundle
-Symfony Bundle to deal with API documentation using SwaggerUI with **YAML files** or **PHP classes**.
+Symfony Bundle to deal with API documentation using **Swagger UI** or **Redoc** with **YAML files** or **PHP classes**.
 
 ## What this bundle does
-- Display API documentation with SwaggerUI
+- Display API documentation with Swagger UI or Redoc
 - Generate schemas, request bodies and more via commands (currently WIP, only supports YAML dump file)
 - Support both YAML and PHP configuration (or mix both!)
 
@@ -14,12 +14,14 @@ You can create as many files/classes as you want and organize them to your needs
 
 To write YAML files, check the OpenAPI specifications: [OpenApi](https://swagger.io/specification/v3/)
 
-This bundle uses the [Swagger UI](https://swagger.io/tools/swagger-ui/) to render the final result.
+This bundle uses [Swagger UI](https://swagger.io/tools/swagger-ui/) or [Redoc](https://redocly.com/redoc) to render the final result.
 
 You will find examples after the bundle is installed in the default directory /src/Swagger.
 
 ---
 - [Installation](#installation)
+- [Configuration](#configuration)
+  - [UI Selection](#ui-selection)
 - [Usage](#usage)
   - [YAML Configuration](#yaml-configuration)
   - [PHP Configuration Classes](#php-configuration-classes)
@@ -38,6 +40,38 @@ Then Run
 ```sh
   composer require ehyiah/apidoc-bundle
 ```
+
+# Configuration
+
+## UI Selection
+
+This bundle supports two documentation UIs:
+
+| UI | Description | Try it out |
+|:---|:------------|:-----------|
+| **Swagger UI** | Interactive API documentation | ✅ Yes |
+| **Redoc** | Clean, elegant documentation | ❌ No |
+
+### Default UI
+
+Configure the default UI in your bundle configuration (`config/packages/ehyiah_api_doc.yaml`):
+
+```yaml
+ehyiah_api_doc:
+    ui: swagger  # or 'redoc'
+```
+
+### Switching UI via Query Parameter
+
+You can switch between UIs on the fly using the `ui` query parameter:
+
+- `/api/doc` → Uses the default UI (from config)
+- `/api/doc?ui=swagger` → Forces Swagger UI (with "Try it out" feature)
+- `/api/doc?ui=redoc` → Forces Redoc (elegant documentation)
+
+This is useful if you want to use Redoc for public documentation but need Swagger UI for testing API calls.
+
+---
 
 # Usage
 
