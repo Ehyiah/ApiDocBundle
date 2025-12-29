@@ -4,6 +4,8 @@ namespace Ehyiah\ApiDocBundle\Command\Traits;
 
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use LogicException;
+use SebastianBergmann\Diff\Differ;
+use SebastianBergmann\Diff\Output\UnifiedDiffOutputBuilder;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -61,17 +63,37 @@ trait GenerateFileTrait
     /**
      * Check if a YAML file with the same name exists and ask for confirmation.
      *
+     * @param array<mixed> $newContentArray The new content to be written
+     *
      * @return bool True if should continue, false if aborted
      */
     protected function checkExistingYamlFile(
         string $filePath,
         InputInterface $input,
         OutputInterface $output,
+        ?array $newContentArray = null,
     ): bool {
         $fileSystem = new Filesystem();
 
         if ($fileSystem->exists($filePath)) {
             $output->writeln('<info>File already exists: ' . $filePath . '</info>');
+
+            if (null !== $newContentArray && class_exists(Differ::class)) {
+                $existingContent = file_get_contents($filePath);
+                $newContent = Yaml::dump($newContentArray, 12, 4, 1024);
+
+                if ($output->isVerbose()) {
+                    $output->writeln('<info>Comparing generated YAML with existing file...</info>');
+                }
+
+                if (false !== $existingContent && $existingContent !== $newContent) {
+                    $output->writeln('<comment>Differences found:</comment>');
+                    $this->showDiff($existingContent, $newContent, $output);
+                } else {
+                    $output->writeln('<comment>No differences found.</comment>');
+                }
+            }
+
             /** @var QuestionHelper $helper */
             $helper = $this->getHelper('question');
             $question = new ConfirmationQuestion('<question>Do you want to overwrite this file? (yes or no, default is YES)</question>', true);
@@ -90,17 +112,36 @@ trait GenerateFileTrait
     /**
      * Check if a PHP file with the same name exists and ask for confirmation.
      *
+     * @param string|null $newContent The new content to be written
+     *
      * @return bool True if should continue, false if aborted
      */
     protected function checkExistingPhpFile(
         string $filePath,
         InputInterface $input,
         OutputInterface $output,
+        ?string $newContent = null,
     ): bool {
         $fileSystem = new Filesystem();
 
         if ($fileSystem->exists($filePath)) {
             $output->writeln('<info>File already exists: ' . $filePath . '</info>');
+
+            if (null !== $newContent && class_exists(Differ::class)) {
+                $existingContent = file_get_contents($filePath);
+
+                if ($output->isVerbose()) {
+                    $output->writeln('<info>Comparing generated PHP with existing file...</info>');
+                }
+
+                if (false !== $existingContent && $existingContent !== $newContent) {
+                    $output->writeln('<comment>Differences found:</comment>');
+                    $this->showDiff($existingContent, $newContent, $output);
+                } else {
+                    $output->writeln('<comment>No differences found.</comment>');
+                }
+            }
+
             /** @var QuestionHelper $helper */
             $helper = $this->getHelper('question');
             $question = new ConfirmationQuestion('<question>Do you want to overwrite this file? (yes or no, default is YES)</question>', true);
@@ -114,6 +155,26 @@ trait GenerateFileTrait
         }
 
         return true;
+    }
+
+    private function showDiff(string $oldContent, string $newContent, OutputInterface $output): void
+    {
+        $builder = new UnifiedDiffOutputBuilder("--- Original\n+++ New\n", false);
+        $differ = new Differ($builder);
+        $diff = $differ->diff($oldContent, $newContent);
+
+        $lines = explode("\n", $diff);
+        foreach ($lines as $line) {
+            if (str_starts_with($line, '+') && !str_starts_with($line, '+++')) {
+                $output->writeln('<fg=green>' . $line . '</>');
+            } elseif (str_starts_with($line, '-') && !str_starts_with($line, '---')) {
+                $output->writeln('<fg=red>' . $line . '</>');
+            } elseif (str_starts_with($line, '@')) {
+                $output->writeln('<comment>' . $line . '</comment>');
+            } else {
+                $output->writeln($line);
+            }
+        }
     }
 
     /**

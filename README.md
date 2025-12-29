@@ -191,7 +191,9 @@ So if you want to call your component ``MyAwesomeDto`` instead of default name, 
 |                    |                       |
 
 
-# Generating ApiDoc Components (WIP)
+# Generating ApiDoc Components
+**WARNING** : this is still a work in progress feature. You can use it but always check if the generated componant is good.
+
 Some commands are included in the bundle to pre-generate components.
 You will probably have to edit the generated files or at least check if everything is okay.
 
@@ -223,13 +225,20 @@ bin/console apidocbundle:component:schema "App\DTO\UserDTO" --format=both
 When generating a component, the command will automatically check if a component with the same name already exists in your codebase:
 
 1. **Same format exists**: If you're generating a YAML file and a YAML file with the same component already exists (or PHP for PHP), you will be prompted to confirm if you want to overwrite it.
+   - **Diff View**: If the file exists, the command will display a colored diff (green for additions, red for deletions) showing exactly what will change if you overwrite the file.
 
 2. **Different format exists**: If you're generating a YAML file but a PHP file with the same component already exists (or vice versa), you will be warned about potential duplicate definitions and asked to confirm before continuing.
 
 **Example output:**
 ```
 Component already exists in YAML file: /path/to/schemas/UserDTO.yaml
-Do you want to overwrite this file with new values ? (yes or no, default is YES)
+Differences found:
+--- Original
++++ New
+-    type: string
++    type: integer
+
+Do you want to overwrite this file? (yes or no, default is YES)
 
 Component also exists in PHP file: /path/to/schemas/UserDTO.php
 Do you want to continue generating the YAML file? This may cause duplicate definitions. (yes or no, default is YES)

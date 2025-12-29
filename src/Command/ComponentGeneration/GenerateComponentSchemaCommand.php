@@ -3,6 +3,8 @@
 namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
 use ReflectionException;
+use ReflectionNamedType;
+use ReflectionProperty;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -49,6 +51,27 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
         $array = self::createComponentArray();
 
         $properties = $this->propertyInfoExtractor->getProperties($fullClassName);
+        if (null === $properties) {
+            $properties = [];
+        }
+
+        $reflectionClass = $this->getReflectionClass();
+        foreach ($reflectionClass->getProperties(ReflectionProperty::IS_PUBLIC) as $reflectionProperty) {
+            if (!in_array($reflectionProperty->getName(), $properties, true)) {
+                $properties[] = $reflectionProperty->getName();
+            }
+        }
+
+        if (empty($properties)) {
+            $output->writeln(sprintf('<error>No properties found for class %s</error>', $fullClassName));
+
+            return Command::FAILURE;
+        }
+
+        if ($output->isVerbose()) {
+            $output->writeln(sprintf('<info>Detected properties for class %s: %s</info>', $fullClassName, implode(', ', $properties)));
+        }
+
         $propertiesToSkip = $input->getOption('skip');
         $propertiesArray = [];
         $requiredProperties = [];
@@ -57,8 +80,42 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
                 continue;
             }
             $types = $this->propertyInfoExtractor->getTypes($fullClassName, $property);
+
+            if (empty($types)) {
+                // Fallback using Reflection
+                try {
+                    $reflectionProperty = new ReflectionProperty($fullClassName, $property);
+                    $reflectionType = $reflectionProperty->getType();
+
+                    if ($reflectionType instanceof ReflectionNamedType) {
+                        $typeName = $reflectionType->getName();
+                        $nullable = $reflectionType->allowsNull();
+
+                        if (class_exists($typeName) || interface_exists($typeName)) {
+                            $types = [new Type(Type::BUILTIN_TYPE_OBJECT, $nullable, $typeName)];
+                        } else {
+                            $types = [new Type($typeName, $nullable)];
+                        }
+                    }
+                } catch (ReflectionException $e) {
+                    // ignore
+                }
+            }
+
+            if (empty($types)) {
+                if ($output->isVerbose()) {
+                    $output->writeln(sprintf('<comment>No types found for property %s. Defaulting to string.</comment>', $property));
+                }
+                $types = [new Type(Type::BUILTIN_TYPE_STRING, true)];
+            }
+
             /** @var Type $firstType */
             $firstType = $types[0];
+
+            if ($output->isVerbose()) {
+                $output->writeln(sprintf('<info>Property %s: type %s</info>', $property, $firstType->getBuiltinType()));
+            }
+
             //             add a warning for this property at the end of the command if it has multiple types
 
             self::addTypeToSchema($array, $shortClassName);
@@ -70,6 +127,16 @@ final class GenerateComponentSchemaCommand extends AbstractGenerateComponentComm
 
             self::addRequirementsToSchema($array, $requiredProperties, $shortClassName);
             self::addPropertiesToSchema($array, $propertiesArray, $shortClassName);
+        }
+
+        if ($output->isVerbose()) {
+            $output->writeln('<info>Generated Schema Array:</info>');
+            $json = json_encode($array, JSON_PRETTY_PRINT);
+            if (false === $json) {
+                $output->writeln('<error>Could not encode schema array to JSON</error>');
+            } else {
+                $output->writeln($json);
+            }
         }
 
         if ($this->dumpLocation === $input->getOption('output')) {
