@@ -3,10 +3,11 @@
 namespace Ehyiah\ApiDocBundle\Tests\Command;
 
 use Ehyiah\ApiDocBundle\Command\GenerateRouteCommand;
+use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\KernelInterface;
 
@@ -24,22 +25,19 @@ class GenerateRouteCommandTest extends TestCase
         $this->tempDir = sys_get_temp_dir() . '/apidoc_route_test_' . uniqid();
         $this->filesystem = new Filesystem();
         $this->filesystem->mkdir($this->tempDir);
+        $this->filesystem->mkdir($this->tempDir . '/src/Swagger');
 
         $kernel = $this->createMock(KernelInterface::class);
         $kernel->method('getProjectDir')->willReturn($this->tempDir);
 
-        $parameterBag = $this->createMock(ParameterBagInterface::class);
-        $parameterBag->method('get')
-            ->willReturnCallback(function ($key) {
-                if ('ehyiah_api_doc.source_path' === $key) {
-                    return '/src/Swagger';
-                }
+        $parameterBag = new ParameterBag([
+            'ehyiah_api_doc.source_path' => '/src/Swagger',
+            'ehyiah_api_doc.dump_path' => '/var/Dump',
+        ]);
 
-                return null;
-            })
-        ;
+        $apiDocConfigHelper = new LoadApiDocConfigHelper($kernel, $parameterBag);
 
-        $command = new GenerateRouteCommand($kernel, $parameterBag);
+        $command = new GenerateRouteCommand($kernel, $parameterBag, $apiDocConfigHelper);
 
         $application = new Application();
         $application->add($command);
@@ -67,7 +65,7 @@ class GenerateRouteCommandTest extends TestCase
         $this->assertEquals(0, $this->commandTester->getStatusCode());
 
         $output = $this->commandTester->getDisplay();
-        $this->assertStringContainsString('Route générée avec succès', $output);
+        $this->assertStringContainsString('YAML file generated', $output);
 
         $expectedFilePath = $this->tempDir . '/src/Swagger/users_route.yaml';
         $this->assertFileExists($expectedFilePath);
@@ -113,7 +111,62 @@ class GenerateRouteCommandTest extends TestCase
 
         $fileContent = file_get_contents($expectedFilePath);
         $this->assertStringContainsString('/api/minimal', $fileContent);
-        $this->assertStringContainsString('get', $fileContent); // GET est la méthode par défaut
-        $this->assertStringContainsString('api', $fileContent); // tag par défaut
+        $this->assertStringContainsString('get', $fileContent); // GET is the default method
+        $this->assertStringContainsString('api', $fileContent); // default tag
+    }
+
+    public function testExecuteGeneratesPhpFile(): void
+    {
+        $this->commandTester->execute([
+            'route' => '/api/products',
+            'method' => 'GET',
+            '--tag' => ['products'],
+            '--description' => 'Get all products',
+            '--response-schema' => 'Product',
+            '--output' => '/src/Swagger',
+            '--filename' => 'products_route',
+            '--format' => 'php',
+        ]);
+
+        $this->assertEquals(0, $this->commandTester->getStatusCode());
+
+        $output = $this->commandTester->getDisplay();
+        $this->assertStringContainsString('PHP file generated', $output);
+
+        $expectedFilePath = $this->tempDir . '/src/Swagger/products_route.php';
+        $this->assertFileExists($expectedFilePath);
+
+        $fileContent = file_get_contents($expectedFilePath);
+        $this->assertStringContainsString("->path('/api/products')", $fileContent);
+        $this->assertStringContainsString("->method('GET')", $fileContent);
+        $this->assertStringContainsString("->tag('products')", $fileContent);
+        $this->assertStringContainsString("->description('Get all products')", $fileContent);
+        $this->assertStringContainsString("->ref('#/components/schemas/Product')", $fileContent);
+        $this->assertStringContainsString('ApiDocConfigInterface', $fileContent);
+        $this->assertStringContainsString('ApiDocBuilder', $fileContent);
+    }
+
+    public function testExecuteGeneratesBothFormats(): void
+    {
+        $this->commandTester->execute([
+            'route' => '/api/orders',
+            'method' => 'POST',
+            '--description' => 'Create an order',
+            '--output' => '/src/Swagger',
+            '--filename' => 'orders_route',
+            '--format' => 'both',
+        ]);
+
+        $this->assertEquals(0, $this->commandTester->getStatusCode());
+
+        $output = $this->commandTester->getDisplay();
+        $this->assertStringContainsString('YAML file generated', $output);
+        $this->assertStringContainsString('PHP file generated', $output);
+
+        $yamlPath = $this->tempDir . '/src/Swagger/orders_route.yaml';
+        $phpPath = $this->tempDir . '/src/Swagger/orders_route.php';
+
+        $this->assertFileExists($yamlPath);
+        $this->assertFileExists($phpPath);
     }
 }

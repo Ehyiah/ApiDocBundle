@@ -8,6 +8,7 @@ use Ehyiah\ApiDocBundle\Tests\AppKernelTest;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -15,14 +16,50 @@ use Symfony\Component\Yaml\Yaml;
  */
 final class GenerateComponentRequestBodyCommandTest extends TestCase
 {
+    private ?AppKernelTest $kernel = null;
+    private Filesystem $filesystem;
+
+    protected function setUp(): void
+    {
+        $this->kernel = new AppKernelTest('test', true);
+        $this->kernel->boot();
+        $this->filesystem = new Filesystem();
+
+        $this->cleanTestFiles();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->cleanTestFiles();
+        $this->kernel = null;
+    }
+
+    private function cleanTestFiles(): void
+    {
+        if (null === $this->kernel) {
+            return;
+        }
+        $paths = [
+            $this->kernel->getProjectDir() . '/var/Swagger/requestBodies/DummyObject.yaml',
+            $this->kernel->getProjectDir() . '/var/Swagger/requestBodies/DummyObject.php',
+            $this->kernel->getProjectDir() . '/var/Swagger/requestBodies/DummyType.yaml',
+            $this->kernel->getProjectDir() . '/var/Swagger/requestBodies/DummyType.php',
+        ];
+
+        foreach ($paths as $path) {
+            if ($this->filesystem->exists($path)) {
+                $this->filesystem->remove($path);
+            }
+        }
+    }
+
     public function testRequestBodyGenerationFromObject(): void
     {
-        $kernel = new AppKernelTest('test', true);
-        $application = new Application($kernel);
-        $kernel->boot();
+        $application = new Application($this->kernel);
 
         $command = $application->find('apidocbundle:component:body');
         $commandTester = new CommandTester($command);
+        $commandTester->setInputs(['yes', 'yes', 'yes']);
         $commandTester->execute([
             'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
         ]);
@@ -30,9 +67,9 @@ final class GenerateComponentRequestBodyCommandTest extends TestCase
         $commandTester->assertCommandIsSuccessful();
 
         $output = $commandTester->getDisplay();
-        $this->assertStringContainsString('File generated', $output);
+        $this->assertStringContainsString('YAML file generated', $output);
 
-        $filePath = $kernel->getProjectDir() . '/var/Swagger/requestBodies/DummyObject.yaml';
+        $filePath = $this->kernel->getProjectDir() . '/var/Swagger/requestBodies/DummyObject.yaml';
         $arrayFromYaml = Yaml::parseFile($filePath);
         $this->assertIsArray($arrayFromYaml);
         $this->assertArrayHasKey('documentation', $arrayFromYaml);
@@ -49,12 +86,11 @@ final class GenerateComponentRequestBodyCommandTest extends TestCase
 
     public function testRequestBodyGenerationFromType(): void
     {
-        $kernel = new AppKernelTest('test', true);
-        $application = new Application($kernel);
-        $kernel->boot();
+        $application = new Application($this->kernel);
 
         $command = $application->find('apidocbundle:component:body');
         $commandTester = new CommandTester($command);
+        $commandTester->setInputs(['yes', 'yes', 'yes']);
         $commandTester->execute([
             'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyType',
         ]);
@@ -62,9 +98,9 @@ final class GenerateComponentRequestBodyCommandTest extends TestCase
         $commandTester->assertCommandIsSuccessful();
 
         $output = $commandTester->getDisplay();
-        $this->assertStringContainsString('File generated', $output);
+        $this->assertStringContainsString('YAML file generated', $output);
 
-        $filePath = $kernel->getProjectDir() . '/var/Swagger/requestBodies/DummyType.yaml';
+        $filePath = $this->kernel->getProjectDir() . '/var/Swagger/requestBodies/DummyType.yaml';
         $arrayFromYaml = Yaml::parseFile($filePath);
 
         $this->assertIsArray($arrayFromYaml);
@@ -103,12 +139,11 @@ final class GenerateComponentRequestBodyCommandTest extends TestCase
 
     public function testRequestBodyGenerationWithPhpFormat(): void
     {
-        $kernel = new AppKernelTest('test', true);
-        $application = new Application($kernel);
-        $kernel->boot();
+        $application = new Application($this->kernel);
 
         $command = $application->find('apidocbundle:component:body');
         $commandTester = new CommandTester($command);
+        $commandTester->setInputs(['yes', 'yes', 'yes']);
         $commandTester->execute([
             'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
             '--format' => 'php',
@@ -119,7 +154,7 @@ final class GenerateComponentRequestBodyCommandTest extends TestCase
         $output = $commandTester->getDisplay();
         $this->assertStringContainsString('PHP file generated', $output);
 
-        $filePath = $kernel->getProjectDir() . '/var/Swagger/requestBodies/DummyObject.php';
+        $filePath = $this->kernel->getProjectDir() . '/var/Swagger/requestBodies/DummyObject.php';
         $this->assertFileExists($filePath);
 
         $content = file_get_contents($filePath);

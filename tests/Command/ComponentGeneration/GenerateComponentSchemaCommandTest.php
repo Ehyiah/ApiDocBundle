@@ -8,6 +8,7 @@ use Ehyiah\ApiDocBundle\Tests\AppKernelTest;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -15,14 +16,49 @@ use Symfony\Component\Yaml\Yaml;
  */
 final class GenerateComponentSchemaCommandTest extends TestCase
 {
+    private ?AppKernelTest $kernel = null;
+    private Filesystem $filesystem;
+
+    protected function setUp(): void
+    {
+        $this->kernel = new AppKernelTest('test', true);
+        $this->kernel->boot();
+        $this->filesystem = new Filesystem();
+
+        $this->cleanTestFiles();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->cleanTestFiles();
+        $this->kernel = null;
+    }
+
+    private function cleanTestFiles(): void
+    {
+        if (null === $this->kernel) {
+            return;
+        }
+        $paths = [
+            $this->kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.yaml',
+            $this->kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.php',
+        ];
+
+        foreach ($paths as $path) {
+            if ($this->filesystem->exists($path)) {
+                $this->filesystem->remove($path);
+            }
+        }
+    }
+
     public function testSchemaGeneration(): void
     {
-        $kernel = new AppKernelTest('test', true);
-        $application = new Application($kernel);
-        $kernel->boot();
+        $application = new Application($this->kernel);
 
         $command = $application->find('apidocbundle:component:schema');
         $commandTester = new CommandTester($command);
+        // Provide 'yes' answers for any interactive prompts
+        $commandTester->setInputs(['yes', 'yes', 'yes']);
         $commandTester->execute([
             'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
         ]);
@@ -30,9 +66,9 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $commandTester->assertCommandIsSuccessful();
 
         $output = $commandTester->getDisplay();
-        $this->assertStringContainsString('File generated', $output);
+        $this->assertStringContainsString('YAML file generated', $output);
 
-        $filePath = $kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.yaml';
+        $filePath = $this->kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.yaml';
         $arrayFromYaml = Yaml::parseFile($filePath);
         $this->assertIsArray($arrayFromYaml);
         $this->assertArrayHasKey('documentation', $arrayFromYaml);
@@ -69,12 +105,11 @@ final class GenerateComponentSchemaCommandTest extends TestCase
 
     public function testSchemaGenerationWithSkipOption(): void
     {
-        $kernel = new AppKernelTest('test', true);
-        $application = new Application($kernel);
-        $kernel->boot();
+        $application = new Application($this->kernel);
 
         $command = $application->find('apidocbundle:component:schema');
         $commandTester = new CommandTester($command);
+        $commandTester->setInputs(['yes', 'yes', 'yes']);
         $commandTester->execute([
             'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
             '--skip' => ['id', 'skipedValue'],
@@ -83,9 +118,9 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $commandTester->assertCommandIsSuccessful();
 
         $output = $commandTester->getDisplay();
-        $this->assertStringContainsString('File generated', $output);
+        $this->assertStringContainsString('YAML file generated', $output);
 
-        $filePath = $kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.yaml';
+        $filePath = $this->kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.yaml';
         $arrayFromYaml = Yaml::parseFile($filePath);
         $this->assertIsArray($arrayFromYaml);
         $this->assertArrayHasKey('documentation', $arrayFromYaml);
@@ -113,12 +148,11 @@ final class GenerateComponentSchemaCommandTest extends TestCase
 
     public function testSchemaGenerationWithPhpFormat(): void
     {
-        $kernel = new AppKernelTest('test', true);
-        $application = new Application($kernel);
-        $kernel->boot();
+        $application = new Application($this->kernel);
 
         $command = $application->find('apidocbundle:component:schema');
         $commandTester = new CommandTester($command);
+        $commandTester->setInputs(['yes', 'yes', 'yes']);
         $commandTester->execute([
             'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
             '--format' => 'php',
@@ -129,7 +163,7 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $output = $commandTester->getDisplay();
         $this->assertStringContainsString('PHP file generated', $output);
 
-        $filePath = $kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.php';
+        $filePath = $this->kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.php';
         $this->assertFileExists($filePath);
 
         $content = file_get_contents($filePath);
@@ -148,12 +182,11 @@ final class GenerateComponentSchemaCommandTest extends TestCase
 
     public function testSchemaGenerationWithBothFormats(): void
     {
-        $kernel = new AppKernelTest('test', true);
-        $application = new Application($kernel);
-        $kernel->boot();
+        $application = new Application($this->kernel);
 
         $command = $application->find('apidocbundle:component:schema');
         $commandTester = new CommandTester($command);
+        $commandTester->setInputs(['yes', 'yes', 'yes']);
         $commandTester->execute([
             'class' => 'Ehyiah\ApiDocBundle\Tests\Dummy\DummyObject',
             '--format' => 'both',
@@ -162,11 +195,11 @@ final class GenerateComponentSchemaCommandTest extends TestCase
         $commandTester->assertCommandIsSuccessful();
 
         $output = $commandTester->getDisplay();
-        $this->assertStringContainsString('File generated', $output);
+        $this->assertStringContainsString('YAML file generated', $output);
         $this->assertStringContainsString('PHP file generated', $output);
 
-        $yamlPath = $kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.yaml';
-        $phpPath = $kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.php';
+        $yamlPath = $this->kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.yaml';
+        $phpPath = $this->kernel->getProjectDir() . '/var/Swagger/schemas/DummyObject.php';
 
         $this->assertFileExists($yamlPath);
         $this->assertFileExists($phpPath);
