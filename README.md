@@ -50,6 +50,7 @@ Then Run
 
 - You must add the YAML files (that you want to be parsed) In the ``src/Swagger`` (default directory) directory, so it can be used and displayed on the Swagger UI interface.
   **the directory can be modified in the .env file with the source_path variable.**
+- PHP files can be put anywhere as long as they implement the Interface ``ApiDocConfigInterface``. But in order to be found by the generation commands (to prevent duplication), you should let them in the same directory.
 
 - the default route to display your API doc is ``ehyiah/api/doc`` example: localhost/ehyiah/api/doc, **you can modify this route in the config/routes/ehyiah_api_doc.yaml file.**
 
