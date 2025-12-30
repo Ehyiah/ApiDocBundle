@@ -183,22 +183,26 @@ class UserController
 
 This bundle provides CLI commands to help you kickstart your documentation by generating Schemas and Request Bodies from your existing PHP classes (Entities, DTOs).
 
-| Command                         | Description                                     | Mandatory parameter                                               | Example                                                       |
-|:--------------------------------|:------------------------------------------------|-------------------------------------------------------------------|:--------------------------------------------------------------|
-| `apidocbundle:component:schema` | Generates a shared **Schema** from a PHP Class. | No, an autocomplete will prompt you to choose a class             | `bin/console apidocbundle:component:schema "App\Entity\User"` |
-| `apidocbundle:component:body`   | Generates a **Request Body** from a PHP Class.  | No, an autocomplete will prompt you to choose a class             | `bin/console apidocbundle:component:body "App\DTO\UserDTO"`   |
-| `apidocbundle:route:generate`   | interactively generates a **Route** path.       | Yes, at the moment, there is no autocomplete for route generation | `bin/console apidocbundle:route:generate /my/path`            |
+| Command                           | Description                                       | Mandatory parameter                                               | Example                                                         |
+|:----------------------------------|:--------------------------------------------------|-------------------------------------------------------------------|:----------------------------------------------------------------|
+| `apidocbundle:component:schema`   | Generates a shared **Schema** from a PHP Class.   | No, an autocomplete will prompt you to choose a class             | `bin/console apidocbundle:component:schema "App\Entity\User"`   |
+| `apidocbundle:component:body`     | Generates a **Request Body** from a PHP Class.    | No, an autocomplete will prompt you to choose a class             | `bin/console apidocbundle:component:body "App\DTO\UserDTO"`     |
+| `apidocbundle:component:parameter`| Generates a reusable **Parameter** component.     | Yes, the name of the parameter component.                         | `bin/console apidocbundle:component:parameter "userId"`         |
+| `apidocbundle:route:generate`     | interactively generates a **Route** path.         | Yes, at the moment, there is no autocomplete for route generation | `bin/console apidocbundle:route:generate /my/path`              |
 
 ### Command Options
 
-| Option              | Used in | Shortcut | Description                                         |
-|:--------------------|---------|:---------|:----------------------------------------------------|
-| `--format`          | All     | `-f`     | Output format: `yaml` (default), `php`, or `both`.  |
-| `--output`          | All     | `-o`     | Custom output directory (relative to project root). |
-| `--tag`             | Route   | `-t`     | (Route only) Tags to associate with the route.      |
-| `--response-schema` | Route   | `-rs`    | (Route only) Reference schema for the response.     |
-| `--request-body`    | Route   | `-rb`    | (Route only) Reference schema for the request body. |
-| `--description`     | Route   | `-d`     | (Route only) Description for the route.             |
+| Option              | Used in    | Shortcut | Description                                                                      |
+|:--------------------|------------|:---------|:---------------------------------------------------------------------------------|
+| `--format`          | All        | `-f`     | Output format: `yaml` (default), `php`, or `both`.                               |
+| `--output`          | All        | `-o`     | Custom output directory (relative to project root).                              |
+| `--tag`             | Route      | `-t`     | (Route only) Tags to associate with the route.                                   |
+| `--response-schema` | Route      | `-rs`    | (Route only) Reference schema for the response.                                  |
+| `--request-body`    | Route      | `-rb`    | (Route only) Reference schema for the request body.                              |
+| `--description`     | All        | `-d`     | Description for the generated component.                                         |
+| `--in`              | Parameter  |          | (Parameter only) Location of the parameter: `query`, `header`, `path`, `cookie`. |
+| `--type`            | Parameter  |          | (Parameter only) Schema type of the parameter: `string`, `integer`, etc.         |
+| `--required`        | Parameter  |          | (Parameter only) Mark the parameter as required.                                 |
 
 📚 **[Read the Full Guide on References](docs/REFERENCES.md)**
 
