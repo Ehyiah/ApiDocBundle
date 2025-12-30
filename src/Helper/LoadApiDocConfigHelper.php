@@ -55,34 +55,7 @@ final class LoadApiDocConfigHelper
             return [];
         }
 
-        $enablePhpConfig = $this->parameterBag->get('ehyiah_api_doc.enable_php_config');
-        if (!$enablePhpConfig) {
-            return [];
-        }
-
         return $this->phpConfigLoader->load();
-    }
-
-    /**
-     * @return array<mixed>
-     */
-    public static function loadServerUrls(?string $envUrls): array
-    {
-        if (null === $envUrls || '' === $envUrls) {
-            return [];
-        }
-
-        $urls = [];
-
-        $baseUrls = explode(',', $envUrls);
-        foreach ($baseUrls as $index => $url) {
-            $url = trim($url);
-            if ('' !== $url) {
-                $urls['servers'][$index]['url'] = $url;
-            }
-        }
-
-        return $urls;
     }
 
     /**

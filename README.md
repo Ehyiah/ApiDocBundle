@@ -62,20 +62,9 @@ ehyiah_api_doc:
     # Directory to dump generated files
     dump_path: 'src/Swagger/dump'
 
-    # Enable or disable PHP config loading
-    enable_php_config: true
-
     # Directories to scan for Entity generation
     scan_directories:
         - 'src/Entity'
-```
-
-### Environment Variables
-You can globally configure your API server URLs in your `.env` file. These will appear in the "Servers" dropdown of the Swagger UI. (this is not mandatory as you can define them in YAML or PHP files too).
-
-```dotenv
-# .env
-EHYIAH_API_DOC_SITE_URLS=https://api.example.com,http://localhost:8000
 ```
 
 ### Custom URL
@@ -115,6 +104,9 @@ documentation:
         title: My Awesome API
         description: API documentation
         version: 1.0.0
+    servers:
+        - url: https://api.example.com
+          description: Production server
     components:
         securitySchemes:
             Bearer:
