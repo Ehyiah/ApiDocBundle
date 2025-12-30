@@ -64,28 +64,6 @@ final class LoadApiDocConfigHelper
     }
 
     /**
-     * @return array<mixed>
-     */
-    public static function loadServerUrls(?string $envUrls): array
-    {
-        if (null === $envUrls || '' === $envUrls) {
-            return [];
-        }
-
-        $urls = [];
-
-        $baseUrls = explode(',', $envUrls);
-        foreach ($baseUrls as $index => $url) {
-            $url = trim($url);
-            if ('' !== $url) {
-                $urls['servers'][$index]['url'] = $url;
-            }
-        }
-
-        return $urls;
-    }
-
-    /**
      * Merge two OpenAPI configurations.
      *
      * - Scalar values: second array overwrites first

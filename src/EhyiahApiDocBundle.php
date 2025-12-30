@@ -20,7 +20,6 @@ class EhyiahApiDocBundle extends AbstractBundle
 
         $container->import('../config/services.yaml');
 
-        $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.site_urls', $config['site_urls']);
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.source_path', $config['source_path']);
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.dump_path', $config['dump_path']);
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.enable_php_config', $config['enable_php_config'] ?? true);
@@ -41,10 +40,6 @@ class EhyiahApiDocBundle extends AbstractBundle
 
         $definition->rootNode()
             ->children()
-                ->scalarNode('site_urls')
-                    ->defaultNull()
-                    ->info('Base URL(s) for Swagger UI. Multiple URLs can be comma-separated.')
-                ->end()
                 ->scalarNode('source_path')
                     ->defaultValue('src/Swagger')
                 ->end()
