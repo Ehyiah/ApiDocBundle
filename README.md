@@ -154,6 +154,7 @@ class UserDocConfig implements ApiDocConfigInterface
 > 💡 **Tip:** While PHP config classes can be placed anywhere in `src/`, it is recommended to keep them in `src/Swagger` (or your `source_path`) if you want the **Generator Commands** to detect them and prevent duplicates.
 
 📚 **[Read full PHP Config Documentation](docs/PHP_CONFIG_CLASSES.md)**
+📚 **[Read the PHP Builder Reference](docs/BUILDER_REFERENCE.md)**
 
 ### 3. IDE Integration
 Link your Controller methods to their documentation using the `#[ApiDoc]` attribute. This allows you to Ctrl+Click from your Controller directly to the documentation source.
