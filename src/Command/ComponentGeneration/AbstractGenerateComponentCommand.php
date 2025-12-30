@@ -30,6 +30,10 @@ abstract class AbstractGenerateComponentCommand extends Command
     public const COMPONENT_SCHEMAS = 'schemas';
     public const COMPONENT_REQUEST_BODIES = 'requestBodies';
     public const COMPONENT_PARAMETERS = 'parameters';
+    public const COMPONENT_HEADERS = 'headers';
+    public const COMPONENT_RESPONSES = 'responses';
+    public const COMPONENT_SECURITY_SCHEMES = 'securitySchemes';
+    public const COMPONENT_EXAMPLES = 'examples';
 
     protected ?string $dumpLocation = null;
     /** @phpstan-ignore-next-line */
@@ -507,6 +511,18 @@ abstract class AbstractGenerateComponentCommand extends Command
         } elseif (self::COMPONENT_PARAMETERS === $componentType) {
             $parameter = $array['documentation']['components']['parameters'][$componentName] ?? [];
             $code .= $this->buildParameterCode($componentName, $parameter, 2);
+        } elseif (self::COMPONENT_HEADERS === $componentType) {
+            $header = $array['documentation']['components']['headers'][$componentName] ?? [];
+            $code .= $this->buildHeaderCode($componentName, $header, 2);
+        } elseif (self::COMPONENT_RESPONSES === $componentType) {
+            $response = $array['documentation']['components']['responses'][$componentName] ?? [];
+            $code .= $this->buildResponseCode($componentName, $response, 2);
+        } elseif (self::COMPONENT_SECURITY_SCHEMES === $componentType) {
+            $securityScheme = $array['documentation']['components']['securitySchemes'][$componentName] ?? [];
+            $code .= $this->buildSecuritySchemeCode($componentName, $securityScheme, 2);
+        } elseif (self::COMPONENT_EXAMPLES === $componentType) {
+            $example = $array['documentation']['components']['examples'][$componentName] ?? [];
+            $code .= $this->buildExampleCode($componentName, $example, 2);
         }
 
         $code .= "    }\n";
@@ -668,6 +684,113 @@ abstract class AbstractGenerateComponentCommand extends Command
 
         if (isset($parameter['schema'])) {
             $code .= "{$pad}    ->schema(['type' => '{$parameter['schema']['type']}'])\n";
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $header
+     */
+    protected function buildHeaderCode(string $name, array $header, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addHeader('{$name}')\n";
+
+        if (isset($header['description'])) {
+            $description = addslashes($header['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($header['schema'])) {
+            $code .= "{$pad}    ->schema(['type' => '{$header['schema']['type']}'])\n";
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $response
+     */
+    protected function buildResponseCode(string $name, array $response, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addResponse('{$name}')\n";
+
+        if (isset($response['description'])) {
+            $description = addslashes($response['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($response['statusCode'])) {
+            $code .= "{$pad}    ->statusCode({$response['statusCode']})\n";
+        }
+
+        if (isset($response['content']['application/json']['schema']['$ref'])) {
+            $ref = $response['content']['application/json']['schema']['$ref'];
+            $code .= "{$pad}    ->jsonContent()\n";
+            $code .= "{$pad}        ->ref('{$ref}')\n";
+            $code .= "{$pad}    ->end()\n";
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $securityScheme
+     */
+    protected function buildSecuritySchemeCode(string $name, array $securityScheme, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addSecurityScheme('{$name}')\n";
+
+        if (isset($securityScheme['type'])) {
+            $code .= "{$pad}    ->type('{$securityScheme['type']}')\n";
+        }
+
+        if (isset($securityScheme['in'])) {
+            $code .= "{$pad}    ->in('{$securityScheme['in']}')\n";
+        }
+
+        if (isset($securityScheme['name'])) {
+            $code .= "{$pad}    ->nameInHeader('{$securityScheme['name']}')\n";
+        }
+
+        if (isset($securityScheme['scheme'])) {
+            $code .= "{$pad}    ->scheme('{$securityScheme['scheme']}')\n";
+        }
+
+        if (isset($securityScheme['bearerFormat'])) {
+            $code .= "{$pad}    ->bearerFormat('{$securityScheme['bearerFormat']}')\n";
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $example
+     */
+    protected function buildExampleCode(string $name, array $example, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addExample('{$name}')\n";
+
+        if (isset($example['summary'])) {
+            $summary = addslashes($example['summary']);
+            $code .= "{$pad}    ->summary('{$summary}')\n";
+        }
+
+        if (isset($example['value'])) {
+            $value = var_export($example['value'], true);
+            $code .= "{$pad}    ->value({$value})\n";
         }
 
         $code .= "{$pad}->end();\n";
