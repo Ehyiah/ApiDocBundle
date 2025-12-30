@@ -29,6 +29,7 @@ abstract class AbstractGenerateComponentCommand extends Command
 
     public const COMPONENT_SCHEMAS = 'schemas';
     public const COMPONENT_REQUEST_BODIES = 'requestBodies';
+    public const COMPONENT_PARAMETERS = 'parameters';
 
     protected ?string $dumpLocation = null;
     /** @phpstan-ignore-next-line */
@@ -503,6 +504,9 @@ abstract class AbstractGenerateComponentCommand extends Command
         } elseif (self::COMPONENT_REQUEST_BODIES === $componentType) {
             $requestBody = $array['documentation']['components']['requestBodies'][$componentName] ?? [];
             $code .= $this->buildRequestBodyCode($componentName, $requestBody, 2);
+        } elseif (self::COMPONENT_PARAMETERS === $componentType) {
+            $parameter = $array['documentation']['components']['parameters'][$componentName] ?? [];
+            $code .= $this->buildParameterCode($componentName, $parameter, 2);
         }
 
         $code .= "    }\n";
@@ -634,6 +638,36 @@ abstract class AbstractGenerateComponentCommand extends Command
 
                 $code .= "{$pad}    ->end()\n";
             }
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $parameter
+     */
+    protected function buildParameterCode(string $name, array $parameter, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addParameter('{$name}')\n";
+
+        if (isset($parameter['in'])) {
+            $code .= "{$pad}    ->in('{$parameter['in']}')\n";
+        }
+
+        if (isset($parameter['description'])) {
+            $description = addslashes($parameter['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($parameter['required']) && $parameter['required']) {
+            $code .= "{$pad}    ->required()\n";
+        }
+
+        if (isset($parameter['schema'])) {
+            $code .= "{$pad}    ->schema(['type' => '{$parameter['schema']['type']}'])\n";
         }
 
         $code .= "{$pad}->end();\n";
