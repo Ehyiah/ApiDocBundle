@@ -1,62 +1,87 @@
 # ApiDocBundle
-Symfony Bundle to deal with API documentation using multiple UI options with **YAML files** or **PHP classes**.
 
-## What this bundle does
-- Display API documentation with Swagger UI, Redoc, Stoplight Elements, RapiDoc or Scalar
-- Generate schemas, request bodies and more via commands (currently WIP, only supports YAML dump file)
-- Support both YAML and PHP configuration (or mix both!)
+A Symfony Bundle to generate and display API documentation using **OpenAPI (Swagger) v3**.
+Define your documentation using **YAML files**, **PHP classes**, or a mix of both!
 
-If you want to write simple YAML files to create your API doc, this bundle is made for you.
-Or, if you prefer a programmatic approach with PHP classes and IDE autocompletion, we've got you covered too!
+## ✨ Features
 
-Install, create your API doc with YAML files or PHP configuration classes, and you're done!
-You can create as many files/classes as you want and organize them to your needs.
-
-To write YAML files, check the OpenAPI specifications: [OpenApi](https://swagger.io/specification/v3/)
-
-This bundle uses [Swagger UI](https://swagger.io/tools/swagger-ui/), [Redoc](https://redocly.com/redoc), [Stoplight Elements](https://stoplight.io/open-source/elements), [RapiDoc](https://rapidocweb.com/) or [Scalar](https://scalar.com/) to render the final result.
-
-You will find examples after the bundle is installed in the default directory /src/Swagger.
+- **Multiple UIs supported**: Swagger UI, Redoc, Stoplight Elements, RapiDoc, and Scalar.
+- **Flexible Configuration**: Use YAML files, PHP classes, or both.
+- **Generator Commands**: CLI tools to quickly generate Schemas, Request Bodies, and Routes.
+- **Hybrid Support**: Seamlessly merge YAML and PHP definitions.
+- **Attributes Support**: Link your Controllers to their documentation for easy IDE navigation.
 
 ---
+
+## 📚 Table of Contents
+
 - [Installation](#installation)
 - [Configuration](#configuration)
-  - [Bundle configuration](#bundle-configuration)
   - [UI Selection](#ui-selection)
 - [Usage](#usage)
-  - [YAML Configuration](#yaml-configuration)
-  - [PHP Configuration Classes](#php-configuration-classes)
-  - [IDE Navigation with ApiDoc Attribute](#ide-navigation-with-apidoc-attribute)
-- [Components generation via commands](#generating-apidoc-components)
+  - [1. YAML Configuration](#1-yaml-configuration)
+  - [2. PHP Configuration](#2-php-configuration-classes)
+  - [3. IDE Integration](#3-ide-integration)
+- [Component Generation](#component-generation)
+
 ---
 
+## Installation
 
-# Installation
-Be sure that contrib recipes are allowed in your project 
-```sh
-    composer config extra.symfony.allow-contrib true
+### 1. Allow Contrib Recipes
+Ensure Symfony Flex allows contrib recipes:
+```bash
+composer config extra.symfony.allow-contrib true
 ```
 
-Then Run 
-```sh
-    composer require ehyiah/apidoc-bundle
+### 2. Install the Bundle
+```bash
+composer require ehyiah/apidoc-bundle
 ```
 
-# Configuration
+---
 
-## Bundle configuration
+## Configuration
 
-- In your .env file, you can update the ``site_urls`` variable to use it in your Swagger UI interface (or define yourself via PHP classes or directly inside YAML files). every urls defined will be combined.
+### Bundle Configuration
+The default configuration is automatically installed in `config/packages/ehyiah_api_doc.yaml`.
 
-- You must add the YAML files (that you want to be parsed) In the ``src/Swagger`` (default directory) directory, so it can be used and displayed on the Swagger UI interface.
-  **the directory can be modified in the .env file with the source_path variable.**
-- PHP files can be put anywhere as long as they implement the Interface ``ApiDocConfigInterface``. But in order to be found by the generation commands (to prevent duplication), you should let them in the same directory.
+```yaml
+# config/packages/ehyiah_api_doc.yaml
+ehyiah_api_doc:
+    # Select your preferred UI
+    ui: swagger  # Options: swagger, redoc, stoplight, rapidoc, scalar
 
-- the default route to display your API doc is ``ehyiah/api/doc`` example: localhost/ehyiah/api/doc, **you can modify this route in the config/routes/ehyiah_api_doc.yaml file.**
+    # Directory where YAML files are located (and where commands look for existing files)
+    source_path: 'src/Swagger'
+
+    # Directory to dump generated files
+    dump_path: 'src/Swagger/dump'
+
+    # Enable or disable PHP config loading
+    enable_php_config: true
+
+    # Directories to scan for Entity generation
+    scan_directories:
+        - 'src/Entity'
+```
+
+### Environment Variables
+You can globally configure your API server URLs in your `.env` file. These will appear in the "Servers" dropdown of the Swagger UI. (this is not mandatory as you can define them in YAML or PHP files too).
+
+```dotenv
+# .env
+EHYIAH_API_DOC_SITE_URLS=https://api.example.com,http://localhost:8000
+```
+
+### Custom URL
+The documentation is available at `/ehyiah/api/doc` by default. You can customize this route in `config/routes/ehyiah_api_doc.yaml`.
+
+---
 
 ## UI Selection
 
-This bundle supports five documentation UIs:
+You can choose from 5 modern UIs to display your documentation.
 
 | UI | Value | Description | Try it out | Links |
 |:---|:------|:------------|:-----------|:------|
@@ -66,63 +91,42 @@ This bundle supports five documentation UIs:
 | **RapiDoc** | `rapidoc` | Lightweight, dark/light themes | ✅ Yes | [GitHub](https://github.com/rapi-doc/RapiDoc) - [Demo](https://rapidocweb.com/examples.html) |
 | **Scalar** | `scalar` | Beautiful, modern design | ✅ Yes | [GitHub](https://github.com/scalar/scalar) - [Demo](https://docs.scalar.com/swagger-editor) |
 
-### Default UI
-
-Configure the default UI in your bundle configuration (`config/packages/ehyiah_api_doc.yaml`):
-
-(By default swagger UI is used).
-
-```yaml
-    ehyiah_api_doc:
-        ui: swagger  # swagger, redoc, stoplight, rapidoc or scalar
-```
-
-### Switching UI via Query Parameter
-
-You can switch between UIs on the fly using the `ui` query parameter:
-
-- `/api/doc` → Uses the default UI (from config)
-- `/api/doc?ui=swagger` → Swagger UI
-- `/api/doc?ui=redoc` → Redoc
-- `/api/doc?ui=stoplight` → Stoplight Elements
-- `/api/doc?ui=rapidoc` → RapiDoc
-- `/api/doc?ui=scalar` → Scalar
-
-This is useful if you want to use one UI for public documentation and another for testing API calls.
+### Switching UI On-the-Fly
+You can switch the interface dynamically using the `ui` query parameter:
+- `https://your-domain/ehyiah/api/doc?ui=redoc`
+- `https://your-domain/ehyiah/api/doc?ui=scalar`
 
 ---
 
-# Usage
+## Usage
 
-## YAML files
-Just use simple yaml files to describe your API doc, here is a little example
+### 1. YAML Configuration
+Place your OpenAPI YAML files in the directory defined by `source_path` (default: `src/Swagger`). The bundle will automatically parse and merge all `.yaml` and `.yml` files in this folder.
 
-### Quick Example
-
-``` yaml
-    documentation:
-        openapi: 3.0.0
-        info:
-            title: Api Doc
-            description: my APIs
-            version: 1.0.0
-        components:
-            securitySchemes:
-                Bearer:
+**Example `src/Swagger/info.yaml`:**
+```yaml
+documentation:
+    openapi: 3.0.0
+    info:
+        title: My Awesome API
+        description: API documentation
+        version: 1.0.0
+    components:
+        securitySchemes:
+            Bearer:
                 type: http
                 scheme: bearer
                 bearerFormat: JWT
-                name: "Authorization"
-                in: header
-                description: just insert a valid JWT token without any prefix
 ```
 
-## PHP files
+### 2. PHP Configuration Classes
+You can define your documentation programmatically using PHP classes. This offers strong typing and IDE autocompletion.
 
-You can define your API documentation using PHP classes instead of (or in addition to) YAML files!
+1. Create a class that implements `Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface`.
+2. Implement the `configure` method.
+3. Your class is automatically autoloaded and parsed.
 
-### Quick Example
-
+**Example `src/ApiDoc/UserDocConfig.php`:**
 ```php
 <?php
 namespace App\ApiDoc;
@@ -130,7 +134,7 @@ namespace App\ApiDoc;
 use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
 use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 
-class UserApiDocConfig implements ApiDocConfigInterface
+class UserDocConfig implements ApiDocConfigInterface
 {
     public function configure(ApiDocBuilder $builder): void
     {
@@ -140,14 +144,8 @@ class UserApiDocConfig implements ApiDocConfigInterface
                 ->method('GET')
                 ->summary('Get user by ID')
                 ->tag('Users')
-                ->parameter()
-                    ->name('id')
-                    ->in('path')
-                    ->required()
-                    ->schema(['type' => 'integer'])
-                ->end()
                 ->response(200)
-                    ->description('User found')
+                    ->description('User details')
                     ->jsonContent()
                         ->ref('#/components/schemas/User')
                     ->end()
@@ -157,139 +155,61 @@ class UserApiDocConfig implements ApiDocConfigInterface
 }
 ```
 
-### Learn More
+> 💡 **Tip:** While PHP config classes can be placed anywhere in `src/`, it is recommended to keep them in `src/Swagger` (or your `source_path`) if you want the **Generator Commands** to detect them and prevent duplicates.
 
-📚 **See [docs/PHP_CONFIG_CLASSES.md](docs/PHP_CONFIG_CLASSES.md) for complete documentation with examples.**
+📚 **[Read full PHP Config Documentation](docs/PHP_CONFIG_CLASSES.md)**
 
-### Benefits
-
-- ✅ **Type safety** - IDE autocompletion and type hints
-- ✅ **Flexible** - Generate documentation dynamically
-- ✅ **Reusable** - Share common patterns across routes
-- ✅ **Hybrid** - Works alongside YAML files
-
-## IDE Navigation with ApiDoc Attribute
-
-To improve navigation between your controllers and their API documentation, you can use the `#[ApiDoc]` attribute.
-This attribute creates a direct link from your controller methods to the PHP configuration class where the documentation is defined.
-
-**Ctrl+Click** on the class reference in your IDE to navigate directly to the documentation!
+### 3. IDE Integration
+Link your Controller methods to their documentation using the `#[ApiDoc]` attribute. This allows you to Ctrl+Click from your Controller directly to the documentation source.
 
 ```php
-<?php
-namespace App\Controller;
-
 use Ehyiah\ApiDocBundle\Attributes\ApiDoc;
-use App\ApiDoc\UserApiDocConfig;
+use App\ApiDoc\UserDocConfig;
 
 class UserController
 {
-    #[ApiDoc(UserApiDocConfig::class)]
-    public function getUser(int $id): Response
-    {
-        // Ctrl+Click on UserApiDocConfig::class to navigate to the documentation
-    }
-
-    // You can also reference a specific method in the config class
-    #[ApiDoc(UserApiDocConfig::class, 'configureCreateUser')]
-    public function createUser(Request $request): Response
-    {
-        // ...
-    }
+    #[ApiDoc(UserDocConfig::class)]
+    public function getUser(int $id) { /* ... */ }
 }
 ```
 
-This attribute is purely for IDE navigation - it has no runtime behavior but makes it easy to find and maintain your API documentation.
+---
 
-## Directory Structure
+## Component Generation
 
-## Recommended directory structure
-If you want to use generation commands (see below) but do not want to use Auto-generated components names, 
-you will have to check and update all ``$ref`` used in the generated yaml/yml files by the commands.
+This bundle provides CLI commands to help you kickstart your documentation by generating Schemas and Request Bodies from your existing PHP classes (Entities, DTOs).
 
-**Exemple**: You got a DTO class called ``MyDto``, a schema named ``MyDto`` will be created and used everywhere a reference to this class is created. 
-So if you want to call your component ``MyAwesomeDto`` instead of default name, you will have to update the reference (``$ref``) in every file.
+| Command                         | Description                                     | Mandatory parameter                                               | Example                                                       |
+|:--------------------------------|:------------------------------------------------|-------------------------------------------------------------------|:--------------------------------------------------------------|
+| `apidocbundle:component:schema` | Generates a shared **Schema** from a PHP Class. | No, an autocomplete will prompt you to choose a class             | `bin/console apidocbundle:component:schema "App\Entity\User"` |
+| `apidocbundle:component:body`   | Generates a **Request Body** from a PHP Class.  | No, an autocomplete will prompt you to choose a class             | `bin/console apidocbundle:component:body "App\DTO\UserDTO"`   |
+| `apidocbundle:route:generate`   | interactively generates a **Route** path.       | Yes, at the moment, there is no autocomplete for route generation | `bin/console apidocbundle:route:generate /my/path`            |
 
-```{SOURCE_PATH}``` => is the env variable used as source directory for your api doc default is ```src/Swagger```
+### Command Options
 
-| Type of Components |   Default directory   |
-|:------------------:|:---------------------:|
-|      Schemas       | {SOURCE_PATH}/schemas |
-|                    |                       |
+| Option              | Used in | Shortcut | Description                                         |
+|:--------------------|---------|:---------|:----------------------------------------------------|
+| `--format`          | All     | `-f`     | Output format: `yaml` (default), `php`, or `both`.  |
+| `--output`          | All     | `-o`     | Custom output directory (relative to project root). |
+| `--tag`             | Route   | `-t`     | (Route only) Tags to associate with the route.      |
+| `--response-schema` | Route   | `-rs`    | (Route only) Reference schema for the response.     |
+| `--request-body`    | Route   | `-rb`    | (Route only) Reference schema for the request body. |
+| `--description`     | Route   | `-d`     | (Route only) Description for the route.             |
 
+### Duplicate Detection
+The commands are smart! They check if a component with the same name already exists:
+- **Same Format**: Warns you and shows a diff before overwriting.
+- **Cross Format**: Warns you if you try to generate a YAML component when a PHP version already exists (and vice-versa).
 
-# Generating ApiDoc Components
-**WARNING**: this is still a work in progress feature. You can use it but always check if the generated componant is good.
+---
 
-### Scan Directories for Component Generation
-
-You can configure which directories are scanned when using the component generation commands (e.g. `apidocbundle:component:schema`).
-By default, only `src/Entity` is scanned.
-
-```yaml
-ehyiah_api_doc:
-    # ...
-    scan_directories:
-        - 'src/Entity'
-        - 'src/DTO' ...
-```
-
-Some commands are included in the bundle to pre-generate components.
-You will probably have to edit the generated files or at least check if everything is okay.
-
-| Command                       | Arguments                                                                                               | Options                                                                                                                                                                                                                          | Generation type                                                                          |
-|:------------------------------|:--------------------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------|
-| apidocbundle:component:schema | (optionnal) pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO)               | **--output** (-o) specify a custom output directory to dump the generated file from the kernel_project_dir<br/> **--skip** (-s) list of properties to skip _(you can pass multiple times this option to skip many properties)_ **--format** (-f) output format: `yaml`, `php`, or `both` (default: `yaml`)  | Generate a [schema](https://swagger.io/specification/v3/#schema-object)                  |
-| apidocbundle:component:body   | (optionnal) pass the FQCN of the php class you wish (exemple: a DTO, an Entity, any POPO or a FormType) | **--reference** (-r) specify if a reference must be used instead of regenerating a new schema in the requestBody **--format** (-f) output format: `yaml`, `php`, or `both` (default: `yaml`)                                                                                                               | Generate a [RequestBody](https://swagger.io/docs/specification/describing-request-body/) |
-| apidocbundle:route:generate   | **route**: route path (exemple: /api/users)<br/>**method**: Méthode HTTP (GET, POST, PUT, DELETE...)    | **--tag** (-t) Tags à associer à la route<br/>**--description** (-d) Description de la route<br/>**--response-schema** (-rs) Nom du schéma à utiliser pour la réponse<br/>**--request-body** (-rb) Nom du requestBody à utiliser<br/>**--output** (-o) Répertoire de sortie<br/>**--filename** (-f) Nom du fichier à générer | Generate a [Path Item Object](https://swagger.io/specification/v3/#path-item-object)     |
-
-### Output Format
-
-You can choose the output format using the `--format` option:
+## Linting & Exporting
+You can export your entire documentation to a single JSON or YAML file, which is useful for CI/CD linting (e.g., using [vacuum](https://quobix.com/vacuum/)).
 
 ```bash
-# Generate PHP file (default)
-bin/console apidocbundle:component:schema "App\DTO\UserDTO"
-
-OR bin/console apidocbundle:component:schema "App\DTO\UserDTO" --format=php
-
-# Generate YAML file
-bin/console apidocbundle:component:schema "App\DTO\UserDTO" --format=yaml
-
-# Generate both YAML and PHP files
-bin/console apidocbundle:component:schema "App\DTO\UserDTO" --format=both
+  # Export to JSON
+  bin/console apidocbundle:api-doc:generate --format=json
+  
+  # Export to YAML
+  bin/console apidocbundle:api-doc:generate --format=yaml
 ```
-
-### Duplicate Component Detection
-
-When generating a component, the command will automatically check if a component with the same name already exists in your codebase:
-
-1. **Same format exists**: If you're generating a YAML file and a YAML file with the same component already exists (or PHP for PHP), you will be prompted to confirm if you want to overwrite it.
-   - **Diff View**: If the file exists, the command will display a colored diff (green for additions, red for deletions) showing exactly what will change if you overwrite the file.
-
-2. **Different format exists**: If you're generating a YAML file but a PHP file with the same component already exists (or vice versa), you will be warned about potential duplicate definitions and asked to confirm before continuing.
-
-**Example output:**
-```
-Component already exists in YAML file: /path/to/schemas/UserDTO.yaml
-Differences found:
---- Original
-+++ New
--    type: string
-+    type: integer
-
-Do you want to overwrite this file? (yes or no, default is YES)
-
-Component also exists in PHP file: /path/to/schemas/UserDTO.php
-Do you want to continue generating the YAML file? This may cause duplicate definitions. (yes or no, default is YES)
-```
-
-This helps prevent accidental overwrites and warns you about duplicate component definitions that could cause conflicts in your API documentation.
-
-
-# ApiDoc Linting
-If needed, there is a command to generate your api doc into a single file in YAML or JSON format.
-
-``` bin/console apidocbundle:api-doc:generate ```
-
-You can use this command, for example, to generate a YAML file and use [vacuum](https://quobix.com/vacuum/api/getting-started) to lint your file.
