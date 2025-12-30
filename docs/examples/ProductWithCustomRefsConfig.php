@@ -18,7 +18,7 @@ class ProductWithCustomRefsConfig implements ApiDocConfigInterface
     {
         // ✨ Step 1: Define schemas with custom reference names
 
-        // Product schema with alias 'Product  '
+        // Product schema with alias 'Product'
         $builder
             ->addSchema('ProductEntity')  // Real component name in OpenAPI
                 ->setRefName('Product')   // 🎯 Custom alias for easy reference

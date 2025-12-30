@@ -196,7 +196,7 @@ This bundle provides CLI commands to help you kickstart your documentation by ge
 | `--request-body`    | Route   | `-rb`    | (Route only) Reference schema for the request body. |
 | `--description`     | Route   | `-d`     | (Route only) Description for the route.             |
 
-📚 **[Read Example on how to define reference](docs/CUSTOM_SCHEMA_REFERENCES.md)**
+📚 **[Read the Full Guide on References](docs/REFERENCES.md)**
 
 
 ### Duplicate Detection
