@@ -55,11 +55,6 @@ final class LoadApiDocConfigHelper
             return [];
         }
 
-        $enablePhpConfig = $this->parameterBag->get('ehyiah_api_doc.enable_php_config');
-        if (!$enablePhpConfig) {
-            return [];
-        }
-
         return $this->phpConfigLoader->load();
     }
 

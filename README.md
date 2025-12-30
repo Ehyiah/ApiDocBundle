@@ -62,9 +62,6 @@ ehyiah_api_doc:
     # Directory to dump generated files
     dump_path: 'src/Swagger/dump'
 
-    # Enable or disable PHP config loading
-    enable_php_config: true
-
     # Directories to scan for Entity generation
     scan_directories:
         - 'src/Entity'

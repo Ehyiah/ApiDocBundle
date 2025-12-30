@@ -22,7 +22,6 @@ class EhyiahApiDocBundle extends AbstractBundle
 
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.source_path', $config['source_path']);
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.dump_path', $config['dump_path']);
-        $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.enable_php_config', $config['enable_php_config'] ?? true);
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.ui', $config['ui']);
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.scan_directories', $config['scan_directories']);
     }
@@ -45,10 +44,6 @@ class EhyiahApiDocBundle extends AbstractBundle
                 ->end()
                 ->scalarNode('dump_path')
                     ->defaultValue('src/Swagger/dump')
-                ->end()
-                ->booleanNode('enable_php_config')
-                    ->defaultTrue()
-                    ->info('Enable PHP configuration classes for API documentation')
                 ->end()
                 ->enumNode('ui')
                     ->values(['swagger', 'redoc', 'stoplight', 'rapidoc', 'scalar'])

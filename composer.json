@@ -57,8 +57,7 @@
         "ci": [
             "@phpcsfixer-lint",
             "@phpstan"
-        ],
-        "serve": "php -S localhost:8000 -t tests/App/public"
+        ]
     },
     "config": {
         "allow-plugins": {
