@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="./logo.png" alt="Melody logo" width="400"/>
+</div>
+
 # ApiDocBundle
 
 A Symfony Bundle to generate and display API documentation using **OpenAPI (Swagger) v3**.
