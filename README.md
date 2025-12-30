@@ -21,6 +21,7 @@ You will find examples after the bundle is installed in the default directory /s
 ---
 - [Installation](#installation)
 - [Configuration](#configuration)
+  - [Bundle configuration](#bundle-configuration)
   - [UI Selection](#ui-selection)
 - [Usage](#usage)
   - [YAML Configuration](#yaml-configuration)
@@ -38,10 +39,19 @@ Be sure that contrib recipes are allowed in your project
 
 Then Run 
 ```sh
-  composer require ehyiah/apidoc-bundle
+    composer require ehyiah/apidoc-bundle
 ```
 
 # Configuration
+
+## Bundle configuration
+
+- In your .env file, you can update the ``site_urls`` variable to use it in your Swagger UI interface (or define yourself via PHP classes or directly inside YAML files). every urls defined will be combined.
+
+- You must add the YAML files (that you want to be parsed) In the ``src/Swagger`` (default directory) directory, so it can be used and displayed on the Swagger UI interface.
+  **the directory can be modified in the .env file with the source_path variable.**
+
+- the default route to display your API doc is ``ehyiah/api/doc`` example: localhost/ehyiah/api/doc, **you can modify this route in the config/routes/ehyiah_api_doc.yaml file.**
 
 ## UI Selection
 
@@ -59,9 +69,11 @@ This bundle supports five documentation UIs:
 
 Configure the default UI in your bundle configuration (`config/packages/ehyiah_api_doc.yaml`):
 
+(By default swagger UI is used).
+
 ```yaml
-ehyiah_api_doc:
-    ui: swagger  # swagger, redoc, stoplight, rapidoc or scalar
+    ehyiah_api_doc:
+        ui: swagger  # swagger, redoc, stoplight, rapidoc or scalar
 ```
 
 ### Switching UI via Query Parameter
@@ -81,16 +93,30 @@ This is useful if you want to use one UI for public documentation and another fo
 
 # Usage
 
-## YAML Configuration
+## YAML files
+Just use simple yaml files to describe your API doc, here is a little example
 
-- In your .env file, you can update the site_urls variable to use it in your Swagger UI interface (or define yourself via PHP classes or directly inside YAML files)
+### Quick Example
 
-- In the src/Swagger (default directory) directory, add the YAML files that you want to be parsed and displayed on the Swagger UI interface.
-**the directory can be modified in the .env file with the source_path variable.**
+``` yaml
+    documentation:
+        openapi: 3.0.0
+        info:
+            title: Api Doc
+            description: my APIs
+            version: 1.0.0
+        components:
+            securitySchemes:
+                Bearer:
+                type: http
+                scheme: bearer
+                bearerFormat: JWT
+                name: "Authorization"
+                in: header
+                description: just insert a valid JWT token without any prefix
+```
 
-- the default route is ehyiah/api/doc example: localhost/ehyiah/api/doc, **you can modify this route in the config/routes/ehyiah_api_doc.yaml file.**
-
-## PHP Configuration Classes
+## PHP files
 
 You can define your API documentation using PHP classes instead of (or in addition to) YAML files!
 
