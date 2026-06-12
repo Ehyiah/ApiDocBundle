@@ -6,6 +6,7 @@ use ReflectionClass;
 use ReflectionIntersectionType;
 use ReflectionMethod;
 use ReflectionNamedType;
+use ReflectionType;
 use ReflectionUnionType;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -38,7 +39,7 @@ final class GenerateBuilderDocCommand extends Command
         $toc = ['## Table of Contents', ''];
 
         foreach ($finder as $file) {
-            $className = 'Ehyiah\\ApiDocBundle\\Builder\\' . $file->getBasename('.php');
+            $className = 'Ehyiah\ApiDocBundle\Builder\\' . $file->getBasename('.php');
             if (!class_exists($className)) {
                 continue;
             }
@@ -114,7 +115,7 @@ final class GenerateBuilderDocCommand extends Command
         return $doc;
     }
 
-    private function getTypeName(\ReflectionType|null $type): string
+    private function getTypeName(?ReflectionType $type): string
     {
         if (null === $type) {
             return 'mixed';

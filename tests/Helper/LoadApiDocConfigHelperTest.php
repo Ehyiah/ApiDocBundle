@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Ehyiah\ApiDocBundle\Tests\Helper;
 
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;

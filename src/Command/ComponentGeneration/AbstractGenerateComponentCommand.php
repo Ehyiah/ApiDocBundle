@@ -4,7 +4,6 @@ namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
 use BackedEnum;
 use DateTimeInterface;
-use Doctrine\Common\Collections\Collection;
 use Ehyiah\ApiDocBundle\Command\Traits\GenerateFileTrait;
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use LogicException;
@@ -19,7 +18,6 @@ use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\PropertyInfo\PropertyInfoExtractorInterface;
-use Symfony\Component\PropertyInfo\Type;
 
 use function Symfony\Component\String\u;
 
@@ -151,8 +149,7 @@ abstract class AbstractGenerateComponentCommand extends Command
     {
         return [
             'documentation' => [
-                'components' => [
-                ],
+                'components' => [],
             ],
         ];
     }
@@ -201,16 +198,16 @@ abstract class AbstractGenerateComponentCommand extends Command
     /**
      * @param array<mixed> $schema
      */
-    public static function addProperty(array &$schema, string $property, Type $type): void
+    public static function addProperty(array &$schema, string $property, \Symfony\Component\TypeInfo\Type $type): void
     {
-        if ('array' === $type->getBuiltinType()) {
-            $arrayType = $type->getCollectionValueTypes();
-            if (isset($arrayType[0])) {
-                /** @var class-string $itemClass */
-                $itemClass = $type->getCollectionValueTypes()[0]->getClassName();
+        $builtinType = $type->getTypeIdentifier()->value;
+        if ('array' === $builtinType) {
+            if ($type instanceof \Symfony\Component\TypeInfo\Type\CollectionType) {
+                $valueType = $type->getCollectionValueType();
+                $itemClass = $valueType instanceof \Symfony\Component\TypeInfo\Type\ObjectType ? $valueType->getClassName() : null;
+
                 if (null !== $itemClass) {
                     $reflectionClass = (new ReflectionClass($itemClass));
-
                     if (in_array(BackedEnum::class, $reflectionClass->getInterfaceNames())) {
                         self::handleEnum($schema, $reflectionClass, $property, 'array');
 
@@ -222,26 +219,25 @@ abstract class AbstractGenerateComponentCommand extends Command
 
                 $schema[$property]['type'] = 'array';
                 if (!isset($schema[$property]['items'])) {
-                    if ('bool' === $arrayType[0]->getBuiltinType()) {
+                    $itemBuiltin = $valueType->getTypeIdentifier()->value;
+                    if ('bool' === $itemBuiltin) {
                         $schema[$property]['items']['type'] = 'boolean';
-                    } elseif ('int' === $arrayType[0]->getBuiltinType()) {
+                    } elseif ('int' === $itemBuiltin) {
                         $schema[$property]['items']['type'] = 'integer';
                     } else {
-                        $schema[$property]['items']['type'] = $arrayType[0]->getBuiltinType();
+                        $schema[$property]['items']['type'] = $itemBuiltin;
                     }
                 }
 
                 return;
             }
             $schema[$property]['items']['type'] = 'string';
-
             $schema[$property]['type'] = 'array';
 
             return;
         }
 
-        if (null !== $type->getClassName()) {
-            /** @var class-string $className */
+        if ($type instanceof \Symfony\Component\TypeInfo\Type\ObjectType) {
             $className = $type->getClassName();
             $reflectionClass = new ReflectionClass($className);
             $interfaces = $reflectionClass->getInterfaceNames();
@@ -249,23 +245,6 @@ abstract class AbstractGenerateComponentCommand extends Command
             if (in_array(DateTimeInterface::class, $interfaces)) {
                 $schema[$property]['type'] = 'string';
                 $schema[$property]['format'] = 'date-time';
-
-                return;
-            }
-
-            if ($type->isCollection()) {
-                $collectionClass = $type->getCollectionValueTypes()[0]->getClassName();
-                /** @var class-string $collectionClass */
-                $reflectionClass = (new ReflectionClass($collectionClass));
-                $schema[$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
-                $schema[$property]['type'] = 'array';
-
-                return;
-            }
-
-            if (Collection::class === $type->getClassName()) {
-                $schema[$property]['type'] = 'array';
-                $schema[$property]['items'] = ['$ref' => '#/components/schemas/' . $reflectionClass->getShortName()];
 
                 return;
             }
@@ -281,21 +260,21 @@ abstract class AbstractGenerateComponentCommand extends Command
             return;
         }
 
-        if ('bool' === $type->getBuiltinType()) {
+        if ('bool' === $builtinType) {
             $schema[$property]['type'] = 'boolean';
             $schema[$property]['description'] = '';
 
             return;
         }
 
-        if ('int' === $type->getBuiltinType()) {
+        if ('int' === $builtinType) {
             $schema[$property]['type'] = 'integer';
             $schema[$property]['description'] = '';
 
             return;
         }
 
-        $schema[$property]['type'] = $type->getBuiltinType();
+        $schema[$property]['type'] = $builtinType;
         $schema[$property]['description'] = '';
     }
 
@@ -488,313 +467,5 @@ abstract class AbstractGenerateComponentCommand extends Command
         }
 
         $this->writePhpFile($phpCode, $dumpLocation, $output);
-    }
-
-    /**
-     * @param array<mixed> $array
-     */
-    protected function generatePhpBuilderCode(array $array, string $componentName, string $componentType): string
-    {
-        $code = "<?php\n\n";
-        $code .= "use Ehyiah\\ApiDocBundle\\Builder\\ApiDocBuilder;\n";
-        $code .= "use Ehyiah\\ApiDocBundle\\Interfaces\\ApiDocConfigInterface;\n\n";
-        $code .= "return new class implements ApiDocConfigInterface {\n";
-        $code .= "    public function configure(ApiDocBuilder \$builder): void\n";
-        $code .= "    {\n";
-
-        if (self::COMPONENT_SCHEMAS === $componentType) {
-            $schema = $array['documentation']['components']['schemas'][$componentName] ?? [];
-            $code .= $this->buildSchemaCode($componentName, $schema, 2);
-        } elseif (self::COMPONENT_REQUEST_BODIES === $componentType) {
-            $requestBody = $array['documentation']['components']['requestBodies'][$componentName] ?? [];
-            $code .= $this->buildRequestBodyCode($componentName, $requestBody, 2);
-        } elseif (self::COMPONENT_PARAMETERS === $componentType) {
-            $parameter = $array['documentation']['components']['parameters'][$componentName] ?? [];
-            $code .= $this->buildParameterCode($componentName, $parameter, 2);
-        } elseif (self::COMPONENT_HEADERS === $componentType) {
-            $header = $array['documentation']['components']['headers'][$componentName] ?? [];
-            $code .= $this->buildHeaderCode($componentName, $header, 2);
-        } elseif (self::COMPONENT_RESPONSES === $componentType) {
-            $response = $array['documentation']['components']['responses'][$componentName] ?? [];
-            $code .= $this->buildResponseCode($componentName, $response, 2);
-        } elseif (self::COMPONENT_SECURITY_SCHEMES === $componentType) {
-            $securityScheme = $array['documentation']['components']['securitySchemes'][$componentName] ?? [];
-            $code .= $this->buildSecuritySchemeCode($componentName, $securityScheme, 2);
-        } elseif (self::COMPONENT_EXAMPLES === $componentType) {
-            $example = $array['documentation']['components']['examples'][$componentName] ?? [];
-            $code .= $this->buildExampleCode($componentName, $example, 2);
-        }
-
-        $code .= "    }\n";
-        $code .= "};\n";
-
-        return $code;
-    }
-
-    /**
-     * @param array<mixed> $schema
-     */
-    protected function buildSchemaCode(string $name, array $schema, int $indent): string
-    {
-        $pad = str_repeat('    ', $indent);
-        $code = "{$pad}\$builder->addSchema('{$name}')\n";
-
-        if (isset($schema['type'])) {
-            $code .= "{$pad}    ->type('{$schema['type']}')\n";
-        }
-
-        if (isset($schema['description'])) {
-            $description = addslashes($schema['description']);
-            $code .= "{$pad}    ->description('{$description}')\n";
-        }
-
-        if (isset($schema['properties']) && is_array($schema['properties'])) {
-            foreach ($schema['properties'] as $propName => $propDef) {
-                $code .= $this->buildPropertyCode($propName, $propDef, $schema['required'] ?? [], $indent + 1);
-            }
-        }
-
-        $code .= "{$pad}->end();\n";
-
-        return $code;
-    }
-
-    /**
-     * @param array<mixed> $propDef
-     * @param array<string> $requiredFields
-     */
-    protected function buildPropertyCode(string $name, array $propDef, array $requiredFields, int $indent): string
-    {
-        $pad = str_repeat('    ', $indent);
-        $code = "{$pad}->addProperty('{$name}')\n";
-
-        if (isset($propDef['$ref'])) {
-            $ref = $propDef['$ref'];
-            $code .= "{$pad}    ->ref('{$ref}')\n";
-        } else {
-            if (isset($propDef['type'])) {
-                $code .= "{$pad}    ->type('{$propDef['type']}')\n";
-            }
-
-            if (isset($propDef['format'])) {
-                $code .= "{$pad}    ->format('{$propDef['format']}')\n";
-            }
-
-            if (isset($propDef['description']) && '' !== $propDef['description']) {
-                $description = addslashes($propDef['description']);
-                $code .= "{$pad}    ->description('{$description}')\n";
-            }
-
-            if (isset($propDef['enum'])) {
-                $enumValues = array_map(function ($v) {
-                    return is_string($v) ? "'" . addslashes($v) . "'" : $v;
-                }, $propDef['enum']);
-                $code .= "{$pad}    ->enum([" . implode(', ', $enumValues) . "])\n";
-            }
-
-            if (isset($propDef['items'])) {
-                if (isset($propDef['items']['$ref'])) {
-                    $code .= "{$pad}    ->items(['\$ref' => '{$propDef['items']['$ref']}'])\n";
-                } elseif (isset($propDef['items']['type'])) {
-                    $code .= "{$pad}    ->items(['type' => '{$propDef['items']['type']}'])\n";
-                }
-            }
-
-            if (isset($propDef['nullable']) && $propDef['nullable']) {
-                $code .= "{$pad}    ->nullable()\n";
-            }
-        }
-
-        if (in_array($name, $requiredFields, true)) {
-            $code .= "{$pad}    ->required()\n";
-        }
-
-        $code .= "{$pad}->end()\n";
-
-        return $code;
-    }
-
-    /**
-     * @param array<mixed> $requestBody
-     */
-    protected function buildRequestBodyCode(string $name, array $requestBody, int $indent): string
-    {
-        $pad = str_repeat('    ', $indent);
-        $code = "{$pad}\$builder->addRequestBody('{$name}')\n";
-
-        if (isset($requestBody['description'])) {
-            $description = addslashes($requestBody['description']);
-            $code .= "{$pad}    ->description('{$description}')\n";
-        }
-
-        if (isset($requestBody['required']) && $requestBody['required']) {
-            $code .= "{$pad}    ->required()\n";
-        }
-
-        if (isset($requestBody['content'])) {
-            foreach ($requestBody['content'] as $mediaType => $content) {
-                if ('application/json' === $mediaType) {
-                    $code .= "{$pad}    ->jsonContent()\n";
-                } else {
-                    $code .= "{$pad}    ->content('{$mediaType}')\n";
-                }
-
-                if (isset($content['schema'])) {
-                    if (isset($content['schema']['$ref'])) {
-                        $code .= "{$pad}        ->ref('{$content['schema']['$ref']}')\n";
-                    } elseif (isset($content['schema']['properties'])) {
-                        $code .= "{$pad}        ->schema()\n";
-                        $code .= "{$pad}            ->type('object')\n";
-                        foreach ($content['schema']['properties'] as $propName => $propDef) {
-                            $code .= $this->buildPropertyCode($propName, $propDef, $content['schema']['required'] ?? [], $indent + 3);
-                        }
-                        $code .= "{$pad}        ->end()\n";
-                    }
-                }
-
-                $code .= "{$pad}    ->end()\n";
-            }
-        }
-
-        $code .= "{$pad}->end();\n";
-
-        return $code;
-    }
-
-    /**
-     * @param array<mixed> $parameter
-     */
-    protected function buildParameterCode(string $name, array $parameter, int $indent): string
-    {
-        $pad = str_repeat('    ', $indent);
-        $code = "{$pad}\$builder->addParameter('{$name}')\n";
-
-        if (isset($parameter['in'])) {
-            $code .= "{$pad}    ->in('{$parameter['in']}')\n";
-        }
-
-        if (isset($parameter['description'])) {
-            $description = addslashes($parameter['description']);
-            $code .= "{$pad}    ->description('{$description}')\n";
-        }
-
-        if (isset($parameter['required']) && $parameter['required']) {
-            $code .= "{$pad}    ->required()\n";
-        }
-
-        if (isset($parameter['schema'])) {
-            $code .= "{$pad}    ->schema(['type' => '{$parameter['schema']['type']}'])\n";
-        }
-
-        $code .= "{$pad}->end();\n";
-
-        return $code;
-    }
-
-    /**
-     * @param array<mixed> $header
-     */
-    protected function buildHeaderCode(string $name, array $header, int $indent): string
-    {
-        $pad = str_repeat('    ', $indent);
-        $code = "{$pad}\$builder->addHeader('{$name}')\n";
-
-        if (isset($header['description'])) {
-            $description = addslashes($header['description']);
-            $code .= "{$pad}    ->description('{$description}')\n";
-        }
-
-        if (isset($header['schema'])) {
-            $code .= "{$pad}    ->schema(['type' => '{$header['schema']['type']}'])\n";
-        }
-
-        $code .= "{$pad}->end();\n";
-
-        return $code;
-    }
-
-    /**
-     * @param array<mixed> $response
-     */
-    protected function buildResponseCode(string $name, array $response, int $indent): string
-    {
-        $pad = str_repeat('    ', $indent);
-        $code = "{$pad}\$builder->addResponse('{$name}')\n";
-
-        if (isset($response['description'])) {
-            $description = addslashes($response['description']);
-            $code .= "{$pad}    ->description('{$description}')\n";
-        }
-
-        if (isset($response['statusCode'])) {
-            $code .= "{$pad}    ->statusCode({$response['statusCode']})\n";
-        }
-
-        if (isset($response['content']['application/json']['schema']['$ref'])) {
-            $ref = $response['content']['application/json']['schema']['$ref'];
-            $code .= "{$pad}    ->jsonContent()\n";
-            $code .= "{$pad}        ->ref('{$ref}')\n";
-            $code .= "{$pad}    ->end()\n";
-        }
-
-        $code .= "{$pad}->end();\n";
-
-        return $code;
-    }
-
-    /**
-     * @param array<mixed> $securityScheme
-     */
-    protected function buildSecuritySchemeCode(string $name, array $securityScheme, int $indent): string
-    {
-        $pad = str_repeat('    ', $indent);
-        $code = "{$pad}\$builder->addSecurityScheme('{$name}')\n";
-
-        if (isset($securityScheme['type'])) {
-            $code .= "{$pad}    ->type('{$securityScheme['type']}')\n";
-        }
-
-        if (isset($securityScheme['in'])) {
-            $code .= "{$pad}    ->in('{$securityScheme['in']}')\n";
-        }
-
-        if (isset($securityScheme['name'])) {
-            $code .= "{$pad}    ->nameInHeader('{$securityScheme['name']}')\n";
-        }
-
-        if (isset($securityScheme['scheme'])) {
-            $code .= "{$pad}    ->scheme('{$securityScheme['scheme']}')\n";
-        }
-
-        if (isset($securityScheme['bearerFormat'])) {
-            $code .= "{$pad}    ->bearerFormat('{$securityScheme['bearerFormat']}')\n";
-        }
-
-        $code .= "{$pad}->end();\n";
-
-        return $code;
-    }
-
-    /**
-     * @param array<mixed> $example
-     */
-    protected function buildExampleCode(string $name, array $example, int $indent): string
-    {
-        $pad = str_repeat('    ', $indent);
-        $code = "{$pad}\$builder->addExample('{$name}')\n";
-
-        if (isset($example['summary'])) {
-            $summary = addslashes($example['summary']);
-            $code .= "{$pad}    ->summary('{$summary}')\n";
-        }
-
-        if (isset($example['value'])) {
-            $value = var_export($example['value'], true);
-            $code .= "{$pad}    ->value({$value})\n";
-        }
-
-        $code .= "{$pad}->end();\n";
-
-        return $code;
     }
 }

@@ -1,9 +1,9 @@
-FROM php:8.1.13-cli
+FROM php:8.4.22-cli
 ARG TIMEZONE="Europe/Paris"
 
 MAINTAINER Matthieu Gostiaux<rei_eva@hotmail.com>
 
-COPY --from=composer:2.7.1 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.10.1 /usr/bin/composer /usr/bin/composer
 
 # Install requirements
 RUN apt-get update && apt-get install -y  --fix-missing \

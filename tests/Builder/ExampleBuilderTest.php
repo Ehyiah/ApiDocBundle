@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Ehyiah\ApiDocBundle\Tests\Builder;
 
 use Ehyiah\ApiDocBundle\Builder\ContentBuilder;
