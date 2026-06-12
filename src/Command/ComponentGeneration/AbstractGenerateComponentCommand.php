@@ -201,7 +201,7 @@ abstract class AbstractGenerateComponentCommand extends Command
      */
     public static function addProperty(array &$schema, string $property, \Symfony\Component\TypeInfo\Type $type): void
     {
-        $builtinType = $type->getTypeIdentifier()->value;
+        $builtinType = self::getBuiltinTypeFromTypeInfo($type);
         if ('array' === $builtinType) {
             if ($type instanceof \Symfony\Component\TypeInfo\Type\CollectionType) {
                 $valueType = $type->getCollectionValueType();
@@ -220,7 +220,7 @@ abstract class AbstractGenerateComponentCommand extends Command
 
                 $schema[$property]['type'] = 'array';
                 if (!isset($schema[$property]['items'])) {
-                    $itemBuiltin = $valueType->getTypeIdentifier()->value;
+                    $itemBuiltin = self::getBuiltinTypeFromTypeInfo($valueType);
                     if ('bool' === $itemBuiltin) {
                         $schema[$property]['items']['type'] = 'boolean';
                     } elseif ('int' === $itemBuiltin) {
@@ -277,6 +277,30 @@ abstract class AbstractGenerateComponentCommand extends Command
 
         $schema[$property]['type'] = $builtinType;
         $schema[$property]['description'] = '';
+    }
+
+    private static function getBuiltinTypeFromTypeInfo(\Symfony\Component\TypeInfo\Type $type): string
+    {
+        if ($type->isIdentifiedBy(\Symfony\Component\TypeInfo\TypeIdentifier::ARRAY)) {
+            return 'array';
+        }
+        if ($type->isIdentifiedBy(\Symfony\Component\TypeInfo\TypeIdentifier::OBJECT)) {
+            return 'object';
+        }
+        if ($type->isIdentifiedBy(\Symfony\Component\TypeInfo\TypeIdentifier::INT)) {
+            return 'int';
+        }
+        if ($type->isIdentifiedBy(\Symfony\Component\TypeInfo\TypeIdentifier::BOOL)) {
+            return 'bool';
+        }
+        if ($type->isIdentifiedBy(\Symfony\Component\TypeInfo\TypeIdentifier::FLOAT)) {
+            return 'float';
+        }
+        if ($type->isIdentifiedBy(\Symfony\Component\TypeInfo\TypeIdentifier::STRING)) {
+            return 'string';
+        }
+
+        return 'string'; // Default fallback
     }
 
     /**

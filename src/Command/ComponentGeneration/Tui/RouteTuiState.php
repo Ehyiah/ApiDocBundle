@@ -13,4 +13,6 @@ class RouteTuiState
     public array $methods = [];
     /** @var array<string, string[]> */
     public array $security = [];
+    public ?string $requestBodySchema = null;
+    public ?string $responseSchema = null;
 }

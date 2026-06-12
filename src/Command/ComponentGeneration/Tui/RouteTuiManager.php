@@ -57,6 +57,31 @@ class RouteTuiManager
         return is_string($dumpLocation) ? (string)u($dumpLocation)->ensureStart('/')->ensureEnd('/') : '/src/Swagger/';
     }
 
+    public function getAvailableSchemas(): array
+    {
+        $sourcePath = $this->parameterBag->get('ehyiah_api_doc.source_path');
+        $dumpDirectory = $this->kernel->getProjectDir() . $sourcePath;
+
+        $schemas = [];
+        if (is_dir($dumpDirectory)) {
+            $finder = new \Symfony\Component\Finder\Finder();
+            $finder->files()->in($dumpDirectory)->name(['*.yaml', '*.php']);
+            foreach ($finder as $file) {
+                // If it's a file in a 'schemas' subdirectory, use filename as schema name
+                if (str_contains($file->getPathname(), DIRECTORY_SEPARATOR . 'schemas' . DIRECTORY_SEPARATOR)) {
+                    $schemas[] = $file->getBasename('.' . $file->getExtension());
+                }
+            }
+        }
+
+        return array_unique($schemas);
+    }
+
+    public function registerSchema(\Ehyiah\ApiDocBundle\Builder\ApiDocBuilder $builder, string $schemaName): void
+    {
+        $builder->addSchema($schemaName)->setRefName($schemaName)->end();
+    }
+
     public function loadRouteConfig(string $routeName, string $componentType): array
     {
         $route = $this->router->getRouteCollection()->get($routeName);
@@ -65,18 +90,13 @@ class RouteTuiManager
         }
         $path = $route->getPath();
 
-        $dumpDirectory = $this->kernel->getProjectDir() . $this->getDefaultDumpLocation() . \Symfony\Component\String\u($componentType)->ensureEnd('/');
-
-        // Debugging
-        // $this->apiDocConfigHelper->findYamlComponentFile($routeName, $componentType); // Log this? No.
+        $dumpDirectory = $this->kernel->getProjectDir() . $this->getDefaultDumpLocation() . u($componentType)->ensureEnd('/');
 
         // 1. Check for YAML
         $yamlFile = $dumpDirectory . $routeName . '.yaml';
         if (file_exists($yamlFile)) {
             $config = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile);
 
-            // $this->currentOutput->writeln("DEBUG: Path looking for: $path");
-            // $this->currentOutput->writeln("DEBUG: Config paths: " . json_encode(array_keys($config['paths'] ?? [])));
             return $this->extractRouteData($config, $path);
         }
 
@@ -86,33 +106,33 @@ class RouteTuiManager
 
     private function extractRouteData(array $config, string $path): array
     {
-        // $this->currentOutput->writeln("DEBUG: Looking for path: $path");
-        // $this->currentOutput->writeln("DEBUG: Available paths: " . json_encode(array_keys($config['paths'] ?? [])));
-
         $data = [
             'summary' => '',
             'description' => '',
             'methods' => [],
             'security' => [],
+            'requestBodySchema' => null,
+            'responseSchema' => null,
         ];
 
         if (isset($config['paths'][$path])) {
             foreach ($config['paths'][$path] as $method => $definition) {
                 if (is_array($definition)) {
-                    // ... (rest of logic)
-                    // Only set summary/description if not already set by a previous method
-                    if (empty($data['summary'])) {
-                        $data['summary'] = $definition['summary'] ?? '';
-                    }
-                    if (empty($data['description'])) {
-                        $data['description'] = $definition['description'] ?? '';
-                    }
+                    $data['summary'] = empty($data['summary']) ? ($definition['summary'] ?? '') : $data['summary'];
+                    $data['description'] = empty($data['description']) ? ($definition['description'] ?? '') : $data['description'];
                     $data['methods'][] = strtoupper($method);
 
                     if (isset($definition['security'])) {
                         foreach ($definition['security'] as $security) {
                             $data['security'] = array_merge($data['security'], array_keys($security));
                         }
+                    }
+
+                    if (empty($data['requestBodySchema']) && isset($definition['requestBody']['content']['application/json']['schema']['$ref'])) {
+                        $data['requestBodySchema'] = $this->extractSchemaName($definition['requestBody']['content']['application/json']['schema']['$ref']);
+                    }
+                    if (empty($data['responseSchema']) && isset($definition['responses']['200']['content']['application/json']['schema']['$ref'])) {
+                        $data['responseSchema'] = $this->extractSchemaName($definition['responses']['200']['content']['application/json']['schema']['$ref']);
                     }
                 }
             }
@@ -121,5 +141,14 @@ class RouteTuiManager
         $data['security'] = array_unique($data['security']);
 
         return $data;
+    }
+
+    private function extractSchemaName(?string $ref): ?string
+    {
+        if (!$ref) {
+            return null;
+        }
+
+        return str_replace('#/components/schemas/', '', $ref);
     }
 }

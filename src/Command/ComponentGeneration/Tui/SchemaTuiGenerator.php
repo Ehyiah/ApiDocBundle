@@ -423,7 +423,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
             $array['documentation']['components']['schemas'][$shortClassName]['type'] = 'object';
             AbstractGenerateComponentCommand::addProperty($propertiesArray, $property, $firstTypeInfo);
 
-            if (TypeIdentifier::OBJECT->value === $firstTypeInfo->getTypeIdentifier()->value || TypeIdentifier::STRING->value === $firstTypeInfo->getTypeIdentifier()->value) {
+            if ($firstTypeInfo->isIdentifiedBy(TypeIdentifier::OBJECT) || $firstTypeInfo->isIdentifiedBy(TypeIdentifier::STRING)) {
                 $propClass = $firstTypeInfo instanceof \Symfony\Component\TypeInfo\Type\ObjectType ? $firstTypeInfo->getClassName() : null;
                 if (null !== $propClass && class_exists($propClass)) {
                     $propReflection = new ReflectionClass($propClass);

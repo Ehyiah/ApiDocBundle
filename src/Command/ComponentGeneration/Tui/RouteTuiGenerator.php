@@ -3,15 +3,27 @@
 namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tui;
 
 use Ehyiah\ApiDocBundle\Attributes\AsTuiGenerator;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\AbstractGenerateComponentCommand;
+use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\PropertyInfo\PropertyInfoExtractorInterface;
 use Symfony\Component\Tui\Event\CancelEvent;
 use Symfony\Component\Tui\Event\SelectEvent;
 use Symfony\Component\Tui\Event\SettingChangeEvent;
+use Symfony\Component\Tui\Event\SubmitEvent;
 use Symfony\Component\Tui\Tui;
 use Symfony\Component\Tui\Widget\ContainerWidget;
+use Symfony\Component\Tui\Widget\InputWidget;
 use Symfony\Component\Tui\Widget\SelectListWidget;
+use Symfony\Component\Tui\Widget\SettingItem;
+use Symfony\Component\Tui\Widget\SettingsListWidget;
 use Symfony\Component\Tui\Widget\TextWidget;
+
+use function Symfony\Component\String\u;
 
 #[AsTuiGenerator]
 class RouteTuiGenerator extends AbstractTuiComponentGenerator
@@ -20,10 +32,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
     public function __construct(
         private readonly RouteTuiManager $manager,
-        \Symfony\Component\HttpKernel\KernelInterface $kernel,
-        \Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface $parameterBag,
-        \Symfony\Component\PropertyInfo\PropertyInfoExtractorInterface $propertyInfoExtractor,
-        \Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper $apiDocConfigHelper,
+        KernelInterface $kernel,
+        ParameterBagInterface $parameterBag,
+        PropertyInfoExtractorInterface $propertyInfoExtractor,
+        LoadApiDocConfigHelper $apiDocConfigHelper,
     ) {
         parent::__construct($kernel, $parameterBag, $propertyInfoExtractor, $apiDocConfigHelper);
     }
@@ -70,8 +82,9 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                 $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
                 $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
 
-                $selectedClass = $event->getValue();
-                $this->showConfigurationDashboard($tui, $selectedClass, $onBack);
+                $state = new RouteTuiState();
+                $state->routeName = $event->getValue();
+                $this->showConfigurationDashboard($tui, $state, $onBack);
             }
         };
 
@@ -87,16 +100,11 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $tui->addListener($cancelListener);
     }
 
-    private function showConfigurationDashboard(Tui $tui, string $selectedClass, callable $onBack): void
+    private function showConfigurationDashboard(Tui $tui, RouteTuiState $state, callable $onBack): void
     {
-        $state = new RouteTuiState();
-        $state->routeName = $selectedClass;
         $state->outputDir = $this->manager->getDefaultDumpLocation();
 
-        $existingConfig = $this->manager->loadRouteConfig($selectedClass, \Ehyiah\ApiDocBundle\Command\ComponentGeneration\AbstractGenerateComponentCommand::COMPONENT_ROUTES);
-
-        $this->currentOutput->writeln("<comment>DEBUG: Checking route file for: $selectedClass</comment>");
-        $this->currentOutput->writeln('<comment>DEBUG: Dump location: ' . $this->manager->getDefaultDumpLocation() . '</comment>');
+        $existingConfig = $this->manager->loadRouteConfig($state->routeName, AbstractGenerateComponentCommand::COMPONENT_ROUTES);
 
         if (!empty($existingConfig)) {
             $state->summary = $existingConfig['summary'] ?? '';
@@ -108,10 +116,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems = [];
 
         $textInputCallback = static function (string $currentValue, callable $onDone) {
-            $inputWidget = new \Symfony\Component\Tui\Widget\InputWidget();
+            $inputWidget = new InputWidget();
             $inputWidget->setValue($currentValue);
             $inputWidget->setPrompt('Saisie : ');
-            $inputWidget->onSubmit(static function (\Symfony\Component\Tui\Event\SubmitEvent $event) use ($onDone) {
+            $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
                 $onDone($event->getValue());
             });
             $inputWidget->onCancel(static function (CancelEvent $event) use ($onDone) {
@@ -121,33 +129,38 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             return $inputWidget;
         };
 
-        $settingItems[] = new \Symfony\Component\Tui\Widget\SettingItem('summary', 'Résumé', $state->summary, 'Résumé de la route', [], $textInputCallback);
-        $settingItems[] = new \Symfony\Component\Tui\Widget\SettingItem('desc', 'Description', $state->description, 'Description détaillée', [], $textInputCallback);
+        $settingItems[] = new SettingItem('summary', 'Résumé', $state->summary, 'Résumé de la route', [], $textInputCallback);
+        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Description détaillée', [], $textInputCallback);
 
         // Methods
         foreach (['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as $method) {
             $value = in_array($method, $state->methods, true) ? 'inclure' : 'exclure';
-            $settingItems[] = new \Symfony\Component\Tui\Widget\SettingItem('method_' . $method, 'Méthode : ' . $method, $value, 'Inclure/Exclure méthode', ['inclure', 'exclure']);
+            $settingItems[] = new SettingItem('method_' . $method, 'Méthode : ' . $method, $value, 'Inclure/Exclure méthode', ['inclure', 'exclure']);
         }
 
         // Security
         foreach ($this->manager->getSecuritySchemes() as $scheme) {
             $value = in_array($scheme, $state->security, true) ? 'inclure' : 'exclure';
-            $settingItems[] = new \Symfony\Component\Tui\Widget\SettingItem('sec_' . $scheme, 'Sécurité : ' . $scheme, $value, 'Inclure/Exclure schéma de sécurité', ['inclure', 'exclure']);
+            $settingItems[] = new SettingItem('sec_' . $scheme, 'Sécurité : ' . $scheme, $value, 'Inclure/Exclure schéma de sécurité', ['inclure', 'exclure']);
         }
 
-        $settingItems[] = new \Symfony\Component\Tui\Widget\SettingItem('format', 'Format', $state->format, 'YAML ou PHP', ['yaml', 'php']);
-        $settingItems[] = new \Symfony\Component\Tui\Widget\SettingItem('output', 'Dossier de sortie', $state->outputDir, 'Répertoire cible', [], $textInputCallback);
+        // Schemas
+        $schemas = $this->manager->getAvailableSchemas();
+        $settingItems[] = new SettingItem('rb_schema', 'Schema RequestBody', $state->requestBodySchema ?? 'aucun', 'Choisir un schéma', array_merge(['aucun'], $schemas));
+        $settingItems[] = new SettingItem('res_schema', 'Schema Réponse 200', $state->responseSchema ?? 'aucun', 'Choisir un schéma', array_merge(['aucun'], $schemas));
 
-        $settingItems[] = new \Symfony\Component\Tui\Widget\SettingItem('action_generate', 'Générer la route', '[Confirmer]', 'Lancer la génération.', ['[Confirmer]']);
-        $settingItems[] = new \Symfony\Component\Tui\Widget\SettingItem('action_cancel', 'Retour', '[Annuler]', 'Retourner à la liste.', ['[Annuler]']);
+        $settingItems[] = new SettingItem('format', 'Format', $state->format, 'YAML ou PHP', ['yaml', 'php']);
+        $settingItems[] = new SettingItem('output', 'Dossier de sortie', $state->outputDir, 'Répertoire cible', [], $textInputCallback);
 
-        $settingsWidget = new \Symfony\Component\Tui\Widget\SettingsListWidget($settingItems, 12);
+        $settingItems[] = new SettingItem('action_generate', 'Générer la route', '[Confirmer]', 'Lancer la génération.', ['[Confirmer]']);
+        $settingItems[] = new SettingItem('action_cancel', 'Retour', '[Annuler]', 'Retourner à la liste.', ['[Annuler]']);
+
+        $settingsWidget = new SettingsListWidget($settingItems, 12);
 
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>Configuration de la route : $selectedClass</info>\n")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>Configuration de la route : {$state->routeName}</info>\n")));
         $container->add($settingsWidget);
         $tui->add($container);
         $tui->setFocus($settingsWidget);
@@ -167,7 +180,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
     private function handleSettingChange(
         SettingChangeEvent $event,
         Tui $tui,
-        \Symfony\Component\Tui\Widget\SettingsListWidget $settingsWidget,
+        SettingsListWidget $settingsWidget,
         RouteTuiState $state,
         callable $onBack,
         callable $changeListener,
@@ -181,13 +194,20 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             case 'action_cancel':
                 $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                 $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-                $this->run($tui, new \Symfony\Component\Console\Input\ArrayInput([]), $this->currentOutput, $onBack);
+                $this->run($tui, new ArrayInput([]), $this->currentOutput, $onBack);
+                break;
+            case 'rb_schema':
+            case 'res_schema':
+                $field = ('rb_schema' === $event->getId()) ? 'requestBodySchema' : 'responseSchema';
+                $this->showSchemaSelection($tui, $field, $state, $onBack);
                 break;
             case 'action_generate':
                 $state->summary = $settingsWidget->getValue('summary') ?? '';
                 $state->description = $settingsWidget->getValue('desc') ?? '';
                 $state->format = $settingsWidget->getValue('format') ?? 'yaml';
                 $state->outputDir = $settingsWidget->getValue('output') ?? $this->manager->getDefaultDumpLocation();
+                $state->requestBodySchema = 'aucun' !== $settingsWidget->getValue('rb_schema') ? $settingsWidget->getValue('rb_schema') : null;
+                $state->responseSchema = 'aucun' !== $settingsWidget->getValue('res_schema') ? $settingsWidget->getValue('res_schema') : null;
 
                 $state->methods = [];
                 foreach (['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as $method) {
@@ -207,9 +227,15 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                 $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
                 $tui->stop();
 
-                // 1. Construire la route avec RouteBuilder
                 $routeData = $this->manager->getAllRoutes()[$state->routeName];
                 $builder = new \Ehyiah\ApiDocBundle\Builder\ApiDocBuilder();
+
+                if ($state->requestBodySchema) {
+                    $this->manager->registerSchema($builder, $state->requestBodySchema);
+                }
+                if ($state->responseSchema) {
+                    $this->manager->registerSchema($builder, $state->responseSchema);
+                }
 
                 foreach ($state->methods as $method) {
                     $routeBuilder = $builder->addRoute()
@@ -222,14 +248,30 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     foreach ($state->security as $scheme) {
                         $routeBuilder->security($scheme);
                     }
+
+                    if ($state->requestBodySchema) {
+                        $routeBuilder->requestBody()
+                            ->content('application/json')
+                            ->refByName($state->requestBodySchema)
+                            ->end()
+                        ;
+                    }
+
+                    if ($state->responseSchema) {
+                        $routeBuilder->response(200)
+                            ->content('application/json')
+                            ->refByName($state->responseSchema)
+                            ->end()
+                        ;
+                    }
                     $routeBuilder->end();
                 }
 
                 $array = $builder->build();
+                unset($array['components']);
 
-                // 2. Déterminer le chemin de sortie et écrire
-                $destination = \Ehyiah\ApiDocBundle\Command\ComponentGeneration\AbstractGenerateComponentCommand::COMPONENT_ROUTES;
-                $dumpDirectory = $this->kernel->getProjectDir() . $state->outputDir . \Symfony\Component\String\u($destination)->ensureEnd('/');
+                $destination = AbstractGenerateComponentCommand::COMPONENT_ROUTES;
+                $dumpDirectory = $this->kernel->getProjectDir() . $state->outputDir . u($destination)->ensureEnd('/');
 
                 if (!is_dir($dumpDirectory)) {
                     mkdir($dumpDirectory, 0755, true);
@@ -244,15 +286,45 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
                 }
 
-                $this->currentOutput->writeln(sprintf('<info>Route "%s" générée avec succès dans %s (Méthodes: %s)</info>', $state->routeName, $dumpLocation, implode(', ', $state->methods)));
+                $this->currentOutput->writeln(sprintf('<info>Route "%s" générée avec succès dans %s</info>', $state->routeName, $dumpLocation));
                 break;
         }
+    }
+
+    private function showSchemaSelection(Tui $tui, string $field, RouteTuiState $state, callable $onBack): void
+    {
+        $schemas = $this->manager->getAvailableSchemas();
+        $choices = [['value' => 'aucun', 'label' => 'Aucun']];
+        foreach ($schemas as $schema) {
+            $choices[] = ['value' => $schema, 'label' => $schema];
+        }
+
+        $selectWidget = new SelectListWidget($choices, 12);
+
+        $tui->clear();
+        $container = new ContainerWidget();
+        $container->expandVertically(true);
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>Sélectionnez un schéma pour : $field</info>\n")));
+        $container->add($selectWidget);
+        $tui->add($container);
+        $tui->setFocus($selectWidget);
+
+        $listener = function (SelectEvent $event) use ($tui, $selectWidget, $field, $state, $onBack, &$listener) {
+            if ($event->getTarget() === $selectWidget) {
+                $tui->getEventDispatcher()->removeListener(SelectEvent::class, $listener);
+                $state->$field = 'aucun' === $event->getValue() ? null : $event->getValue();
+                // Retour au dashboard
+                $this->showConfigurationDashboard($tui, $state, $onBack);
+            }
+        };
+
+        $tui->addListener($listener);
     }
 
     private function handleCancel(
         CancelEvent $event,
         Tui $tui,
-        \Symfony\Component\Tui\Widget\SettingsListWidget $settingsWidget,
+        SettingsListWidget $settingsWidget,
         callable $onBack,
         callable $changeListener,
         callable $cancelListener,
@@ -260,7 +332,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         if ($event->getTarget() === $settingsWidget) {
             $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
             $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-            $this->run($tui, new \Symfony\Component\Console\Input\ArrayInput([]), $this->currentOutput, $onBack);
+            $this->run($tui, new ArrayInput([]), $this->currentOutput, $onBack);
         }
     }
 }

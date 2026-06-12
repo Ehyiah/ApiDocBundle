@@ -252,6 +252,11 @@ class ApiDocBuilder
         return $this->schemas;
     }
 
+    public function clearSchemas(): void
+    {
+        $this->schemas = [];
+    }
+
     /**
      * Build the complete OpenAPI specification array.
      *
