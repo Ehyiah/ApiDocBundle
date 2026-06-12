@@ -2,6 +2,7 @@
 
 namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tui;
 
+use Ehyiah\ApiDocBundle\Attributes\AsTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\AbstractGenerateComponentCommand;
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use Exception;
@@ -26,6 +27,7 @@ use Symfony\Component\Tui\Widget\SettingsListWidget;
 use Symfony\Component\Tui\Widget\TextWidget;
 use Symfony\Component\TypeInfo\TypeIdentifier;
 
+#[AsTuiGenerator]
 class SchemaTuiGenerator extends AbstractTuiComponentGenerator
 {
     private ?InputInterface $currentInput = null;

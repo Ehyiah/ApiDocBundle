@@ -1,7 +1,7 @@
 services:
     _defaults:
-        autowire: true      # Automatically injects dependencies in your services.
-        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        autowire: true
+        autoconfigure: true
 
     Ehyiah\ApiDocBundle\:
         resource: '../src/'
@@ -14,6 +14,3 @@ services:
     Ehyiah\ApiDocBundle\Command\ComponentGeneration\GenerateComponentTuiCommand:
         arguments:
             $generators: !tagged_iterator ehyiah_api_doc.tui_generator
-
-    Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tui\SchemaTuiGenerator:
-        tags: ['ehyiah_api_doc.tui_generator']
