@@ -1,3 +1,13 @@
 api_doc:
     path: /api/doc
     controller: Ehyiah\ApiDocBundle\Controller\ApiDocController::index
+
+get_users:
+    path: /api/users
+    methods: [GET]
+    controller: Ehyiah\ApiDocBundle\Tests\Dummy\DummyController::getUsers
+
+create_user:
+    path: /api/users
+    methods: [POST]
+    controller: Ehyiah\ApiDocBundle\Tests\Dummy\DummyController::createUser

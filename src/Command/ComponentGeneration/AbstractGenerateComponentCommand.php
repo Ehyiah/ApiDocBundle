@@ -32,6 +32,7 @@ abstract class AbstractGenerateComponentCommand extends Command
     public const COMPONENT_RESPONSES = 'responses';
     public const COMPONENT_SECURITY_SCHEMES = 'securitySchemes';
     public const COMPONENT_EXAMPLES = 'examples';
+    public const COMPONENT_ROUTES = 'routes';
 
     protected ?string $dumpLocation = null;
     /** @phpstan-ignore-next-line */
