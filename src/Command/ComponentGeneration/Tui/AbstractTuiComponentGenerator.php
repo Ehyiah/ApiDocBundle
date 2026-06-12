@@ -13,14 +13,14 @@ abstract class AbstractTuiComponentGenerator implements TuiComponentGeneratorInt
     use GenerateFileTrait;
 
     public function __construct(
-        protected readonly KernelInterface $kernel,
-        protected readonly ParameterBagInterface $parameterBag,
-        protected readonly PropertyInfoExtractorInterface $propertyInfoExtractor,
-        protected readonly LoadApiDocConfigHelper $apiDocConfigHelper,
+        protected KernelInterface $kernel,
+        protected ParameterBagInterface $parameterBag,
+        protected PropertyInfoExtractorInterface $propertyInfoExtractor,
+        protected LoadApiDocConfigHelper $apiDocConfigHelper,
     ) {
     }
 
-    protected function getKernel(): KernelInterface
+    public function getKernel(): KernelInterface
     {
         return $this->kernel;
     }

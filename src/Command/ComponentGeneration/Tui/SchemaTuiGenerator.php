@@ -4,13 +4,13 @@ namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tui;
 
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\AbstractGenerateComponentCommand;
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
-// Removed unused shim Type import.
+use Exception;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionNamedType;
 use ReflectionProperty;
 use Symfony\Component\Console\Helper\HelperSet;
-use Symfony\Component\Console\Input\InputInterface; // to avoid warning in trait if getHelper is called
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Tui\Event\CancelEvent;
 use Symfony\Component\Tui\Event\ChangeEvent;
@@ -191,6 +191,9 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
 
     private function showConfigurationDashboard(Tui $tui, string $selectedClass, callable $onBack): void
     {
+        if (!method_exists($this->manager, 'getClassProperties')) {
+            throw new Exception('Manager does not have getClassProperties');
+        }
         $properties = $this->manager->getClassProperties($selectedClass);
 
         $settingItems = [];
@@ -285,51 +288,82 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $tui->setFocus($settingsWidget);
 
         $changeListener = function (SettingChangeEvent $event) use ($tui, $settingsWidget, $selectedClass, $properties, $onBack, &$changeListener, &$cancelListener) {
-            if ($event->getTarget() === $settingsWidget) {
-                if ('action_cancel' === $event->getId()) {
-                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
-                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-                    $this->run($tui, $this->currentInput, $this->currentOutput, $onBack);
-                } elseif ('action_select_all' === $event->getId()) {
-                    foreach ($properties as $property) {
-                        $settingsWidget->updateValue('prop_' . $property, 'inclure');
-                    }
-                    $tui->requestRender();
-                } elseif ('action_deselect_all' === $event->getId()) {
-                    foreach ($properties as $property) {
-                        $settingsWidget->updateValue('prop_' . $property, 'exclure');
-                    }
-                    $tui->requestRender();
-                } elseif ('action_generate' === $event->getId()) {
-                    $format = $settingsWidget->getValue('format') ?? 'both';
-                    $outputDir = $settingsWidget->getValue('output') ?? $this->manager->getDefaultDumpLocation();
-                    $propertiesToSkip = [];
-                    foreach ($properties as $property) {
-                        if ('exclure' === $settingsWidget->getValue('prop_' . $property)) {
-                            $propertiesToSkip[] = $property;
-                        }
-                    }
-
-                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
-                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-
-                    $tui->stop();
-
-                    $this->generateFiles($selectedClass, $format, $outputDir, $propertiesToSkip);
-                }
-            }
+            $this->handleSettingChange($event, $tui, $settingsWidget, $selectedClass, $properties, $onBack, $changeListener, $cancelListener);
         };
 
         $cancelListener = function (CancelEvent $event) use ($tui, $settingsWidget, $onBack, &$changeListener, &$cancelListener) {
-            if ($event->getTarget() === $settingsWidget) {
-                $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
-                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-                $this->run($tui, $this->currentInput, $this->currentOutput, $onBack);
-            }
+            $this->handleCancel($event, $tui, $settingsWidget, $onBack, $changeListener, $cancelListener);
         };
 
         $tui->addListener($changeListener);
         $tui->addListener($cancelListener);
+    }
+
+    private function handleSettingChange(
+        SettingChangeEvent $event,
+        Tui $tui,
+        SettingsListWidget $settingsWidget,
+        string $selectedClass,
+        array $properties,
+        callable $onBack,
+        callable $changeListener,
+        callable $cancelListener,
+    ): void {
+        if ($event->getTarget() !== $settingsWidget) {
+            return;
+        }
+
+        switch ($event->getId()) {
+            case 'action_cancel':
+                $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                $this->run($tui, $this->currentInput, $this->currentOutput, $onBack);
+                break;
+            case 'action_select_all':
+                foreach ($properties as $property) {
+                    $settingsWidget->updateValue('prop_' . $property, 'inclure');
+                }
+                $tui->requestRender();
+                break;
+            case 'action_deselect_all':
+                foreach ($properties as $property) {
+                    $settingsWidget->updateValue('prop_' . $property, 'exclure');
+                }
+                $tui->requestRender();
+                break;
+            case 'action_generate':
+                $format = $settingsWidget->getValue('format') ?? 'both';
+                $outputDir = $settingsWidget->getValue('output') ?? $this->manager->getDefaultDumpLocation();
+                $propertiesToSkip = [];
+                foreach ($properties as $property) {
+                    if ('exclure' === $settingsWidget->getValue('prop_' . $property)) {
+                        $propertiesToSkip[] = $property;
+                    }
+                }
+
+                $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+
+                $tui->stop();
+
+                $this->generateFiles($selectedClass, $format, $outputDir, $propertiesToSkip);
+                break;
+        }
+    }
+
+    private function handleCancel(
+        CancelEvent $event,
+        Tui $tui,
+        SettingsListWidget $settingsWidget,
+        callable $onBack,
+        callable $changeListener,
+        callable $cancelListener,
+    ): void {
+        if ($event->getTarget() === $settingsWidget) {
+            $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+            $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+            $this->run($tui, $this->currentInput, $this->currentOutput, $onBack);
+        }
     }
 
     private function generateFiles(string $className, string $format, string $outputDir, array $propertiesToSkip): void

@@ -10,3 +10,10 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Exception/'
             - '../src/Kernel.php'
+
+    Ehyiah\ApiDocBundle\Command\ComponentGeneration\GenerateComponentTuiCommand:
+        arguments:
+            $generators: !tagged_iterator ehyiah_api_doc.tui_generator
+
+    Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tui\SchemaTuiGenerator:
+        tags: ['ehyiah_api_doc.tui_generator']
