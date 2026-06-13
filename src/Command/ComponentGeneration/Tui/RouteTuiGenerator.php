@@ -242,6 +242,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem('res_schema', 'Schema Réponse 200', $config['responseSchema'] ?? 'aucun', 'Choisir un schéma', $schemaChoices);
 
         $settingItems[] = new SettingItem('action_validate', 'Valider', '[Confirmer]', 'Sauvegarder et revenir à la liste.', ['[Confirmer]']);
+        $settingItems[] = new SettingItem('action_delete', 'Supprimer', '[Supprimer]', 'Supprimer cette méthode de la route.', ['[Supprimer]']);
         $settingItems[] = new SettingItem('action_cancel', 'Annuler', '[Annuler]', 'Retourner sans sauvegarder.', ['[Annuler]']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
@@ -261,6 +262,12 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
             switch ($event->getId()) {
                 case 'action_cancel':
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showMethodList($tui, $state, $onBack);
+                    break;
+                case 'action_delete':
+                    unset($state->methodsConfig[$method]);
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
                     $this->showMethodList($tui, $state, $onBack);
