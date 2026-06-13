@@ -416,6 +416,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
 
             /** @var \Symfony\Component\TypeInfo\Type $firstTypeInfo */
             $firstTypeInfo = $types[0];
+            $isNullable = $firstTypeInfo->isNullable();
             if ($firstTypeInfo instanceof \Symfony\Component\TypeInfo\Type\NullableType) {
                 $firstTypeInfo = $firstTypeInfo->getWrappedType();
             }
@@ -433,7 +434,11 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
                 }
             }
 
-            if (!$firstTypeInfo->isNullable()) {
+            if ($isNullable) {
+                $propertiesArray[$property]['nullable'] = true;
+            }
+
+            if (!$isNullable) {
                 AbstractGenerateComponentCommand::addRequirement($requiredProperties, $property);
             }
         }
@@ -471,10 +476,10 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
                 $dumpLocation = $this->kernel->getProjectDir() . $outputDirClean . \Symfony\Component\String\u($destination)->ensureEnd('/') . $shortClassName . '.yaml';
             }
 
-            if ($this->checkExistingYamlFile($dumpLocation, $input, $output, $array)) {
+            if ($this->checkExistingYamlFile($dumpLocation, $input, $output, $array, interactive: false)) {
                 $phpComponentFile = $this->apiDocConfigHelper->findPhpComponentFile($shortClassName, $destination);
                 if (null !== $phpComponentFile) {
-                    if ($this->warnAboutOtherFormat($phpComponentFile->getPathname(), 'yaml', $input, $output)) {
+                    if ($this->warnAboutOtherFormat($phpComponentFile->getPathname(), 'yaml', $input, $output, interactive: false)) {
                         $this->writeYamlFile($array, $dumpLocation, $output);
                     }
                 } else {
@@ -497,10 +502,10 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
 
             $phpCode = $this->generatePhpBuilderCode($array, $shortClassName, $destination);
 
-            if ($this->checkExistingPhpFile($dumpLocation, $input, $output, $phpCode)) {
+            if ($this->checkExistingPhpFile($dumpLocation, $input, $output, $phpCode, interactive: false)) {
                 $yamlComponentFile = $this->apiDocConfigHelper->findYamlComponentFile($shortClassName, $destination);
                 if (null !== $yamlComponentFile) {
-                    if ($this->warnAboutOtherFormat($yamlComponentFile->getPathname(), 'php', $input, $output)) {
+                    if ($this->warnAboutOtherFormat($yamlComponentFile->getPathname(), 'php', $input, $output, interactive: false)) {
                         $this->writePhpFile($phpCode, $dumpLocation, $output);
                     }
                 } else {

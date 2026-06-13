@@ -5,7 +5,6 @@ namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tui;
 use Ehyiah\ApiDocBundle\Attributes\AsTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\AbstractGenerateComponentCommand;
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
-use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
@@ -28,6 +27,7 @@ use function Symfony\Component\String\u;
 #[AsTuiGenerator]
 class RouteTuiGenerator extends AbstractTuiComponentGenerator
 {
+    private ?InputInterface $originalInput = null;
     private ?OutputInterface $currentOutput = null;
 
     public function __construct(
@@ -57,6 +57,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
     public function run(Tui $tui, InputInterface $input, OutputInterface $output, callable $onBack): void
     {
+        $this->originalInput = $input;
         $this->currentOutput = $output;
         $routes = $this->manager->getAllRoutes();
         $choices = [];
@@ -100,17 +101,26 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $tui->addListener($cancelListener);
     }
 
-    private function showConfigurationDashboard(Tui $tui, RouteTuiState $state, callable $onBack): void
+    private function showConfigurationDashboard(Tui $tui, RouteTuiState $state, callable $onBack, bool $reloadConfig = true): void
     {
         $state->outputDir = $this->manager->getDefaultDumpLocation();
 
-        $existingConfig = $this->manager->loadRouteConfig($state->routeName, AbstractGenerateComponentCommand::COMPONENT_ROUTES);
+        if ($reloadConfig) {
+            $existingConfig = $this->manager->loadRouteConfig($state->routeName, AbstractGenerateComponentCommand::COMPONENT_ROUTES);
 
-        if (!empty($existingConfig)) {
-            $state->summary = $existingConfig['summary'] ?? '';
-            $state->description = $existingConfig['description'] ?? '';
-            $state->methods = $existingConfig['methods'] ?? [];
-            $state->security = $existingConfig['security'] ?? [];
+            if (!empty($existingConfig)) {
+                $state->summary = $existingConfig['summary'] ?? '';
+                $state->description = $existingConfig['description'] ?? '';
+                $state->methods = $existingConfig['methods'] ?? [];
+                $state->security = $existingConfig['security'] ?? [];
+                $state->requestBodySchema = $existingConfig['requestBodySchema'] ?? null;
+                $state->responseSchema = $existingConfig['responseSchema'] ?? null;
+            } else {
+                $allRoutes = $this->manager->getAllRoutes();
+                if (isset($allRoutes[$state->routeName])) {
+                    $state->methods = $allRoutes[$state->routeName]['methods'];
+                }
+            }
         }
 
         $settingItems = [];
@@ -194,10 +204,12 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             case 'action_cancel':
                 $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                 $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-                $this->run($tui, new ArrayInput([]), $this->currentOutput, $onBack);
+                $this->run($tui, $this->originalInput, $this->currentOutput, $onBack);
                 break;
             case 'rb_schema':
             case 'res_schema':
+                $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
                 $field = ('rb_schema' === $event->getId()) ? 'requestBodySchema' : 'responseSchema';
                 $this->showSchemaSelection($tui, $field, $state, $onBack);
                 break;
@@ -314,7 +326,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                 $tui->getEventDispatcher()->removeListener(SelectEvent::class, $listener);
                 $state->$field = 'aucun' === $event->getValue() ? null : $event->getValue();
                 // Retour au dashboard
-                $this->showConfigurationDashboard($tui, $state, $onBack);
+                $this->showConfigurationDashboard($tui, $state, $onBack, reloadConfig: false);
             }
         };
 
@@ -332,7 +344,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         if ($event->getTarget() === $settingsWidget) {
             $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
             $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-            $this->run($tui, new ArrayInput([]), $this->currentOutput, $onBack);
+            $this->run($tui, $this->originalInput, $this->currentOutput, $onBack);
         }
     }
 }

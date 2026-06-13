@@ -72,6 +72,7 @@ trait GenerateFileTrait
         InputInterface $input,
         OutputInterface $output,
         ?array $newContentArray = null,
+        bool $interactive = true,
     ): bool {
         $fileSystem = new Filesystem();
 
@@ -92,6 +93,12 @@ trait GenerateFileTrait
                 } else {
                     $output->writeln('<comment>No differences found.</comment>');
                 }
+            }
+
+            if (!$interactive) {
+                $output->writeln('<info>Overwriting file (non-interactive mode).</info>');
+
+                return true;
             }
 
             /** @var QuestionHelper $helper */
@@ -121,6 +128,7 @@ trait GenerateFileTrait
         InputInterface $input,
         OutputInterface $output,
         ?string $newContent = null,
+        bool $interactive = true,
     ): bool {
         $fileSystem = new Filesystem();
 
@@ -140,6 +148,12 @@ trait GenerateFileTrait
                 } else {
                     $output->writeln('<comment>No differences found.</comment>');
                 }
+            }
+
+            if (!$interactive) {
+                $output->writeln('<info>Overwriting file (non-interactive mode).</info>');
+
+                return true;
             }
 
             /** @var QuestionHelper $helper */
@@ -187,12 +201,20 @@ trait GenerateFileTrait
         string $currentFormat,
         InputInterface $input,
         OutputInterface $output,
+        bool $interactive = true,
     ): bool {
         $fileSystem = new Filesystem();
 
         if ($fileSystem->exists($filePath)) {
             $otherFormat = 'yaml' === $currentFormat ? 'PHP' : 'YAML';
             $output->writeln('<warning>A ' . $otherFormat . ' file also exists: ' . $filePath . '</warning>');
+
+            if (!$interactive) {
+                $output->writeln('<info>Continuing anyway (non-interactive mode).</info>');
+
+                return true;
+            }
+
             /** @var QuestionHelper $helper */
             $helper = $this->getHelper('question');
             $question = new ConfirmationQuestion(

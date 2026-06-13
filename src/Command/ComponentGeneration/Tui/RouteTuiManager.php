@@ -36,6 +36,7 @@ class RouteTuiManager
         return $routeList;
     }
 
+    /** @return string[] */
     public function getSecuritySchemes(): array
     {
         $config = $this->apiDocConfigHelper->loadPhpConfigDoc();
@@ -131,8 +132,9 @@ class RouteTuiManager
                     if (empty($data['requestBodySchema']) && isset($definition['requestBody']['content']['application/json']['schema']['$ref'])) {
                         $data['requestBodySchema'] = $this->extractSchemaName($definition['requestBody']['content']['application/json']['schema']['$ref']);
                     }
-                    if (empty($data['responseSchema']) && isset($definition['responses']['200']['content']['application/json']['schema']['$ref'])) {
-                        $data['responseSchema'] = $this->extractSchemaName($definition['responses']['200']['content']['application/json']['schema']['$ref']);
+                    $response200 = $definition['responses'][200] ?? $definition['responses']['200'] ?? null;
+                    if (empty($data['responseSchema']) && isset($response200['content']['application/json']['schema']['$ref'])) {
+                        $data['responseSchema'] = $this->extractSchemaName($response200['content']['application/json']['schema']['$ref']);
                     }
                 }
             }

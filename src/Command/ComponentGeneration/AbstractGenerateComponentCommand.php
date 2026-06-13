@@ -73,7 +73,7 @@ abstract class AbstractGenerateComponentCommand extends Command
         }
 
         $this->dumpLocation = u($dumpLocation)->ensureStart('/');
-        $this->dumpLocation = u($dumpLocation)->ensureEnd('/');
+        $this->dumpLocation = u($this->dumpLocation)->ensureEnd('/');
     }
 
     protected function configure(): void
