@@ -83,66 +83,77 @@ class RouteTuiManager
         $builder->addSchema($schemaName)->setRefName($schemaName)->end();
     }
 
+    /**
+     * Load existing route configuration from YAML file, returning per-method config.
+     *
+     * @return array{methodsConfig: array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string}>}
+     */
     public function loadRouteConfig(string $routeName, string $componentType): array
     {
         $route = $this->router->getRouteCollection()->get($routeName);
         if (!$route) {
-            return [];
+            return ['methodsConfig' => []];
         }
         $path = $route->getPath();
 
         $dumpDirectory = $this->kernel->getProjectDir() . $this->getDefaultDumpLocation() . u($componentType)->ensureEnd('/');
 
-        // 1. Check for YAML
         $yamlFile = $dumpDirectory . $routeName . '.yaml';
         if (file_exists($yamlFile)) {
             $config = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile);
 
-            return $this->extractRouteData($config, $path);
+            return ['methodsConfig' => $this->extractMethodsConfig($config, $path)];
         }
 
-        // 2. Check for PHP (omitted for now)
-        return [];
+        return ['methodsConfig' => []];
     }
 
-    private function extractRouteData(array $config, string $path): array
+    /**
+     * Extract per-method configuration from an OpenAPI paths config.
+     *
+     * @return array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string}>
+     */
+    private function extractMethodsConfig(array $config, string $path): array
     {
-        $data = [
-            'summary' => '',
-            'description' => '',
-            'methods' => [],
-            'security' => [],
-            'requestBodySchema' => null,
-            'responseSchema' => null,
-        ];
+        $methodsConfig = [];
 
-        if (isset($config['paths'][$path])) {
-            foreach ($config['paths'][$path] as $method => $definition) {
-                if (is_array($definition)) {
-                    $data['summary'] = empty($data['summary']) ? ($definition['summary'] ?? '') : $data['summary'];
-                    $data['description'] = empty($data['description']) ? ($definition['description'] ?? '') : $data['description'];
-                    $data['methods'][] = strtoupper($method);
+        if (!isset($config['paths'][$path])) {
+            return $methodsConfig;
+        }
 
-                    if (isset($definition['security'])) {
-                        foreach ($definition['security'] as $security) {
-                            $data['security'] = array_merge($data['security'], array_keys($security));
-                        }
-                    }
+        foreach ($config['paths'][$path] as $method => $definition) {
+            if (!is_array($definition)) {
+                continue;
+            }
 
-                    if (empty($data['requestBodySchema']) && isset($definition['requestBody']['content']['application/json']['schema']['$ref'])) {
-                        $data['requestBodySchema'] = $this->extractSchemaName($definition['requestBody']['content']['application/json']['schema']['$ref']);
-                    }
-                    $response200 = $definition['responses'][200] ?? $definition['responses']['200'] ?? null;
-                    if (empty($data['responseSchema']) && isset($response200['content']['application/json']['schema']['$ref'])) {
-                        $data['responseSchema'] = $this->extractSchemaName($response200['content']['application/json']['schema']['$ref']);
-                    }
+            $security = [];
+            if (isset($definition['security'])) {
+                foreach ($definition['security'] as $securityEntry) {
+                    $security = array_merge($security, array_keys($securityEntry));
                 }
             }
-        }
-        $data['methods'] = array_unique($data['methods']);
-        $data['security'] = array_unique($data['security']);
 
-        return $data;
+            $requestBodySchema = null;
+            if (isset($definition['requestBody']['content']['application/json']['schema']['$ref'])) {
+                $requestBodySchema = $this->extractSchemaName($definition['requestBody']['content']['application/json']['schema']['$ref']);
+            }
+
+            $responseSchema = null;
+            $response200 = $definition['responses'][200] ?? $definition['responses']['200'] ?? null;
+            if (isset($response200['content']['application/json']['schema']['$ref'])) {
+                $responseSchema = $this->extractSchemaName($response200['content']['application/json']['schema']['$ref']);
+            }
+
+            $methodsConfig[strtoupper($method)] = [
+                'summary' => $definition['summary'] ?? '',
+                'description' => $definition['description'] ?? '',
+                'security' => array_unique($security),
+                'requestBodySchema' => $requestBodySchema,
+                'responseSchema' => $responseSchema,
+            ];
+        }
+
+        return $methodsConfig;
     }
 
     private function extractSchemaName(?string $ref): ?string

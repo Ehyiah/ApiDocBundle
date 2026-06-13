@@ -5,14 +5,15 @@ namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tui;
 class RouteTuiState
 {
     public string $routeName = '';
-    public string $summary = '';
-    public string $description = '';
     public string $format = 'yaml';
     public string $outputDir = '';
-    /** @var string[] */
-    public array $methods = [];
-    /** @var array<string, string[]> */
-    public array $security = [];
-    public ?string $requestBodySchema = null;
-    public ?string $responseSchema = null;
+
+    /**
+     * Per-method configuration.
+     * Key: HTTP method (GET, POST, PUT, DELETE, PATCH)
+     * Value: method-specific config
+     *
+     * @var array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string}>
+     */
+    public array $methodsConfig = [];
 }
