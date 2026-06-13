@@ -47,7 +47,5 @@ class RouteTuiManagerTest extends TestCase
 
         // Assert that the configuration was loaded
         $this->assertNotEmpty($config, 'The configuration should be loaded');
-        // Debug
-        var_dump($config);
     }
 }

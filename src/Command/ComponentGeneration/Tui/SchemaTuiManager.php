@@ -26,7 +26,8 @@ class SchemaTuiManager
     public function getAllClasses(): array
     {
         $classes = [];
-        $scanDirectories = $this->parameterBag->get('ehyiah_api_doc.scan_directories') ?? ['src'];
+        /** @var array<int, string> $scanDirectories */
+        $scanDirectories = (array)($this->parameterBag->get('ehyiah_api_doc.scan_directories') ?? ['src']);
 
         $finder = new Finder();
         $projectDir = $this->kernel->getProjectDir();

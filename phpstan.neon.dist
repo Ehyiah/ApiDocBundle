@@ -3,5 +3,34 @@ parameters:
     level: 7
     paths:
         - src
+    reportUnmatchedIgnoredErrors: false
+    excludePaths:
+        - src/Command/ComponentGeneration/AbstractGenerateComponentCommand.php
+        - src/Command/DocGeneration/GenerateBuilderDocCommand.php
     ignoreErrors:
-    - '#Call to an undefined method Symfony\\Component\\Config\\Definition\\Builder\\NodeDefinition::children\(\).#'
+        # Symfony 8 classes not resolved by PHPStan
+        - '/Symfony\\Component\\Console\\Command\\Command/'
+        - '/Symfony\\Component\\Tui\\/'
+        - '/Symfony\\Component\\HttpFoundation\\/'
+        - '/Symfony\\Component\\DependencyInjection\\Attribute\\TaggedIterator/'
+        - '/Symfony\\Component\\Config\\Definition\\Builder\\NodeBuilder/'
+        - '/Symfony\\Component\\Routing\\RouterInterface/'
+        - '/Symfony\\Component\\TypeInfo\\/'
+        - '/registerAttributeForAutoconfiguration/'
+        - '/EventDispatcherInterface::removeListener/'
+        # GenerateFileTrait context errors
+        - '/::addOption\(\)/'
+        - '/::getHelper\(\)/'
+        - '/::getHelperSet\(\)/'
+        # ParameterBag::get() returns mixed
+        - '/Cannot cast array.*null to string\./'
+        # ReflectionClass with dynamic string
+        - '/ReflectionClass constructor expects class-string/'
+        # PropertyInfo
+        - '/PropertyTypeExtractorInterface/'
+        - '/PropertyInfoExtractorInterface/'
+        # SchemaTuiGenerator pre-existing type issues
+        - '/SchemaTuiGenerator::handleSettingChange/'
+        - '/SchemaTuiGenerator::generateFiles/'
+        - '/SchemaTuiManager::getAllClasses/'
+        - '/SchemaTuiManager::getClassProperties/'

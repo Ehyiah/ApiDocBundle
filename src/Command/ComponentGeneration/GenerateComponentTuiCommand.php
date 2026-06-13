@@ -76,25 +76,6 @@ final class GenerateComponentTuiCommand extends AbstractGenerateComponentCommand
             $generatorsMap[$generator->getLabel()] = $generator;
         }
 
-        // 2. Ajouter des placeholders pour les futurs générateurs
-        $futureComponents = [
-            'Request Body' => 'Générer un composant de corps de requête (RequestBody)',
-            'Parameter' => 'Générer un composant de paramètre de requête (Parameter)',
-            'Response' => 'Générer un composant de réponse HTTP (Response)',
-            'Header' => 'Générer un composant d\'en-tête HTTP (Header)',
-            'Security Scheme' => 'Générer un composant de sécurité (SecurityScheme)',
-            'Example' => 'Générer un composant d\'exemple de données (Example)',
-        ];
-
-        foreach ($futureComponents as $label => $desc) {
-            if (!isset($generatorsMap[$label])) {
-                $choices[] = [
-                    'value' => $label . '_disabled',
-                    'label' => $formatter->format(sprintf('%s <fg=gray>[Bientôt]</fg=gray> - %s', $label, $desc)),
-                ];
-            }
-        }
-
         // Option Quitter
         $choices[] = [
             'value' => 'quit',
@@ -126,12 +107,6 @@ final class GenerateComponentTuiCommand extends AbstractGenerateComponentCommand
                     return;
                 }
 
-                if (str_ends_with($value, '_disabled')) {
-                    $this->showComingSoonMessage($tui, $input, $output);
-
-                    return;
-                }
-
                 if (isset($generatorsMap[$value])) {
                     $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
@@ -154,38 +129,5 @@ final class GenerateComponentTuiCommand extends AbstractGenerateComponentCommand
 
         $tui->addListener($selectListener);
         $tui->addListener($cancelListener);
-    }
-
-    private function showComingSoonMessage(Tui $tui, InputInterface $input, OutputInterface $output): void
-    {
-        $formatter = $output->getFormatter();
-        $tui->clear();
-        $container = new ContainerWidget();
-        $container->expandVertically(true);
-        $container->add(new TextWidget($formatter->format("<info>Ce générateur de composant sera disponible très bientôt !</info>\n")));
-
-        $backWidget = new SelectListWidget([
-            ['value' => 'back', 'label' => 'Retour au menu principal'],
-        ]);
-        $container->add($backWidget);
-        $container->add(new TextWidget($formatter->format("\n<comment>Appuyez sur Entrée ou Échap pour revenir.</comment>")));
-
-        $tui->add($container);
-        $tui->setFocus($backWidget);
-
-        $onBackSelect = function (SelectEvent $event) use ($tui, $input, $output, &$onBackSelect, &$onBackCancel) {
-            $tui->getEventDispatcher()->removeListener(SelectEvent::class, $onBackSelect);
-            $tui->getEventDispatcher()->removeListener(CancelEvent::class, $onBackCancel);
-            $this->showMainMenu($tui, $input, $output);
-        };
-
-        $onBackCancel = function (CancelEvent $event) use ($tui, $input, $output, &$onBackSelect, &$onBackCancel) {
-            $tui->getEventDispatcher()->removeListener(SelectEvent::class, $onBackSelect);
-            $tui->getEventDispatcher()->removeListener(CancelEvent::class, $onBackCancel);
-            $this->showMainMenu($tui, $input, $output);
-        };
-
-        $tui->addListener($onBackSelect);
-        $tui->addListener($onBackCancel);
     }
 }

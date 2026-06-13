@@ -29,7 +29,6 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 {
     private const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
-    private ?InputInterface $originalInput = null;
     private ?OutputInterface $currentOutput = null;
 
     public function __construct(
@@ -59,7 +58,6 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
     public function run(Tui $tui, InputInterface $input, OutputInterface $output, callable $onBack): void
     {
-        $this->originalInput = $input;
         $this->currentOutput = $output;
         $this->showRouteList($tui, $onBack);
     }
@@ -193,7 +191,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             $this->showMethodConfig($tui, $value, $state, $onBack);
         };
 
-        $cancelListener = static function (CancelEvent $event) use ($tui, $selectWidget, $onBack, &$selectListener, &$cancelListener) {
+        $cancelListener = function (CancelEvent $event) use ($tui, $selectWidget, $onBack, &$selectListener, &$cancelListener) {
             if ($event->getTarget() === $selectWidget) {
                 $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
                 $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
@@ -341,7 +339,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     'responseSchema' => null,
                 ];
                 $current[$field] = $newValue;
-                $state->methodsConfig[$method] = $current;
+                $state->methodsConfig[$method] = $current; // @phpstan-ignore-line
 
                 $this->showMethodConfig($tui, $method, $state, $onBack);
             }

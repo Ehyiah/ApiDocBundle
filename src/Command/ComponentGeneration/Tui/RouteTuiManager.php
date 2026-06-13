@@ -36,31 +36,32 @@ class RouteTuiManager
         return $routeList;
     }
 
-    /** @return string[] */
+    /** @return array<int, string> */
     public function getSecuritySchemes(): array
     {
         $config = $this->apiDocConfigHelper->loadPhpConfigDoc();
         $yamlConfig = $this->apiDocConfigHelper->loadYamlConfigDoc(
-            $this->parameterBag->get('ehyiah_api_doc.source_path'),
+            (string)$this->parameterBag->get('ehyiah_api_doc.source_path'),
             $this->kernel->getProjectDir(),
-            $this->parameterBag->get('ehyiah_api_doc.dump_path')
+            (string)$this->parameterBag->get('ehyiah_api_doc.dump_path')
         );
 
         $merged = LoadApiDocConfigHelper::mergeConfigs($config, $yamlConfig);
 
-        return array_keys($merged['components']['securitySchemes'] ?? []);
+        return array_values(array_map('strval', array_keys($merged['components']['securitySchemes'] ?? [])));
     }
 
     public function getDefaultDumpLocation(): string
     {
-        $dumpLocation = $this->parameterBag->get('ehyiah_api_doc.source_path');
+        $dumpLocation = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
 
-        return is_string($dumpLocation) ? (string)u($dumpLocation)->ensureStart('/')->ensureEnd('/') : '/src/Swagger/';
+        return (string)u($dumpLocation)->ensureStart('/')->ensureEnd('/');
     }
 
+    /** @return string[] */
     public function getAvailableSchemas(): array
     {
-        $sourcePath = $this->parameterBag->get('ehyiah_api_doc.source_path');
+        $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
         $dumpDirectory = $this->kernel->getProjectDir() . $sourcePath;
 
         $schemas = [];
@@ -75,7 +76,7 @@ class RouteTuiManager
             }
         }
 
-        return array_unique($schemas);
+        return array_values(array_unique($schemas));
     }
 
     public function registerSchema(\Ehyiah\ApiDocBundle\Builder\ApiDocBuilder $builder, string $schemaName): void
@@ -111,6 +112,8 @@ class RouteTuiManager
     /**
      * Extract per-method configuration from an OpenAPI paths config.
      *
+     * @param array<string, mixed> $config
+     *
      * @return array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string}>
      */
     private function extractMethodsConfig(array $config, string $path): array
@@ -129,7 +132,7 @@ class RouteTuiManager
             $security = [];
             if (isset($definition['security'])) {
                 foreach ($definition['security'] as $securityEntry) {
-                    $security = array_merge($security, array_keys($securityEntry));
+                    $security = array_merge($security, array_map('strval', array_keys($securityEntry)));
                 }
             }
 
@@ -145,9 +148,9 @@ class RouteTuiManager
             }
 
             $methodsConfig[strtoupper($method)] = [
-                'summary' => $definition['summary'] ?? '',
-                'description' => $definition['description'] ?? '',
-                'security' => array_unique($security),
+                'summary' => (string)($definition['summary'] ?? ''),
+                'description' => (string)($definition['description'] ?? ''),
+                'security' => array_values(array_unique($security)),
                 'requestBodySchema' => $requestBodySchema,
                 'responseSchema' => $responseSchema,
             ];
