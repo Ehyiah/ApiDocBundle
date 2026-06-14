@@ -69,17 +69,25 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         foreach ($routes as $name => $data) {
             $choices[] = [
                 'value' => $name,
-                'label' => sprintf('%s [%s] %s', $name, implode(',', $data['methods']), $data['path']),
+                'label' => $this->currentOutput->getFormatter()->format(sprintf('  %-20s [%s] %s', $name, implode(',', $data['methods']), $data['path'])),
             ];
         }
+        $choices[] = [
+            'value' => '__back__',
+            'label' => $this->currentOutput->getFormatter()->format('  <comment>[← Retour]</comment>'),
+        ];
 
         $selectWidget = new SelectListWidget($choices, 12);
 
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>Génération de Route : Sélection de route</info>\n")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<info>|  Sélection de route</info>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Retour</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -88,8 +96,15 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                 $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
                 $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
 
+                $value = $event->getValue();
+                if ('__back__' === $value) {
+                    $onBack();
+
+                    return;
+                }
+
                 $state = new RouteTuiState();
-                $state->routeName = $event->getValue();
+                $state->routeName = $value;
                 $state->outputDir = $this->manager->getDefaultDumpLocation();
                 $this->loadExistingConfig($state);
                 $state->loadedFrom = $this->manager->findRouteFile($state->routeName);
