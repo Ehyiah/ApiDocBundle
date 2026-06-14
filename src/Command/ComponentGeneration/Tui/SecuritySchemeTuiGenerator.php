@@ -98,6 +98,16 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
             $state->outputDir = $this->manager->getDefaultDumpLocation();
             if ('__new__' !== $value) {
                 $state->name = $value;
+                $existing = $this->manager->loadComponentConfig($value);
+                if (null !== $existing) {
+                    $state->type = $existing['type'];
+                    $state->scheme = $existing['scheme'];
+                    $state->bearerFormat = $existing['bearerFormat'];
+                    $state->apiKeyName = $existing['name'];
+                    $state->apiKeyIn = $existing['in'];
+                    $state->openIdConnectUrl = $existing['openIdConnectUrl'];
+                    $state->description = $existing['description'];
+                }
             }
             $this->showForm($tui, $state, $onBack);
         };

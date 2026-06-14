@@ -23,7 +23,7 @@ class HeaderTuiManager
     public function getExistingComponents(): array
     {
         $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
-        $directory = $this->kernel->getProjectDir() . $sourcePath . 'headers/';
+        $directory = $this->kernel->getProjectDir() . $sourcePath . '/headers/';
 
         $names = [];
         if (is_dir($directory)) {
