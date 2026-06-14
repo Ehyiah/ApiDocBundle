@@ -6,6 +6,7 @@ use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tui\SecuritySchemeTuiManager
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * @coversNothing
@@ -40,11 +41,68 @@ class SecuritySchemeTuiManagerTest extends TestCase
         $this->assertStringStartsWith('/', $location);
     }
 
+    public function testGetExistingComponentsFindsYamlFiles(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/securitySchemes/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'BearerAuth.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'securitySchemes' => [
+                        'BearerAuth' => ['type' => 'http', 'scheme' => 'bearer'],
+                    ],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $components = $manager->getExistingComponents();
+
+        $this->assertContains('BearerAuth', $components);
+    }
+
+    public function testLoadComponentConfigReturnsConfig(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/securitySchemes/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'ApiKeyAuth.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'securitySchemes' => [
+                        'ApiKeyAuth' => [
+                            'type' => 'apiKey',
+                            'name' => 'X-API-Key',
+                            'in' => 'header',
+                            'description' => 'API key authentication',
+                        ],
+                    ],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $config = $manager->loadComponentConfig('ApiKeyAuth');
+
+        $this->assertNotNull($config);
+        $this->assertSame('apiKey', $config['type']);
+        $this->assertSame('X-API-Key', $config['name']);
+        $this->assertSame('header', $config['in']);
+        $this->assertSame('API key authentication', $config['description']);
+    }
+
+    public function testLoadComponentConfigReturnsNullWhenNotFound(): void
+    {
+        $manager = $this->createManager();
+        $config = $manager->loadComponentConfig('NonExistent');
+
+        $this->assertNull($config);
+    }
+
     private function createManager(): SecuritySchemeTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);
         $parameterBag->method('get')->willReturnMap([
-            ['ehyiah_api_doc.source_path', '/Swagger/'],
+            ['ehyiah_api_doc.source_path', '/Swagger'],
         ]);
 
         $kernel = $this->createMock(KernelInterface::class);

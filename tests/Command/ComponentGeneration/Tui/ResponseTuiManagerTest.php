@@ -6,6 +6,7 @@ use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tui\ResponseTuiManager;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * @coversNothing
@@ -47,11 +48,31 @@ class ResponseTuiManagerTest extends TestCase
         $this->assertStringStartsWith('/', $location);
     }
 
+    public function testGetExistingComponentsFindsYamlFiles(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/responses/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'NotFound.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'responses' => [
+                        'NotFound' => ['description' => 'Resource not found'],
+                    ],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $components = $manager->getExistingComponents();
+
+        $this->assertContains('NotFound', $components);
+    }
+
     private function createManager(): ResponseTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);
         $parameterBag->method('get')->willReturnMap([
-            ['ehyiah_api_doc.source_path', '/Swagger/'],
+            ['ehyiah_api_doc.source_path', '/Swagger'],
         ]);
 
         $kernel = $this->createMock(KernelInterface::class);

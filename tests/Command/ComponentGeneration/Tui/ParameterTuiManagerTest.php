@@ -6,6 +6,7 @@ use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tui\ParameterTuiManager;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * @coversNothing
@@ -40,12 +41,31 @@ class ParameterTuiManagerTest extends TestCase
         $this->assertStringStartsWith('/', $location);
     }
 
+    public function testGetExistingComponentsFindsYamlFiles(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/parameters/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'userId.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'parameters' => [
+                        'userId' => ['name' => 'userId', 'in' => 'path'],
+                    ],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $components = $manager->getExistingComponents();
+
+        $this->assertContains('userId', $components);
+    }
+
     private function createManager(): ParameterTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);
         $parameterBag->method('get')->willReturnMap([
-            ['ehyiah_api_doc.source_path', '/Swagger/'],
-            ['ehyiah_api_doc.dump_path', '/Swagger/dump/'],
+            ['ehyiah_api_doc.source_path', '/Swagger'],
         ]);
 
         $kernel = $this->createMock(KernelInterface::class);
