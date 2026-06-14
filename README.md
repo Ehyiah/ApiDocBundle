@@ -11,7 +11,7 @@ Define your documentation using **YAML files**, **PHP classes**, or a mix of bot
 
 - **Multiple UIs supported**: Swagger UI, Redoc, Stoplight Elements, RapiDoc, and Scalar.
 - **Flexible Configuration**: Use YAML files, PHP classes, or both.
-- **Generator Commands**: CLI tools to quickly generate Schemas, Request Bodies, and Routes.
+- **Interactive TUI**: Generate and edit all OpenAPI components via a beautiful terminal interface.
 - **Hybrid Support**: Seamlessly merge YAML and PHP definitions.
 - **Attributes Support**: Link your Controllers to their documentation for easy IDE navigation.
 
@@ -174,40 +174,37 @@ class UserController
 
 ## Component Generation
 
-This bundle provides CLI commands to help you kickstart your documentation by generating reusable OpenAPI components.
+This bundle provides an interactive terminal UI (TUI) to generate and edit all OpenAPI components.
 
-| Command                             | Description                                         | Example                                                           |
-|:------------------------------------|:----------------------------------------------------|:------------------------------------------------------------------|
-| `apidocbundle:component:schema`     | Generates a **Schema** from a PHP Class.            | `...:schema "App\Entity\User"`                                    |
-| `apidocbundle:component:body`       | Generates a **Request Body** from a PHP Class.      | `...:body "App\DTO\UserDTO"`                                      |
-| `apidocbundle:component:parameter`  | Generates a reusable **Parameter**.                 | `...:parameter "userId" --in=path`                                |
-| `apidocbundle:component:header`     | Generates a reusable **Header**.                    | `...:header "X-Request-ID"`                                       |
-| `apidocbundle:component:response`   | Generates a reusable **Response**.                  | `...:response "NotFound" -s 404`                                  |
-| `apidocbundle:component:example`    | Generates a reusable **Example**.                   | `...:example "UserExample" --value='{"id":1}'`                     |
-| `apidocbundle:component:security`   | Generates a reusable **Security Scheme**.           | `...:security "ApiKeyAuth" --type=apiKey`                         |
-| `apidocbundle:route:generate`       | Interactively generates a **Route** path.           | `...:route:generate /my/path`                                     |
+### Interactive TUI
 
-### Command Options
+Run the interactive terminal UI to generate and edit all component types:
 
-| Option              | Used in    | Shortcut | Description                                                                      |
-|:--------------------|------------|:---------|:---------------------------------------------------------------------------------|
-| `--format`          | All        | `-f`     | Output format: `yaml` (default), `php`, or `both`.                               |
-| `--output`          | All        | `-o`     | Custom output directory (relative to project root).                              |
-| `--description`     | All        | `-d`     | Description for the generated component.                                         |
-| `--tag`             | Route      | `-t`     | (Route only) Tags to associate with the route.                                   |
-| `--response-schema` | Route      | `-rs`    | (Route only) Reference schema for the response.                                  |
-| `--request-body`    | Route      | `-rb`    | (Route only) Reference schema for the request body.                              |
-| `--in`              | Parameter  |          | (Parameter only) Location of the parameter: `query`, `header`, `path`, `cookie`. |
-| `--type`            | Parameter  |          | (Parameter only) Schema type of the parameter: `string`, `integer`, etc.         |
-| `--required`        | Parameter  |          | (Parameter only) Mark the parameter as required.                                 |
+```bash
+bin/console apidocbundle:component:tui
+```
 
-📚 **[Read the Full Guide on References](docs/REFERENCES.md)**
+The TUI supports:
 
+| Component | Description |
+|:----------|:------------|
+| **Schema** | Generate schemas from PHP classes |
+| **Route** | Generate route documentation with per-method configuration |
+| **Parameter** | Generate reusable request parameters |
+| **Header** | Generate HTTP response headers |
+| **Response** | Generate response definitions |
+| **Request Body** | Generate request body definitions |
+| **Security Scheme** | Generate authentication schemes (HTTP, API Key, OAuth2, OpenID Connect) |
+| **Example** | Generate data examples |
 
-### Duplicate Detection
-The commands are smart! They check if a component with the same name already exists:
-- **Same Format**: Warns you and shows a diff before overwriting.
-- **Cross Format**: Warns you if you try to generate a YAML component when a PHP version already exists (and vice-versa).
+Features:
+- Edit existing components in place (YAML and PHP files)
+- Automatic file detection in any subdirectory of `source_path`
+- Format choice: YAML or PHP output
+- Visual indicators for configured methods (routes)
+- Delete components directly from the TUI
+
+> 💡 **Tip:** The TUI automatically detects existing components and updates them in place, even if they're in a non-standard subdirectory.
 
 ---
 
