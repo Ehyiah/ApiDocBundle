@@ -136,10 +136,11 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $choices = [];
         foreach (self::HTTP_METHODS as $method) {
             $configured = isset($state->methodsConfig[$method]);
-            $indicator = $configured ? '<fg=green>[✓]</fg=green>' : '<fg=gray>[ ]</fg=gray>';
+            $indicator = $configured ? '<fg=green>✓</fg=green>' : '<fg=gray>○</fg=gray>';
+            $status = $configured ? '<fg=green>Configuré</fg=green>' : '<fg=gray>Non configuré</fg=gray>';
             $choices[] = [
                 'value' => $method,
-                'label' => $this->currentOutput->getFormatter()->format(sprintf('%s %s', $indicator, $method)),
+                'label' => $this->currentOutput->getFormatter()->format(sprintf('  %s %-10s %s', $indicator, $method, $status)),
             ];
         }
 
@@ -147,13 +148,13 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         if ($hasConfig) {
             $choices[] = [
                 'value' => '__generate__',
-                'label' => $this->currentOutput->getFormatter()->format('<info>[Générer]</info>'),
+                'label' => $this->currentOutput->getFormatter()->format('  <info>▸ Générer</info>'),
             ];
         }
 
         $choices[] = [
             'value' => '__back__',
-            'label' => $this->currentOutput->getFormatter()->format('<comment>[Retour]</comment>'),
+            'label' => $this->currentOutput->getFormatter()->format('  <comment>← Retour</comment>'),
         ];
 
         $selectWidget = new SelectListWidget($choices, 12);
@@ -161,9 +162,14 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>Route : {$state->routeName}</info>\n")));
-        $container->add(new TextWidget("Sélectionnez une méthode HTTP à configurer :\n"));
+        $routePath = $this->manager->getAllRoutes()[$state->routeName]['path'] ?? '';
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  Route: {$state->routeName}</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>|  ' . $routePath . '</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Naviguer  ↵ Configurer  Échap Retour</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -251,8 +257,12 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>Configuration {$method} — {$state->routeName}</info>\n")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  {$method} — {$state->routeName}</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($settingsWidget);
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Valider    ⌫ Supprimer    Échap Annuler</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 

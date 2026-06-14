@@ -65,18 +65,22 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
         $existing = $this->manager->getExistingComponents();
         $choices = [];
         foreach ($existing as $name) {
-            $choices[] = ['value' => $name, 'label' => $name];
+            $choices[] = ['value' => $name, 'label' => $this->currentOutput->getFormatter()->format(sprintf('  %-20s', $name))];
         }
-        $choices[] = ['value' => '__new__', 'label' => $this->currentOutput->getFormatter()->format('<info>[Nouveau]</info>')];
-        $choices[] = ['value' => '__back__', 'label' => $this->currentOutput->getFormatter()->format('<comment>[Retour]</comment>')];
+        $choices[] = ['value' => '__new__', 'label' => $this->currentOutput->getFormatter()->format('  <fg=green>[+ Nouveau]</fg=green>')];
+        $choices[] = ['value' => '__back__', 'label' => $this->currentOutput->getFormatter()->format('  <comment>[← Retour]</comment>')];
 
         $selectWidget = new SelectListWidget($choices, 12);
 
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>Response — Sélection ou création</info>\n")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<info>|  Responses                                |</info>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Retour</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -143,16 +147,21 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
 
         $settingItems[] = new SettingItem('format_output', 'Format sortie', $state->format_output, 'YAML ou PHP', ['yaml', 'php']);
         $settingItems[] = new SettingItem('output', 'Dossier de sortie', $state->outputDir, 'Répertoire cible', [], $textInputCallback);
-        $settingItems[] = new SettingItem('action_validate', 'Valider', '[Confirmer]', 'Générer le composant.', ['[Confirmer]']);
-        $settingItems[] = new SettingItem('action_cancel', 'Annuler', '[Annuler]', 'Retourner à la liste.', ['[Annuler]']);
+        $settingItems[] = new SettingItem('action_validate', 'Valider', '[Confirmer]', 'Sauvegarder et revenir à la liste.', ['[Confirmer]']);
+        $settingItems[] = new SettingItem('action_cancel', 'Annuler', '[Annuler]', 'Retourner sans sauvegarder.', ['[Annuler]']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
 
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>Configuration Response</info>\n")));
+        $title = $state->name ? "Modifier: {$state->name}" : 'Nouveau Response';
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  {$title}</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($settingsWidget);
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Valider    Échap Annuler</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 

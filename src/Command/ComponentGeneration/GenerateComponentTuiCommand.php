@@ -71,7 +71,7 @@ final class GenerateComponentTuiCommand extends AbstractGenerateComponentCommand
         foreach ($this->generators as $generator) {
             $choices[] = [
                 'value' => $generator->getLabel(),
-                'label' => $formatter->format(sprintf('%s - %s', $generator->getLabel(), $generator->getDescription())),
+                'label' => $formatter->format(sprintf('  %-15s <fg=gray>%s</fg=gray>', $generator->getLabel(), $generator->getDescription())),
             ];
             $generatorsMap[$generator->getLabel()] = $generator;
         }
@@ -79,7 +79,7 @@ final class GenerateComponentTuiCommand extends AbstractGenerateComponentCommand
         // Option Quitter
         $choices[] = [
             'value' => 'quit',
-            'label' => $formatter->format('Quitter le TUI'),
+            'label' => $formatter->format('  <fg=red>Quitter</fg=red>'),
         ];
 
         $selectWidget = new SelectListWidget($choices, 12);
@@ -87,10 +87,13 @@ final class GenerateComponentTuiCommand extends AbstractGenerateComponentCommand
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($formatter->format("<info>=== ApiDocBundle TUI Generator ===</info>\n")));
-        $container->add(new TextWidget("Sélectionnez le type de composant à générer :\n"));
+        $container->add(new TextWidget($formatter->format("\n<info>+══════════════════════════════════════════════════+</info>")));
+        $container->add(new TextWidget($formatter->format('<info>║       ApiDocBundle TUI Generator                ║</info>')));
+        $container->add(new TextWidget($formatter->format("<info>+══════════════════════════════════════════════════+</info>\n")));
+        $container->add(new TextWidget($formatter->format("<comment>  Choisissez le type de composant :</comment>\n")));
         $container->add($selectWidget);
-        $container->add(new TextWidget($formatter->format("\n<comment>Navigation : ↑/↓  Sélectionner : Entrée  Quitter : Échap</comment>")));
+        $container->add(new TextWidget($formatter->format("\n<fg=gray>------------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Quitter</fg=gray>')));
 
         $tui->add($container);
         $tui->setFocus($selectWidget);
