@@ -98,6 +98,7 @@ class ParameterTuiGenerator extends AbstractTuiComponentGenerator
             $state->outputDir = $this->manager->getDefaultDumpLocation();
             if ('__new__' !== $value) {
                 $state->name = $value;
+                $state->loadedFrom = $this->manager->findComponentFile($value);
             }
             $this->showForm($tui, $state, $onBack);
         };
@@ -224,18 +225,24 @@ class ParameterTuiGenerator extends AbstractTuiComponentGenerator
         }
 
         $destination = AbstractGenerateComponentCommand::COMPONENT_PARAMETERS;
-        $outputDir = u($state->outputDir)->ensureStart('/')->ensureEnd('/');
-        $dumpDirectory = $this->kernel->getProjectDir() . $outputDir . u($destination)->ensureEnd('/');
 
-        if (!is_dir($dumpDirectory)) {
-            mkdir($dumpDirectory, 0755, true);
+        if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
+            $dumpLocation = dirname($state->loadedFrom) . '/' . $state->name . '.yaml';
+        } else {
+            $outputDir = u($state->outputDir)->ensureStart('/')->ensureEnd('/');
+            $dumpDirectory = $this->kernel->getProjectDir() . $outputDir . u($destination)->ensureEnd('/');
+
+            if (!is_dir($dumpDirectory)) {
+                mkdir($dumpDirectory, 0755, true);
+            }
+
+            $dumpLocation = $dumpDirectory . $state->name . '.yaml';
         }
 
         if ('yaml' === $state->format_output) {
-            $dumpLocation = $dumpDirectory . $state->name . '.yaml';
             $this->writeYamlFile($array, $dumpLocation, $this->currentOutput);
         } else {
-            $dumpLocation = $dumpDirectory . $state->name . '.php';
+            $dumpLocation = str_replace('.yaml', '.php', $dumpLocation);
             $phpCode = $this->generatePhpBuilderCode($array, $state->name, $destination);
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }

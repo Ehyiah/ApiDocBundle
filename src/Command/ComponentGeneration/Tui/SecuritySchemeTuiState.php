@@ -14,4 +14,5 @@ class SecuritySchemeTuiState
     public string $description = '';
     public string $format_output = 'yaml';
     public string $outputDir = '';
+    public ?string $loadedFrom = null;
 }

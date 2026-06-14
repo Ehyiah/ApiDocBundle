@@ -92,6 +92,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                 $state->routeName = $event->getValue();
                 $state->outputDir = $this->manager->getDefaultDumpLocation();
                 $this->loadExistingConfig($state);
+                $state->loadedFrom = $this->manager->findRouteFile($state->routeName);
                 $this->showMethodList($tui, $state, $onBack);
             }
         };
@@ -407,17 +408,23 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         unset($array['components']);
 
         $destination = AbstractGenerateComponentCommand::COMPONENT_ROUTES;
-        $dumpDirectory = $this->kernel->getProjectDir() . $state->outputDir . u($destination)->ensureEnd('/');
 
-        if (!is_dir($dumpDirectory)) {
-            mkdir($dumpDirectory, 0755, true);
+        if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
+            $dumpLocation = dirname($state->loadedFrom) . '/' . $state->routeName . '.yaml';
+        } else {
+            $dumpDirectory = $this->kernel->getProjectDir() . $state->outputDir . u($destination)->ensureEnd('/');
+
+            if (!is_dir($dumpDirectory)) {
+                mkdir($dumpDirectory, 0755, true);
+            }
+
+            $dumpLocation = $dumpDirectory . $state->routeName . '.yaml';
         }
 
         if ('yaml' === $state->format) {
-            $dumpLocation = $dumpDirectory . $state->routeName . '.yaml';
             $this->writeYamlFile($array, $dumpLocation, $this->currentOutput);
         } else {
-            $dumpLocation = $dumpDirectory . $state->routeName . '.php';
+            $dumpLocation = str_replace('.yaml', '.php', $dumpLocation);
             $phpCode = $this->generatePhpBuilderCode($array, $state->routeName, $destination);
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }

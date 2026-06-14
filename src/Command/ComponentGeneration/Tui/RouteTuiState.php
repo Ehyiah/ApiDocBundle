@@ -7,6 +7,7 @@ class RouteTuiState
     public string $routeName = '';
     public string $format = 'yaml';
     public string $outputDir = '';
+    public ?string $loadedFrom = null;
 
     /**
      * Per-method configuration.

@@ -108,6 +108,7 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
                     $state->openIdConnectUrl = $existing['openIdConnectUrl'];
                     $state->description = $existing['description'];
                 }
+                $state->loadedFrom = $this->manager->findComponentFile($value);
             }
             $this->showForm($tui, $state, $onBack);
         };
@@ -240,18 +241,24 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         ];
 
         $destination = AbstractGenerateComponentCommand::COMPONENT_SECURITY_SCHEMES;
-        $outputDir = u($state->outputDir)->ensureStart('/')->ensureEnd('/');
-        $dumpDirectory = $this->kernel->getProjectDir() . $outputDir . u($destination)->ensureEnd('/');
 
-        if (!is_dir($dumpDirectory)) {
-            mkdir($dumpDirectory, 0755, true);
+        if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
+            $dumpLocation = dirname($state->loadedFrom) . '/' . $state->name . '.yaml';
+        } else {
+            $outputDir = u($state->outputDir)->ensureStart('/')->ensureEnd('/');
+            $dumpDirectory = $this->kernel->getProjectDir() . $outputDir . u($destination)->ensureEnd('/');
+
+            if (!is_dir($dumpDirectory)) {
+                mkdir($dumpDirectory, 0755, true);
+            }
+
+            $dumpLocation = $dumpDirectory . $state->name . '.yaml';
         }
 
         if ('yaml' === $state->format_output) {
-            $dumpLocation = $dumpDirectory . $state->name . '.yaml';
             $this->writeYamlFile($array, $dumpLocation, $this->currentOutput);
         } else {
-            $dumpLocation = $dumpDirectory . $state->name . '.php';
+            $dumpLocation = str_replace('.yaml', '.php', $dumpLocation);
             $phpCode = $this->generatePhpBuilderCode($array, $state->name, $destination);
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }

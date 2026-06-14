@@ -86,6 +86,33 @@ class ResponseTuiManagerTest extends TestCase
         $this->assertContains('CustomResponse', $components);
     }
 
+    public function testFindComponentFileReturnsFilePath(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'error.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'responses' => ['Error' => ['description' => 'Error response']],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('Error');
+
+        $this->assertNotNull($file);
+        $this->assertStringContainsString('error.yaml', $file);
+    }
+
+    public function testFindComponentFileReturnsNullWhenNotFound(): void
+    {
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('NonExistent');
+
+        $this->assertNull($file);
+    }
+
     private function createManager(): ResponseTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

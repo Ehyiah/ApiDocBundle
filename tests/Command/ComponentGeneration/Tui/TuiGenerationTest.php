@@ -261,8 +261,8 @@ class TuiGenerationTest extends TestCase
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);
         $parameterBag->method('get')->willReturnMap([
-            ['ehyiah_api_doc.source_path', '/Swagger/'],
-            ['ehyiah_api_doc.dump_path', '/Swagger/dump/'],
+            ['ehyiah_api_doc.source_path', '/Swagger'],
+            ['ehyiah_api_doc.dump_path', '/Swagger/dump'],
             ['ehyiah_api_doc.scan_directories', ['src/Entity']],
         ]);
 
@@ -298,5 +298,191 @@ class TuiGenerationTest extends TestCase
             is_dir($path) ? $this->removeDir($path) : unlink($path);
         }
         rmdir($dir);
+    }
+
+    // ── Integration tests: loadedFrom ──
+
+    public function testSecuritySchemeWritesToOriginalLocationWhenLoadedFrom(): void
+    {
+        $customDir = $this->tmpDir . '/Swagger/custom/auth/';
+        mkdir($customDir, 0755, true);
+        $originalFile = $customDir . 'BearerAuth.yaml';
+        file_put_contents($originalFile, Yaml::dump([
+            'documentation' => ['components' => ['securitySchemes' => ['BearerAuth' => ['type' => 'http']]]],
+        ]));
+
+        $state = new SecuritySchemeTuiState();
+        $state->name = 'BearerAuth';
+        $state->type = 'http';
+        $state->scheme = 'bearer';
+        $state->bearerFormat = 'JWT';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger';
+        $state->loadedFrom = $originalFile;
+
+        $generator = $this->createGenerator(SecuritySchemeTuiGenerator::class, SecuritySchemeTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $this->assertFileExists($originalFile);
+        $content = file_get_contents($originalFile);
+        $this->assertStringContainsString('BearerAuth', $content);
+        $this->assertStringContainsString('bearer', $content);
+        $this->assertFileDoesNotExist($this->tmpDir . '/Swagger/securitySchemes/BearerAuth.yaml');
+    }
+
+    public function testParameterWritesToOriginalLocationWhenLoadedFrom(): void
+    {
+        $customDir = $this->tmpDir . '/Swagger/custom/params/';
+        mkdir($customDir, 0755, true);
+        $originalFile = $customDir . 'userId.yaml';
+        file_put_contents($originalFile, Yaml::dump([
+            'documentation' => ['components' => ['parameters' => ['userId' => ['name' => 'userId', 'in' => 'path']]]],
+        ]));
+
+        $state = new ParameterTuiState();
+        $state->name = 'userId';
+        $state->in = 'path';
+        $state->description = 'User ID';
+        $state->required = true;
+        $state->schemaType = 'integer';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger';
+        $state->loadedFrom = $originalFile;
+
+        $generator = $this->createGenerator(ParameterTuiGenerator::class, ParameterTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $this->assertFileExists($originalFile);
+        $content = file_get_contents($originalFile);
+        $this->assertStringContainsString('userId', $content);
+        $this->assertStringContainsString('integer', $content);
+    }
+
+    public function testHeaderWritesToOriginalLocationWhenLoadedFrom(): void
+    {
+        $customDir = $this->tmpDir . '/Swagger/custom/headers/';
+        mkdir($customDir, 0755, true);
+        $originalFile = $customDir . 'X-Request-ID.yaml';
+        file_put_contents($originalFile, Yaml::dump([
+            'documentation' => ['components' => ['headers' => ['X-Request-ID' => ['description' => 'ID']]]],
+        ]));
+
+        $state = new HeaderTuiState();
+        $state->name = 'X-Request-ID';
+        $state->description = 'Unique request identifier';
+        $state->schemaType = 'string';
+        $state->format = 'uuid';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger';
+        $state->loadedFrom = $originalFile;
+
+        $generator = $this->createGenerator(HeaderTuiGenerator::class, HeaderTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $this->assertFileExists($originalFile);
+        $content = file_get_contents($originalFile);
+        $this->assertStringContainsString('X-Request-ID', $content);
+        $this->assertStringContainsString('uuid', $content);
+    }
+
+    public function testResponseWritesToOriginalLocationWhenLoadedFrom(): void
+    {
+        $customDir = $this->tmpDir . '/Swagger/custom/responses/';
+        mkdir($customDir, 0755, true);
+        $originalFile = $customDir . 'NotFound.yaml';
+        file_put_contents($originalFile, Yaml::dump([
+            'documentation' => ['components' => ['responses' => ['NotFound' => ['description' => 'Not found']]]],
+        ]));
+
+        $state = new ResponseTuiState();
+        $state->name = 'NotFound';
+        $state->statusCode = '404';
+        $state->description = 'Resource not found';
+        $state->schemaRef = null;
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger';
+        $state->loadedFrom = $originalFile;
+
+        $generator = $this->createGenerator(ResponseTuiGenerator::class, ResponseTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $this->assertFileExists($originalFile);
+        $content = file_get_contents($originalFile);
+        $this->assertStringContainsString('NotFound', $content);
+        $this->assertStringContainsString('Resource not found', $content);
+    }
+
+    public function testRequestBodyWritesToOriginalLocationWhenLoadedFrom(): void
+    {
+        $customDir = $this->tmpDir . '/Swagger/custom/bodies/';
+        mkdir($customDir, 0755, true);
+        $originalFile = $customDir . 'CreateUser.yaml';
+        file_put_contents($originalFile, Yaml::dump([
+            'documentation' => ['components' => ['requestBodies' => ['CreateUser' => ['description' => 'Create']]]],
+        ]));
+
+        $state = new RequestBodyTuiState();
+        $state->name = 'CreateUser';
+        $state->description = 'User creation payload';
+        $state->required = true;
+        $state->schemaRef = 'User';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger';
+        $state->loadedFrom = $originalFile;
+
+        $generator = $this->createGenerator(RequestBodyTuiGenerator::class, RequestBodyTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $this->assertFileExists($originalFile);
+        $content = file_get_contents($originalFile);
+        $this->assertStringContainsString('CreateUser', $content);
+        $this->assertStringContainsString('User creation payload', $content);
+    }
+
+    public function testExampleWritesToOriginalLocationWhenLoadedFrom(): void
+    {
+        $customDir = $this->tmpDir . '/Swagger/custom/examples/';
+        mkdir($customDir, 0755, true);
+        $originalFile = $customDir . 'SuccessfulLogin.yaml';
+        file_put_contents($originalFile, Yaml::dump([
+            'documentation' => ['components' => ['examples' => ['SuccessfulLogin' => ['summary' => 'Login']]]],
+        ]));
+
+        $state = new ExampleTuiState();
+        $state->name = 'SuccessfulLogin';
+        $state->summary = 'Successful login response';
+        $state->description = 'Returns a valid JWT token';
+        $state->value = '{"token": "abc"}';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger';
+        $state->loadedFrom = $originalFile;
+
+        $generator = $this->createGenerator(ExampleTuiGenerator::class, ExampleTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $this->assertFileExists($originalFile);
+        $content = file_get_contents($originalFile);
+        $this->assertStringContainsString('Successful login response', $content);
+        $this->assertStringContainsString('token:', $content);
+    }
+
+    public function testSecuritySchemeWritesToDefaultWhenLoadedFromIsNull(): void
+    {
+        $state = new SecuritySchemeTuiState();
+        $state->name = 'NewScheme';
+        $state->type = 'http';
+        $state->scheme = 'bearer';
+        $state->bearerFormat = 'JWT';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger';
+        $state->loadedFrom = null;
+
+        $generator = $this->createGenerator(SecuritySchemeTuiGenerator::class, SecuritySchemeTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $expectedFile = $this->tmpDir . '/Swagger/securitySchemes/NewScheme.yaml';
+        $this->assertFileExists($expectedFile);
+        $content = file_get_contents($expectedFile);
+        $this->assertStringContainsString('NewScheme', $content);
     }
 }

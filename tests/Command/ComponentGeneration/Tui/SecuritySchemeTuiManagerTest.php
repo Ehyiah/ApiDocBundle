@@ -98,6 +98,33 @@ class SecuritySchemeTuiManagerTest extends TestCase
         $this->assertNull($config);
     }
 
+    public function testFindComponentFileReturnsFilePath(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'my_scheme.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'securitySchemes' => ['MyScheme' => ['type' => 'http']],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('MyScheme');
+
+        $this->assertNotNull($file);
+        $this->assertStringContainsString('my_scheme.yaml', $file);
+    }
+
+    public function testFindComponentFileReturnsNullWhenNotFound(): void
+    {
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('NonExistent');
+
+        $this->assertNull($file);
+    }
+
     public function testGetExistingComponentsFindsYamlInAnySubdirectory(): void
     {
         $dir = $this->tmpDir . '/Swagger/custom/auth/';

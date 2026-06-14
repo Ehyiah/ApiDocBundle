@@ -11,4 +11,5 @@ class ResponseTuiState
     public string $contentType = 'application/json';
     public string $format_output = 'yaml';
     public string $outputDir = '';
+    public ?string $loadedFrom = null;
 }

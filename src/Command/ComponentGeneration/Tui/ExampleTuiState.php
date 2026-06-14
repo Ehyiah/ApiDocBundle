@@ -10,4 +10,5 @@ class ExampleTuiState
     public string $value = '';
     public string $format_output = 'yaml';
     public string $outputDir = '';
+    public ?string $loadedFrom = null;
 }

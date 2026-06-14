@@ -82,4 +82,28 @@ class SecuritySchemeTuiManager
 
         return null;
     }
+
+    /**
+     * Find the YAML file path for a given component name.
+     */
+    public function findComponentFile(string $name): ?string
+    {
+        $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
+
+        if (!is_dir($directory)) {
+            return null;
+        }
+
+        $finder = new Finder();
+        $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
+        foreach ($finder as $file) {
+            $config = Yaml::parseFile($file->getRealPath());
+            if (isset($config['documentation']['components']['securitySchemes'][$name])) {
+                return $file->getRealPath();
+            }
+        }
+
+        return null;
+    }
 }

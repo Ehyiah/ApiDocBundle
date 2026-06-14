@@ -79,6 +79,33 @@ class HeaderTuiManagerTest extends TestCase
         $this->assertContains('CustomHeader', $components);
     }
 
+    public function testFindComponentFileReturnsFilePath(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'etag.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'headers' => ['ETag' => ['description' => 'Cache tag', 'schema' => ['type' => 'string']]],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('ETag');
+
+        $this->assertNotNull($file);
+        $this->assertStringContainsString('etag.yaml', $file);
+    }
+
+    public function testFindComponentFileReturnsNullWhenNotFound(): void
+    {
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('NonExistent');
+
+        $this->assertNull($file);
+    }
+
     private function createManager(): HeaderTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

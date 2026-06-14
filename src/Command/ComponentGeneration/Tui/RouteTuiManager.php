@@ -85,6 +85,30 @@ class RouteTuiManager
     }
 
     /**
+     * Find the YAML file path for a given route name.
+     */
+    public function findRouteFile(string $routeName): ?string
+    {
+        $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
+
+        if (!is_dir($directory)) {
+            return null;
+        }
+
+        $finder = new \Symfony\Component\Finder\Finder();
+        $finder->files()->in($directory)->name($routeName . '.yaml');
+        foreach ($finder as $file) {
+            $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
+            if (isset($config['paths'])) {
+                return $file->getRealPath();
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Load existing route configuration from YAML file, returning per-method config.
      *
      * @return array{methodsConfig: array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string}>}
@@ -97,13 +121,20 @@ class RouteTuiManager
         }
         $path = $route->getPath();
 
-        $dumpDirectory = $this->kernel->getProjectDir() . $this->getDefaultDumpLocation() . u($componentType)->ensureEnd('/');
+        $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
 
-        $yamlFile = $dumpDirectory . $routeName . '.yaml';
-        if (file_exists($yamlFile)) {
-            $config = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile);
+        if (!is_dir($directory)) {
+            return ['methodsConfig' => []];
+        }
 
-            return ['methodsConfig' => $this->extractMethodsConfig($config, $path)];
+        $finder = new \Symfony\Component\Finder\Finder();
+        $finder->files()->in($directory)->name($routeName . '.yaml');
+        foreach ($finder as $file) {
+            $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
+            if (isset($config['paths'])) {
+                return ['methodsConfig' => $this->extractMethodsConfig($config, $path)];
+            }
         }
 
         return ['methodsConfig' => []];

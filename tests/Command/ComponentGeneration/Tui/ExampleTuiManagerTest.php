@@ -79,6 +79,33 @@ class ExampleTuiManagerTest extends TestCase
         $this->assertContains('CustomExample', $components);
     }
 
+    public function testFindComponentFileReturnsFilePath(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'user.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'examples' => ['UserExample' => ['summary' => 'User', 'value' => ['id' => 1]]],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('UserExample');
+
+        $this->assertNotNull($file);
+        $this->assertStringContainsString('user.yaml', $file);
+    }
+
+    public function testFindComponentFileReturnsNullWhenNotFound(): void
+    {
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('NonExistent');
+
+        $this->assertNull($file);
+    }
+
     private function createManager(): ExampleTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

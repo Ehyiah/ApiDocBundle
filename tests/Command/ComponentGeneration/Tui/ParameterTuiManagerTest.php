@@ -79,6 +79,33 @@ class ParameterTuiManagerTest extends TestCase
         $this->assertContains('CustomParam', $components);
     }
 
+    public function testFindComponentFileReturnsFilePath(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'page.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'parameters' => ['page' => ['name' => 'page', 'in' => 'query']],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('page');
+
+        $this->assertNotNull($file);
+        $this->assertStringContainsString('page.yaml', $file);
+    }
+
+    public function testFindComponentFileReturnsNullWhenNotFound(): void
+    {
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('NonExistent');
+
+        $this->assertNull($file);
+    }
+
     private function createManager(): ParameterTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

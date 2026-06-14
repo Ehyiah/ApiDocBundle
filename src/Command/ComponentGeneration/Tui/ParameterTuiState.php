@@ -13,4 +13,5 @@ class ParameterTuiState
     public string $example = '';
     public string $format_output = 'yaml';
     public string $outputDir = '';
+    public ?string $loadedFrom = null;
 }
