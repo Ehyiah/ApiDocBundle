@@ -263,6 +263,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem('rb_schema', 'Schema RequestBody', $config['requestBodySchema'] ?? 'aucun', 'Choisir un schéma', $schemaChoices);
         $settingItems[] = new SettingItem('res_schema', 'Schema Réponse 200', $config['responseSchema'] ?? 'aucun', 'Choisir un schéma', $schemaChoices);
 
+        $settingItems[] = new SettingItem('format', 'Format', $state->format, 'YAML ou PHP', ['yaml', 'php']);
         $settingItems[] = new SettingItem('action_validate', 'Valider', '[Confirmer]', 'Sauvegarder et revenir à la liste.', ['[Confirmer]']);
         $settingItems[] = new SettingItem('action_delete', 'Supprimer', '[Supprimer]', 'Supprimer cette méthode de la route.', ['[Supprimer]']);
         $settingItems[] = new SettingItem('action_cancel', 'Annuler', '[Annuler]', 'Retourner sans sauvegarder.', ['[Annuler]']);
@@ -320,6 +321,8 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                         'requestBodySchema' => 'aucun' !== ($settingsWidget->getValue('rb_schema') ?? 'aucun') ? $settingsWidget->getValue('rb_schema') : null,
                         'responseSchema' => 'aucun' !== ($settingsWidget->getValue('res_schema') ?? 'aucun') ? $settingsWidget->getValue('res_schema') : null,
                     ];
+
+                    $state->format = $settingsWidget->getValue('format') ?? 'yaml';
 
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
@@ -434,8 +437,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
         $destination = AbstractGenerateComponentCommand::COMPONENT_ROUTES;
 
+        $extension = 'yaml' === $state->format ? 'yaml' : 'php';
+
         if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
-            $dumpLocation = dirname($state->loadedFrom) . '/' . $state->routeName . '.yaml';
+            $dumpLocation = dirname($state->loadedFrom) . '/' . $state->routeName . '.' . $extension;
         } else {
             $dumpDirectory = $this->kernel->getProjectDir() . $state->outputDir . u($destination)->ensureEnd('/');
 
@@ -443,13 +448,12 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                 mkdir($dumpDirectory, 0755, true);
             }
 
-            $dumpLocation = $dumpDirectory . $state->routeName . '.yaml';
+            $dumpLocation = $dumpDirectory . $state->routeName . '.' . $extension;
         }
 
         if ('yaml' === $state->format) {
             $this->writeYamlFile($array, $dumpLocation, $this->currentOutput);
         } else {
-            $dumpLocation = str_replace('.yaml', '.php', $dumpLocation);
             $phpCode = $this->generatePhpBuilderCode($array, $state->routeName, $destination);
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }

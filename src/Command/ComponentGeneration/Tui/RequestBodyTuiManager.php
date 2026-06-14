@@ -70,7 +70,7 @@ class RequestBodyTuiManager
     }
 
     /**
-     * Find the YAML file path for a given component name.
+     * Find the YAML or PHP file path for a given component name.
      */
     public function findComponentFile(string $name): ?string
     {
@@ -82,11 +82,18 @@ class RequestBodyTuiManager
         }
 
         $finder = new Finder();
-        $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
+        $finder->files()->in($directory)->name(['*.yaml', '*.yml', '*.php']);
         foreach ($finder as $file) {
-            $config = Yaml::parseFile($file->getRealPath());
-            if (isset($config['documentation']['components']['requestBodies'][$name])) {
-                return $file->getRealPath();
+            if ('php' === $file->getExtension()) {
+                $content = file_get_contents($file->getRealPath());
+                if (false !== $content && (str_contains($content, "'{$name}'") || str_contains($content, "\"{$name}\""))) {
+                    return $file->getRealPath();
+                }
+            } else {
+                $config = Yaml::parseFile($file->getRealPath());
+                if (isset($config['documentation']['components']['requestBodies'][$name])) {
+                    return $file->getRealPath();
+                }
             }
         }
 

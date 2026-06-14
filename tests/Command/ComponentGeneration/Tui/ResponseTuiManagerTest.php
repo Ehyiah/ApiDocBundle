@@ -113,6 +113,31 @@ class ResponseTuiManagerTest extends TestCase
         $this->assertNull($file);
     }
 
+    public function testFindComponentFileFindsPhpFile(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'Error.php', <<<'PHP'
+<?php
+return new class implements \Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface {
+    public function configure(\Ehyiah\ApiDocBundle\Builder\ApiDocBuilder $builder): void
+    {
+        $builder->addResponse('Error')
+            ->statusCode(500)
+            ->description('Server error')
+        ->end();
+    }
+};
+PHP
+        );
+
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('Error');
+
+        $this->assertNotNull($file);
+        $this->assertStringContainsString('Error.php', $file);
+    }
+
     private function createManager(): ResponseTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

@@ -106,6 +106,30 @@ class ParameterTuiManagerTest extends TestCase
         $this->assertNull($file);
     }
 
+    public function testFindComponentFileFindsPhpFile(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'page.php', <<<'PHP'
+<?php
+return new class implements \Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface {
+    public function configure(\Ehyiah\ApiDocBundle\Builder\ApiDocBuilder $builder): void
+    {
+        $builder->addParameter('page')
+            ->in('query')
+        ->end();
+    }
+};
+PHP
+        );
+
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('page');
+
+        $this->assertNotNull($file);
+        $this->assertStringContainsString('page.php', $file);
+    }
+
     private function createManager(): ParameterTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

@@ -106,6 +106,30 @@ class HeaderTuiManagerTest extends TestCase
         $this->assertNull($file);
     }
 
+    public function testFindComponentFileFindsPhpFile(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'ETag.php', <<<'PHP'
+<?php
+return new class implements \Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface {
+    public function configure(\Ehyiah\ApiDocBundle\Builder\ApiDocBuilder $builder): void
+    {
+        $builder->addHeader('ETag')
+            ->typeString('uuid')
+        ->end();
+    }
+};
+PHP
+        );
+
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('ETag');
+
+        $this->assertNotNull($file);
+        $this->assertStringContainsString('ETag.php', $file);
+    }
+
     private function createManager(): HeaderTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

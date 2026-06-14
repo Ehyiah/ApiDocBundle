@@ -113,6 +113,30 @@ class RequestBodyTuiManagerTest extends TestCase
         $this->assertNull($file);
     }
 
+    public function testFindComponentFileFindsPhpFile(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'LoginRequest.php', <<<'PHP'
+<?php
+return new class implements \Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface {
+    public function configure(\Ehyiah\ApiDocBundle\Builder\ApiDocBuilder $builder): void
+    {
+        $builder->addRequestBody('LoginRequest')
+            ->description('Login payload')
+        ->end();
+    }
+};
+PHP
+        );
+
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('LoginRequest');
+
+        $this->assertNotNull($file);
+        $this->assertStringContainsString('LoginRequest.php', $file);
+    }
+
     private function createManager(): RequestBodyTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

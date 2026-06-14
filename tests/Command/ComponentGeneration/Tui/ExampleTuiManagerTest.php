@@ -106,6 +106,31 @@ class ExampleTuiManagerTest extends TestCase
         $this->assertNull($file);
     }
 
+    public function testFindComponentFileFindsPhpFile(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'UserExample.php', <<<'PHP'
+<?php
+return new class implements \Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface {
+    public function configure(\Ehyiah\ApiDocBundle\Builder\ApiDocBuilder $builder): void
+    {
+        $builder->addExample('UserExample')
+            ->summary('User example')
+            ->value(['id' => 1])
+        ->end();
+    }
+};
+PHP
+        );
+
+        $manager = $this->createManager();
+        $file = $manager->findComponentFile('UserExample');
+
+        $this->assertNotNull($file);
+        $this->assertStringContainsString('UserExample.php', $file);
+    }
+
     private function createManager(): ExampleTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

@@ -85,7 +85,7 @@ class RouteTuiManager
     }
 
     /**
-     * Find the YAML file path for a given route name.
+     * Find the YAML or PHP file path for a given route name.
      */
     public function findRouteFile(string $routeName): ?string
     {
@@ -97,11 +97,18 @@ class RouteTuiManager
         }
 
         $finder = new \Symfony\Component\Finder\Finder();
-        $finder->files()->in($directory)->name($routeName . '.yaml');
+        $finder->files()->in($directory)->name([$routeName . '.yaml', $routeName . '.php']);
         foreach ($finder as $file) {
-            $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
-            if (isset($config['paths'])) {
-                return $file->getRealPath();
+            if ('php' === $file->getExtension()) {
+                $content = file_get_contents($file->getRealPath());
+                if (false !== $content && str_contains($content, "'{$routeName}'")) {
+                    return $file->getRealPath();
+                }
+            } else {
+                $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
+                if (isset($config['paths'])) {
+                    return $file->getRealPath();
+                }
             }
         }
 
