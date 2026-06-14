@@ -61,6 +61,24 @@ class ExampleTuiManagerTest extends TestCase
         $this->assertContains('SuccessfulLogin', $components);
     }
 
+    public function testGetExistingComponentsFindsYamlInAnySubdirectory(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/examples/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'my_example.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'examples' => ['CustomExample' => ['summary' => 'Custom', 'value' => ['key' => 'val']]],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $components = $manager->getExistingComponents();
+
+        $this->assertContains('CustomExample', $components);
+    }
+
     private function createManager(): ExampleTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

@@ -61,6 +61,24 @@ class HeaderTuiManagerTest extends TestCase
         $this->assertContains('X-Request-ID', $components);
     }
 
+    public function testGetExistingComponentsFindsYamlInAnySubdirectory(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/headers/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'my_header.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'headers' => ['CustomHeader' => ['description' => 'Custom', 'schema' => ['type' => 'string']]],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $components = $manager->getExistingComponents();
+
+        $this->assertContains('CustomHeader', $components);
+    }
+
     private function createManager(): HeaderTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

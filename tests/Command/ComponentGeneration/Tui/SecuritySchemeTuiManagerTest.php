@@ -98,6 +98,24 @@ class SecuritySchemeTuiManagerTest extends TestCase
         $this->assertNull($config);
     }
 
+    public function testGetExistingComponentsFindsYamlInAnySubdirectory(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/auth/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'my_component.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'securitySchemes' => ['CustomScheme' => ['type' => 'http', 'scheme' => 'bearer']],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $components = $manager->getExistingComponents();
+
+        $this->assertContains('CustomScheme', $components);
+    }
+
     private function createManager(): SecuritySchemeTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

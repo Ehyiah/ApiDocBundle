@@ -23,7 +23,7 @@ class ResponseTuiManager
     public function getExistingComponents(): array
     {
         $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
-        $directory = $this->kernel->getProjectDir() . $sourcePath . '/responses/';
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
 
         $names = [];
         if (is_dir($directory)) {
@@ -41,7 +41,7 @@ class ResponseTuiManager
     }
 
     /**
-     * @return string[]
+     * @return array<int, string>
      */
     public function getAvailableSchemas(): array
     {

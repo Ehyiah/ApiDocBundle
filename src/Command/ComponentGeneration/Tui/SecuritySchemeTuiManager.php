@@ -23,7 +23,7 @@ class SecuritySchemeTuiManager
     public function getExistingComponents(): array
     {
         $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
-        $directory = $this->kernel->getProjectDir() . $sourcePath . '/securitySchemes/';
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
 
         $names = [];
         if (is_dir($directory)) {
@@ -55,7 +55,7 @@ class SecuritySchemeTuiManager
     public function loadComponentConfig(string $name): ?array
     {
         $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
-        $directory = $this->kernel->getProjectDir() . $sourcePath . '/securitySchemes/';
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
 
         if (!is_dir($directory)) {
             return null;

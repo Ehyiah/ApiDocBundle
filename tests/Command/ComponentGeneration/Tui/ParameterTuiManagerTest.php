@@ -61,6 +61,24 @@ class ParameterTuiManagerTest extends TestCase
         $this->assertContains('userId', $components);
     }
 
+    public function testGetExistingComponentsFindsYamlInAnySubdirectory(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/params/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'my_param.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'parameters' => ['CustomParam' => ['name' => 'CustomParam', 'in' => 'query']],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $components = $manager->getExistingComponents();
+
+        $this->assertContains('CustomParam', $components);
+    }
+
     private function createManager(): ParameterTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

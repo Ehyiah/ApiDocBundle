@@ -23,7 +23,7 @@ class ParameterTuiManager
     public function getExistingComponents(): array
     {
         $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
-        $directory = $this->kernel->getProjectDir() . $sourcePath . '/parameters/';
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
 
         $names = [];
         if (is_dir($directory)) {

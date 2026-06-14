@@ -68,6 +68,24 @@ class RequestBodyTuiManagerTest extends TestCase
         $this->assertContains('CreateUser', $components);
     }
 
+    public function testGetExistingComponentsFindsYamlInAnySubdirectory(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/custom/bodies/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'my_body.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'requestBodies' => ['CustomBody' => ['description' => 'Custom body', 'required' => false]],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $components = $manager->getExistingComponents();
+
+        $this->assertContains('CustomBody', $components);
+    }
+
     private function createManager(): RequestBodyTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);
