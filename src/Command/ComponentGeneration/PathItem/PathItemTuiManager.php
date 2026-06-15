@@ -1,6 +1,6 @@
 <?php
 
-namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Header;
+namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\PathItem;
 
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Finder\Finder;
@@ -9,7 +9,7 @@ use Symfony\Component\Yaml\Yaml;
 
 use function Symfony\Component\String\u;
 
-class HeaderTuiManager
+class PathItemTuiManager
 {
     public function __construct(
         private readonly KernelInterface $kernel,
@@ -31,8 +31,8 @@ class HeaderTuiManager
             $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
             foreach ($finder as $file) {
                 $config = Yaml::parseFile($file->getRealPath());
-                if (isset($config['documentation']['components']['headers'])) {
-                    $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['headers'])));
+                if (isset($config['documentation']['components']['pathItems'])) {
+                    $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['pathItems'])));
                 }
             }
         }
@@ -48,9 +48,9 @@ class HeaderTuiManager
     }
 
     /**
-     * Load the configuration of an existing header from YAML files.
+     * Load the configuration of an existing path item from YAML files.
      *
-     * @return array{name: string, description: string, required: bool, deprecated: bool, schemaType: string, format: string, example: string}|null
+     * @return array{summary: string, description: string, ref: string}|null
      */
     public function loadComponentConfig(string $name): ?array
     {
@@ -65,17 +65,13 @@ class HeaderTuiManager
         $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
         foreach ($finder as $file) {
             $config = Yaml::parseFile($file->getRealPath());
-            if (isset($config['documentation']['components']['headers'][$name])) {
-                $header = $config['documentation']['components']['headers'][$name];
+            if (isset($config['documentation']['components']['pathItems'][$name])) {
+                $pathItem = $config['documentation']['components']['pathItems'][$name];
 
                 return [
-                    'name' => $name,
-                    'description' => (string)($header['description'] ?? ''),
-                    'required' => (bool)($header['required'] ?? false),
-                    'deprecated' => (bool)($header['deprecated'] ?? false),
-                    'schemaType' => (string)($header['schema']['type'] ?? 'string'),
-                    'format' => (string)($header['schema']['format'] ?? ''),
-                    'example' => isset($header['example']) ? (string)$header['example'] : '',
+                    'summary' => $pathItem['summary'] ?? '',
+                    'description' => $pathItem['description'] ?? '',
+                    'ref' => $pathItem['$ref'] ?? '',
                 ];
             }
         }
@@ -105,7 +101,7 @@ class HeaderTuiManager
                 }
             } else {
                 $config = Yaml::parseFile($file->getRealPath());
-                if (isset($config['documentation']['components']['headers'][$name])) {
+                if (isset($config['documentation']['components']['pathItems'][$name])) {
                     return $file->getRealPath();
                 }
             }

@@ -88,6 +88,18 @@ class ExampleBuilder
     }
 
     /**
+     * Set a reference to an existing example component.
+     *
+     * @param string $ref Reference path (e.g., '#/components/examples/SuccessResponse')
+     */
+    public function ref(string $ref): self
+    {
+        $this->definition = ['$ref' => $ref];
+
+        return $this;
+    }
+
+    /**
      * Finish building this example and return to the parent builder.
      *
      * @return ContentBuilder|ParameterBuilder|HeaderBuilder

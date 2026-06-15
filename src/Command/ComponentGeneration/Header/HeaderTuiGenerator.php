@@ -103,6 +103,16 @@ class HeaderTuiGenerator extends AbstractTuiComponentGenerator
             $state->outputDir = $this->manager->getDefaultDumpLocation();
             if ('__new__' !== $value) {
                 $state->name = $value;
+                $existing = $this->manager->loadComponentConfig($value);
+                if (null !== $existing) {
+                    $state->name = $existing['name'];
+                    $state->description = $existing['description'];
+                    $state->required = $existing['required'];
+                    $state->deprecated = $existing['deprecated'];
+                    $state->schemaType = $existing['schemaType'];
+                    $state->format = $existing['format'];
+                    $state->example = $existing['example'];
+                }
                 $state->loadedFrom = $this->manager->findComponentFile($value);
             }
             $this->showForm($tui, $state, $onBack);
@@ -139,6 +149,8 @@ class HeaderTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems = [];
         $settingItems[] = new SettingItem('name', 'Name', $state->name, 'Header name (e.g. X-Request-ID)', [], $textInputCallback);
         $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Header description', [], $textInputCallback);
+        $settingItems[] = new SettingItem('required', 'Required', $state->required ? 'yes' : 'no', 'Required header', ['yes', 'no']);
+        $settingItems[] = new SettingItem('deprecated', 'Deprecated', $state->deprecated ? 'yes' : 'no', 'Deprecated header', ['yes', 'no']);
         $settingItems[] = new SettingItem('schema_type', 'Type', $state->schemaType, 'Schema type', ['string', 'integer', 'number', 'boolean', 'array']);
         $settingItems[] = new SettingItem('format', 'Format', $state->format, 'Format (optional)', [], $textInputCallback);
         $settingItems[] = new SettingItem('example', 'Example', $state->example, 'Example value', [], $textInputCallback);
@@ -177,6 +189,8 @@ class HeaderTuiGenerator extends AbstractTuiComponentGenerator
                 case 'action_validate':
                     $state->name = $settingsWidget->getValue('name') ?? '';
                     $state->description = $settingsWidget->getValue('desc') ?? '';
+                    $state->required = 'yes' === ($settingsWidget->getValue('required') ?? 'no');
+                    $state->deprecated = 'yes' === ($settingsWidget->getValue('deprecated') ?? 'no');
                     $state->schemaType = $settingsWidget->getValue('schema_type') ?? 'string';
                     $state->format = $settingsWidget->getValue('format') ?? '';
                     $state->example = $settingsWidget->getValue('example') ?? '';
@@ -210,27 +224,41 @@ class HeaderTuiGenerator extends AbstractTuiComponentGenerator
             $schema['format'] = $state->format;
         }
 
+        $header = [
+            'description' => $state->description,
+            'schema' => $schema,
+        ];
+
+        if ($state->required) {
+            $header['required'] = true;
+        }
+        if ($state->deprecated) {
+            $header['deprecated'] = true;
+        }
+        if ('' !== $state->example) {
+            $header['example'] = $state->example;
+        }
+
         $array = [
             'documentation' => [
                 'components' => [
                     'headers' => [
-                        $state->name => [
-                            'description' => $state->description,
-                            'schema' => $schema,
-                        ],
+                        $state->name => $header,
                     ],
                 ],
             ],
         ];
 
-        if ('' !== $state->example) {
-            $array['documentation']['components']['headers'][$state->name]['example'] = $state->example;
-        }
-
         $destination = ComponentType::Headers->value;
 
         if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
             $dumpLocation = dirname($state->loadedFrom) . '/' . $state->name . '.yaml';
+            // Merge with existing config to preserve manually-added fields
+            $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
+            if (isset($existingConfig['documentation']['components']['headers'][$state->name])) {
+                $mergedHeader = array_merge($existingConfig['documentation']['components']['headers'][$state->name], $header);
+                $array['documentation']['components']['headers'][$state->name] = $mergedHeader;
+            }
         } else {
             $outputDir = u($state->outputDir)->ensureStart('/')->ensureEnd('/');
             $dumpDirectory = $this->kernel->getProjectDir() . $outputDir . u($destination)->ensureEnd('/');

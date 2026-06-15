@@ -131,6 +131,67 @@ PHP
         $this->assertStringContainsString('UserExample.php', $file);
     }
 
+    public function testLoadComponentConfigReturnsConfig(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/examples/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'SuccessfulLogin.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'examples' => [
+                        'SuccessfulLogin' => [
+                            'summary' => 'Successful login',
+                            'description' => 'Returns a valid JWT',
+                            'value' => ['token' => 'abc'],
+                            'externalValue' => '',
+                        ],
+                    ],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $config = $manager->loadComponentConfig('SuccessfulLogin');
+
+        $this->assertNotNull($config);
+        $this->assertSame('SuccessfulLogin', $config['name']);
+        $this->assertSame('Successful login', $config['summary']);
+        $this->assertSame('Returns a valid JWT', $config['description']);
+        $this->assertStringContainsString('token', $config['value']);
+    }
+
+    public function testLoadComponentConfigWithExternalValue(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/examples/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'ExternalExample.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'examples' => [
+                        'ExternalExample' => [
+                            'summary' => 'External',
+                            'externalValue' => 'https://example.com/data.json',
+                        ],
+                    ],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $config = $manager->loadComponentConfig('ExternalExample');
+
+        $this->assertNotNull($config);
+        $this->assertSame('https://example.com/data.json', $config['externalValue']);
+    }
+
+    public function testLoadComponentConfigReturnsNullWhenNotFound(): void
+    {
+        $manager = $this->createManager();
+        $config = $manager->loadComponentConfig('NonExistent');
+
+        $this->assertNull($config);
+    }
+
     private function createManager(): ExampleTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

@@ -2,15 +2,24 @@
 
 namespace Ehyiah\ApiDocBundle\Tests\Command\ComponentGeneration\Tui;
 
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Callback\CallbackTuiGenerator;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Callback\CallbackTuiManager;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Callback\CallbackTuiState;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Example\ExampleTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Example\ExampleTuiManager;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Example\ExampleTuiState;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Header\HeaderTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Header\HeaderTuiManager;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Header\HeaderTuiState;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Link\LinkTuiGenerator;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Link\LinkTuiManager;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Link\LinkTuiState;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Parameter\ParameterTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Parameter\ParameterTuiManager;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Parameter\ParameterTuiState;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\PathItem\PathItemTuiGenerator;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\PathItem\PathItemTuiManager;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\PathItem\PathItemTuiState;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\RequestBody\RequestBodyTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\RequestBody\RequestBodyTuiManager;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\RequestBody\RequestBodyTuiState;
@@ -484,5 +493,305 @@ class TuiGenerationTest extends TestCase
         $this->assertFileExists($expectedFile);
         $content = file_get_contents($expectedFile);
         $this->assertStringContainsString('NewScheme', $content);
+    }
+
+    // ── Link tests ──
+
+    public function testLinkYamlGeneration(): void
+    {
+        $state = new LinkTuiState();
+        $state->name = 'GetUserOrders';
+        $state->operationRef = '/users/{userId}/orders';
+        $state->operationId = 'getUserOrders';
+        $state->description = 'Orders for this user';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(LinkTuiGenerator::class, LinkTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $file = $this->tmpDir . '/Swagger/links/GetUserOrders.yaml';
+        $this->assertFileExists($file);
+
+        $yaml = Yaml::parseFile($file);
+        $link = $yaml['documentation']['components']['links']['GetUserOrders'];
+        $this->assertSame('/users/{userId}/orders', $link['operationRef']);
+        $this->assertSame('getUserOrders', $link['operationId']);
+        $this->assertSame('Orders for this user', $link['description']);
+    }
+
+    public function testLinkPhpGeneration(): void
+    {
+        $state = new LinkTuiState();
+        $state->name = 'GetUserOrders';
+        $state->operationId = 'getUserOrders';
+        $state->format_output = 'php';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(LinkTuiGenerator::class, LinkTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $file = $this->tmpDir . '/Swagger/links/GetUserOrders.php';
+        $this->assertFileExists($file);
+
+        $content = file_get_contents($file);
+        $this->assertStringContainsString('addLink', $content);
+        $this->assertStringContainsString('GetUserOrders', $content);
+    }
+
+    public function testLinkWritesToOriginalLocationWhenLoadedFrom(): void
+    {
+        $customDir = $this->tmpDir . '/Swagger/custom/links/';
+        mkdir($customDir, 0755, true);
+        $originalFile = $customDir . 'GetUserOrders.yaml';
+        file_put_contents($originalFile, Yaml::dump([
+            'documentation' => ['components' => ['links' => ['GetUserOrders' => ['operationId' => 'getUserOrders']]]],
+        ]));
+
+        $state = new LinkTuiState();
+        $state->name = 'GetUserOrders';
+        $state->operationId = 'getUserOrders';
+        $state->description = 'Updated description';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger';
+        $state->loadedFrom = $originalFile;
+
+        $generator = $this->createGenerator(LinkTuiGenerator::class, LinkTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $this->assertFileExists($originalFile);
+        $content = file_get_contents($originalFile);
+        $this->assertStringContainsString('getUserOrders', $content);
+        $this->assertStringContainsString('Updated description', $content);
+    }
+
+    // ── Callback tests ──
+
+    public function testCallbackYamlGeneration(): void
+    {
+        $state = new CallbackTuiState();
+        $state->name = 'OnOrderCreated';
+        $state->expression = '{$request.body#/callbackUrl}';
+        $state->method = 'post';
+        $state->operationId = 'handleOrderCallback';
+        $state->description = 'Handle order event';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(CallbackTuiGenerator::class, CallbackTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $file = $this->tmpDir . '/Swagger/callbacks/OnOrderCreated.yaml';
+        $this->assertFileExists($file);
+
+        $yaml = Yaml::parseFile($file);
+        $callback = $yaml['documentation']['components']['callbacks']['OnOrderCreated'];
+        $this->assertArrayHasKey('{$request.body#/callbackUrl}', $callback);
+        $this->assertSame('handleOrderCallback', $callback['{$request.body#/callbackUrl}']['post']['operationId']);
+    }
+
+    public function testCallbackPhpGeneration(): void
+    {
+        $state = new CallbackTuiState();
+        $state->name = 'OnOrderCreated';
+        $state->expression = '{$request.body#/callbackUrl}';
+        $state->method = 'post';
+        $state->format_output = 'php';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(CallbackTuiGenerator::class, CallbackTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $file = $this->tmpDir . '/Swagger/callbacks/OnOrderCreated.php';
+        $this->assertFileExists($file);
+
+        $content = file_get_contents($file);
+        $this->assertStringContainsString('addCallback', $content);
+        $this->assertStringContainsString('OnOrderCreated', $content);
+    }
+
+    public function testCallbackWritesToOriginalLocationWhenLoadedFrom(): void
+    {
+        $customDir = $this->tmpDir . '/Swagger/custom/callbacks/';
+        mkdir($customDir, 0755, true);
+        $originalFile = $customDir . 'OnOrder.yaml';
+        file_put_contents($originalFile, Yaml::dump([
+            'documentation' => ['components' => ['callbacks' => ['OnOrder' => ['{$request.body#/url}' => ['post' => ['operationId' => 'oldHandler']]]]]],
+        ]));
+
+        $state = new CallbackTuiState();
+        $state->name = 'OnOrder';
+        $state->expression = '{$request.body#/url}';
+        $state->method = 'post';
+        $state->operationId = 'newHandler';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger';
+        $state->loadedFrom = $originalFile;
+
+        $generator = $this->createGenerator(CallbackTuiGenerator::class, CallbackTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $this->assertFileExists($originalFile);
+        $content = file_get_contents($originalFile);
+        $this->assertStringContainsString('newHandler', $content);
+    }
+
+    // ── PathItem tests ──
+
+    public function testPathItemYamlGeneration(): void
+    {
+        $state = new PathItemTuiState();
+        $state->name = 'UserOperations';
+        $state->summary = 'User operations';
+        $state->description = 'All operations for users';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(PathItemTuiGenerator::class, PathItemTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $file = $this->tmpDir . '/Swagger/pathItems/UserOperations.yaml';
+        $this->assertFileExists($file);
+
+        $yaml = Yaml::parseFile($file);
+        $pathItem = $yaml['documentation']['components']['pathItems']['UserOperations'];
+        $this->assertSame('User operations', $pathItem['summary']);
+        $this->assertSame('All operations for users', $pathItem['description']);
+    }
+
+    public function testPathItemPhpGeneration(): void
+    {
+        $state = new PathItemTuiState();
+        $state->name = 'UserOperations';
+        $state->summary = 'User operations';
+        $state->format_output = 'php';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(PathItemTuiGenerator::class, PathItemTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $file = $this->tmpDir . '/Swagger/pathItems/UserOperations.php';
+        $this->assertFileExists($file);
+
+        $content = file_get_contents($file);
+        $this->assertStringContainsString('addPathItem', $content);
+        $this->assertStringContainsString('UserOperations', $content);
+    }
+
+    public function testPathItemWritesToOriginalLocationWhenLoadedFrom(): void
+    {
+        $customDir = $this->tmpDir . '/Swagger/custom/pathItems/';
+        mkdir($customDir, 0755, true);
+        $originalFile = $customDir . 'UserOps.yaml';
+        file_put_contents($originalFile, Yaml::dump([
+            'documentation' => ['components' => ['pathItems' => ['UserOps' => ['summary' => 'Old summary']]]],
+        ]));
+
+        $state = new PathItemTuiState();
+        $state->name = 'UserOps';
+        $state->summary = 'Updated summary';
+        $state->description = 'New description';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger';
+        $state->loadedFrom = $originalFile;
+
+        $generator = $this->createGenerator(PathItemTuiGenerator::class, PathItemTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $this->assertFileExists($originalFile);
+        $content = file_get_contents($originalFile);
+        $this->assertStringContainsString('Updated summary', $content);
+        $this->assertStringContainsString('New description', $content);
+    }
+
+    // ── New fields generation tests ──
+
+    public function testParameterWithDeprecatedFields(): void
+    {
+        $state = new ParameterTuiState();
+        $state->name = 'oldId';
+        $state->in = 'query';
+        $state->description = 'Old parameter';
+        $state->required = false;
+        $state->deprecated = true;
+        $state->allowEmptyValue = true;
+        $state->style = 'form';
+        $state->explode = 'true';
+        $state->allowReserved = true;
+        $state->schemaType = 'string';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(ParameterTuiGenerator::class, ParameterTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $yaml = Yaml::parseFile($this->tmpDir . '/Swagger/parameters/oldId.yaml');
+        $param = $yaml['documentation']['components']['parameters']['oldId'];
+        $this->assertTrue($param['deprecated']);
+        $this->assertTrue($param['allowEmptyValue']);
+        $this->assertSame('form', $param['style']);
+        $this->assertTrue($param['explode']);
+        $this->assertTrue($param['allowReserved']);
+    }
+
+    public function testHeaderWithRequiredAndDeprecated(): void
+    {
+        $state = new HeaderTuiState();
+        $state->name = 'X-Old-Header';
+        $state->description = 'Deprecated header';
+        $state->required = true;
+        $state->deprecated = true;
+        $state->schemaType = 'string';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(HeaderTuiGenerator::class, HeaderTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $yaml = Yaml::parseFile($this->tmpDir . '/Swagger/headers/X-Old-Header.yaml');
+        $header = $yaml['documentation']['components']['headers']['X-Old-Header'];
+        $this->assertTrue($header['required']);
+        $this->assertTrue($header['deprecated']);
+    }
+
+    public function testResponseWithHeadersAndLinks(): void
+    {
+        $state = new ResponseTuiState();
+        $state->name = 'Created';
+        $state->statusCode = '201';
+        $state->description = 'Resource created';
+        $state->headers = '{"X-Request-ID": {"description": "Request ID", "schema": {"type": "string"}}}';
+        $state->links = '{"GetResource": {"operationId": "getResource", "parameters": {"id": "$response.body#/id"}}}';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(ResponseTuiGenerator::class, ResponseTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $yaml = Yaml::parseFile($this->tmpDir . '/Swagger/responses/Created.yaml');
+        $response = $yaml['documentation']['components']['responses']['Created'];
+        $this->assertArrayHasKey('headers', $response);
+        $this->assertArrayHasKey('X-Request-ID', $response['headers']);
+        $this->assertArrayHasKey('links', $response);
+        $this->assertArrayHasKey('GetResource', $response['links']);
+    }
+
+    public function testExampleWithExternalValue(): void
+    {
+        $state = new ExampleTuiState();
+        $state->name = 'ExternalUser';
+        $state->summary = 'External user example';
+        $state->externalValue = 'https://example.com/user.json';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(ExampleTuiGenerator::class, ExampleTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $yaml = Yaml::parseFile($this->tmpDir . '/Swagger/examples/ExternalUser.yaml');
+        $example = $yaml['documentation']['components']['examples']['ExternalUser'];
+        $this->assertSame('External user example', $example['summary']);
+        $this->assertSame('https://example.com/user.json', $example['externalValue']);
+        $this->assertArrayNotHasKey('value', $example);
     }
 }

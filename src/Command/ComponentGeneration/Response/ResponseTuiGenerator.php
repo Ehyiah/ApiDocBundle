@@ -103,6 +103,15 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
             $state->outputDir = $this->manager->getDefaultDumpLocation();
             if ('__new__' !== $value) {
                 $state->name = $value;
+                $existing = $this->manager->loadComponentConfig($value);
+                if (null !== $existing) {
+                    $state->name = $existing['name'];
+                    $state->description = $existing['description'];
+                    $state->schemaRef = $existing['schemaRef'];
+                    $state->contentType = $existing['contentType'];
+                    $state->headers = $existing['headers'];
+                    $state->links = $existing['links'];
+                }
                 $state->loadedFrom = $this->manager->findComponentFile($value);
             }
             $this->showForm($tui, $state, $onBack);
@@ -145,6 +154,8 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Response description', [], $textInputCallback);
         $settingItems[] = new SettingItem('schema_ref', 'Schema $ref', $state->schemaRef ?? 'none', 'Schema reference', $schemaChoices);
         $settingItems[] = new SettingItem('content_type', 'Content-Type', $state->contentType, 'Content type', ['application/json', 'application/xml', 'text/plain']);
+        $settingItems[] = new SettingItem('headers', 'Headers (JSON)', $state->headers, 'Response headers as JSON object', [], $textInputCallback);
+        $settingItems[] = new SettingItem('links', 'Links (JSON)', $state->links, 'Response links as JSON object', [], $textInputCallback);
 
         $settingItems[] = new SettingItem('format_output', 'Output Format', $state->format_output, 'YAML or PHP', ['yaml', 'php']);
         $settingItems[] = new SettingItem('output', 'Output Directory', $state->outputDir, 'Target directory', [], $textInputCallback);
@@ -184,6 +195,8 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
                     $schemaRef = $settingsWidget->getValue('schema_ref') ?? 'none';
                     $state->schemaRef = 'none' !== $schemaRef ? $schemaRef : null;
                     $state->contentType = $settingsWidget->getValue('content_type') ?? 'application/json';
+                    $state->headers = $settingsWidget->getValue('headers') ?? '';
+                    $state->links = $settingsWidget->getValue('links') ?? '';
                     $state->format_output = $settingsWidget->getValue('format_output') ?? 'yaml';
                     $state->outputDir = $settingsWidget->getValue('output') ?? $this->manager->getDefaultDumpLocation();
 
@@ -226,6 +239,20 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
             $response['content'] = $content;
         }
 
+        if ('' !== $state->headers) {
+            $decoded = json_decode($state->headers, true);
+            if (null !== $decoded && is_array($decoded)) {
+                $response['headers'] = $decoded;
+            }
+        }
+
+        if ('' !== $state->links) {
+            $decoded = json_decode($state->links, true);
+            if (null !== $decoded && is_array($decoded)) {
+                $response['links'] = $decoded;
+            }
+        }
+
         $array = [
             'documentation' => [
                 'components' => [
@@ -240,6 +267,12 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
 
         if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
             $dumpLocation = dirname($state->loadedFrom) . '/' . $state->name . '.yaml';
+            // Merge with existing config to preserve manually-added fields
+            $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
+            if (isset($existingConfig['documentation']['components']['responses'][$state->name])) {
+                $mergedResponse = array_merge($existingConfig['documentation']['components']['responses'][$state->name], $response);
+                $array['documentation']['components']['responses'][$state->name] = $mergedResponse;
+            }
         } else {
             $outputDir = u($state->outputDir)->ensureStart('/')->ensureEnd('/');
             $dumpDirectory = $this->kernel->getProjectDir() . $outputDir . u($destination)->ensureEnd('/');

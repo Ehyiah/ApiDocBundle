@@ -48,6 +48,47 @@ class ParameterTuiManager
     }
 
     /**
+     * Load the configuration of an existing parameter from YAML files.
+     *
+     * @return array{name: string, in: string, description: string, required: bool, deprecated: bool, allowEmptyValue: bool, style: string, explode: string, allowReserved: bool, schemaType: string, format: string, example: string}|null
+     */
+    public function loadComponentConfig(string $name): ?array
+    {
+        $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
+
+        if (!is_dir($directory)) {
+            return null;
+        }
+
+        $finder = new Finder();
+        $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
+        foreach ($finder as $file) {
+            $config = Yaml::parseFile($file->getRealPath());
+            if (isset($config['documentation']['components']['parameters'][$name])) {
+                $param = $config['documentation']['components']['parameters'][$name];
+
+                return [
+                    'name' => (string)($param['name'] ?? $name),
+                    'in' => (string)($param['in'] ?? 'query'),
+                    'description' => (string)($param['description'] ?? ''),
+                    'required' => (bool)($param['required'] ?? false),
+                    'deprecated' => (bool)($param['deprecated'] ?? false),
+                    'allowEmptyValue' => (bool)($param['allowEmptyValue'] ?? false),
+                    'style' => (string)($param['style'] ?? ''),
+                    'explode' => is_bool($param['explode'] ?? null) ? ($param['explode'] ? 'true' : 'false') : '',
+                    'allowReserved' => (bool)($param['allowReserved'] ?? false),
+                    'schemaType' => (string)($param['schema']['type'] ?? 'string'),
+                    'format' => (string)($param['schema']['format'] ?? ''),
+                    'example' => isset($param['example']) ? (string)$param['example'] : '',
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Find the YAML or PHP file path for a given component name.
      */
     public function findComponentFile(string $name): ?string

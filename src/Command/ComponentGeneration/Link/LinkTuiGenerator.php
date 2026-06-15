@@ -1,6 +1,6 @@
 <?php
 
-namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Security;
+namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Link;
 
 use Ehyiah\ApiDocBundle\Attributes\AsTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\AbstractTuiComponentGenerator;
@@ -26,12 +26,12 @@ use Symfony\Component\Tui\Widget\TextWidget;
 use function Symfony\Component\String\u;
 
 #[AsTuiGenerator]
-class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
+class LinkTuiGenerator extends AbstractTuiComponentGenerator
 {
     private ?OutputInterface $currentOutput = null;
 
     public function __construct(
-        private readonly SecuritySchemeTuiManager $manager,
+        private readonly LinkTuiManager $manager,
         KernelInterface $kernel,
         ParameterBagInterface $parameterBag,
         PropertyInfoExtractorInterface $propertyInfoExtractor,
@@ -42,12 +42,12 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
 
     public function getLabel(): string
     {
-        return 'Security Scheme';
+        return 'Link';
     }
 
     public function getDescription(): string
     {
-        return 'Generate a security scheme component';
+        return 'Generate a link component';
     }
 
     public function isSupported(): bool
@@ -67,7 +67,7 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         $choices = [];
         foreach ($existing as $name) {
             $config = $this->manager->loadComponentConfig($name);
-            $info = $config ? $config['type'] . ' / ' . ($config['scheme'] ?: $config['name']) : '';
+            $info = $config ? $config['operationRef'] ?: $config['operationId'] : '';
             $choices[] = ['value' => $name, 'label' => $this->currentOutput->getFormatter()->format(sprintf('  %-20s <fg=gray>%s</fg=gray>', $name, $info))];
         }
         $choices[] = ['value' => '__new__', 'label' => $this->currentOutput->getFormatter()->format('  <fg=green>[+ New]</fg=green>')];
@@ -79,7 +79,7 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<info>|  Security Schemes                          |</info>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<info>|  Links                                    |</info>')));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
@@ -101,19 +101,19 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
                 return;
             }
 
-            $state = new SecuritySchemeTuiState();
+            $state = new LinkTuiState();
             $state->outputDir = $this->manager->getDefaultDumpLocation();
             if ('__new__' !== $value) {
                 $state->name = $value;
                 $existing = $this->manager->loadComponentConfig($value);
                 if (null !== $existing) {
-                    $state->type = $existing['type'];
-                    $state->scheme = $existing['scheme'];
-                    $state->bearerFormat = $existing['bearerFormat'];
-                    $state->apiKeyName = $existing['name'];
-                    $state->apiKeyIn = $existing['in'];
-                    $state->openIdConnectUrl = $existing['openIdConnectUrl'];
+                    $state->operationRef = $existing['operationRef'];
+                    $state->operationId = $existing['operationId'];
+                    $state->parameters = $existing['parameters'];
+                    $state->requestBody = $existing['requestBody'];
                     $state->description = $existing['description'];
+                    $state->serverUrl = $existing['serverUrl'];
+                    $state->serverDescription = $existing['serverDescription'];
                 }
                 $state->loadedFrom = $this->manager->findComponentFile($value);
             }
@@ -132,7 +132,7 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         $tui->addListener($cancelListener);
     }
 
-    private function showForm(Tui $tui, SecuritySchemeTuiState $state, callable $onBack): void
+    private function showForm(Tui $tui, LinkTuiState $state, callable $onBack): void
     {
         $textInputCallback = static function (string $currentValue, callable $onDone) {
             $inputWidget = new InputWidget();
@@ -149,14 +149,14 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         };
 
         $settingItems = [];
-        $settingItems[] = new SettingItem('name', 'Name', $state->name, 'Schema name (e.g. BearerAuth)', [], $textInputCallback);
-        $settingItems[] = new SettingItem('type', 'Type', $state->type, 'Authentication type', ['http', 'apiKey', 'openIdConnect']);
-        $settingItems[] = new SettingItem('scheme', 'Scheme', $state->scheme, 'HTTP scheme', ['bearer', 'basic']);
-        $settingItems[] = new SettingItem('bearerFormat', 'Bearer Format', $state->bearerFormat, 'Token format', [], $textInputCallback);
-        $settingItems[] = new SettingItem('apiKeyName', 'API Key Name', $state->apiKeyName, 'Header/query parameter name', [], $textInputCallback);
-        $settingItems[] = new SettingItem('apiKeyIn', 'API Key In', $state->apiKeyIn, 'Key location', ['header', 'query', 'cookie']);
-        $settingItems[] = new SettingItem('openIdConnectUrl', 'OpenID Connect URL', $state->openIdConnectUrl, 'Discovery URL', [], $textInputCallback);
-        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Schema description', [], $textInputCallback);
+        $settingItems[] = new SettingItem('name', 'Name', $state->name, 'Link name (e.g. GetUserInfo)', [], $textInputCallback);
+        $settingItems[] = new SettingItem('operationRef', 'Operation Ref', $state->operationRef, 'Relative URI to an OAS operation', [], $textInputCallback);
+        $settingItems[] = new SettingItem('operationId', 'Operation ID', $state->operationId, 'Existing operation ID', [], $textInputCallback);
+        $settingItems[] = new SettingItem('parameters', 'Parameters (JSON)', $state->parameters, 'JSON map of parameters', [], $textInputCallback);
+        $settingItems[] = new SettingItem('requestBody', 'Request Body', $state->requestBody, 'Request body value/expression', [], $textInputCallback);
+        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Link description', [], $textInputCallback);
+        $settingItems[] = new SettingItem('serverUrl', 'Server URL', $state->serverUrl, 'Target server URL', [], $textInputCallback);
+        $settingItems[] = new SettingItem('serverDesc', 'Server Description', $state->serverDescription, 'Server description', [], $textInputCallback);
 
         $settingItems[] = new SettingItem('format_output', 'Output Format', $state->format_output, 'YAML or PHP', ['yaml', 'php']);
         $settingItems[] = new SettingItem('output', 'Output Directory', $state->outputDir, 'Target directory', [], $textInputCallback);
@@ -169,7 +169,7 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $title = $state->name ? "Edit: {$state->name}" : 'New Security Scheme';
+        $title = $state->name ? "Edit: {$state->name}" : 'New Link';
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  {$title}</info>")));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
@@ -190,15 +190,20 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
                     $this->showComponentList($tui, $onBack);
                     break;
+                case 'action_delete':
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showComponentList($tui, $onBack);
+                    break;
                 case 'action_validate':
                     $state->name = $settingsWidget->getValue('name') ?? '';
-                    $state->type = $settingsWidget->getValue('type') ?? 'http';
-                    $state->scheme = $settingsWidget->getValue('scheme') ?? 'bearer';
-                    $state->bearerFormat = $settingsWidget->getValue('bearerFormat') ?? 'JWT';
-                    $state->apiKeyName = $settingsWidget->getValue('apiKeyName') ?? '';
-                    $state->apiKeyIn = $settingsWidget->getValue('apiKeyIn') ?? 'header';
-                    $state->openIdConnectUrl = $settingsWidget->getValue('openIdConnectUrl') ?? '';
+                    $state->operationRef = $settingsWidget->getValue('operationRef') ?? '';
+                    $state->operationId = $settingsWidget->getValue('operationId') ?? '';
+                    $state->parameters = $settingsWidget->getValue('parameters') ?? '';
+                    $state->requestBody = $settingsWidget->getValue('requestBody') ?? '';
                     $state->description = $settingsWidget->getValue('desc') ?? '';
+                    $state->serverUrl = $settingsWidget->getValue('serverUrl') ?? '';
+                    $state->serverDescription = $settingsWidget->getValue('serverDesc') ?? '';
                     $state->format_output = $settingsWidget->getValue('format_output') ?? 'yaml';
                     $state->outputDir = $settingsWidget->getValue('output') ?? $this->manager->getDefaultDumpLocation();
 
@@ -222,45 +227,53 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         $tui->addListener($cancelListener);
     }
 
-    private function generateComponent(SecuritySchemeTuiState $state): void
+    private function generateComponent(LinkTuiState $state): void
     {
-        $definition = ['type' => $state->type];
-
-        if ('http' === $state->type) {
-            $definition['scheme'] = $state->scheme;
-            if ('bearer' === $state->scheme && '' !== $state->bearerFormat) {
-                $definition['bearerFormat'] = $state->bearerFormat;
-            }
-        } elseif ('apiKey' === $state->type) {
-            $definition['name'] = $state->apiKeyName;
-            $definition['in'] = $state->apiKeyIn;
-        } elseif ('openIdConnect' === $state->type) {
-            $definition['openIdConnectUrl'] = $state->openIdConnectUrl;
+        $link = [];
+        if ('' !== $state->operationRef) {
+            $link['operationRef'] = $state->operationRef;
         }
-
+        if ('' !== $state->operationId) {
+            $link['operationId'] = $state->operationId;
+        }
+        if ('' !== $state->parameters) {
+            $decoded = json_decode($state->parameters, true);
+            if (null !== $decoded && is_array($decoded)) {
+                $link['parameters'] = $decoded;
+            }
+        }
+        if ('' !== $state->requestBody) {
+            $link['requestBody'] = $state->requestBody;
+        }
         if ('' !== $state->description) {
-            $definition['description'] = $state->description;
+            $link['description'] = $state->description;
+        }
+        if ('' !== $state->serverUrl) {
+            $link['server'] = ['url' => $state->serverUrl];
+            if ('' !== $state->serverDescription) {
+                $link['server']['description'] = $state->serverDescription;
+            }
         }
 
         $array = [
             'documentation' => [
                 'components' => [
-                    'securitySchemes' => [
-                        $state->name => $definition,
+                    'links' => [
+                        $state->name => $link,
                     ],
                 ],
             ],
         ];
 
-        $destination = ComponentType::SecuritySchemes->value;
+        $destination = ComponentType::Links->value;
 
         if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
             $dumpLocation = dirname($state->loadedFrom) . '/' . $state->name . '.yaml';
             // Merge with existing config to preserve manually-added fields
             $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
-            if (isset($existingConfig['documentation']['components']['securitySchemes'][$state->name])) {
-                $mergedDefinition = array_merge($existingConfig['documentation']['components']['securitySchemes'][$state->name], $definition);
-                $array['documentation']['components']['securitySchemes'][$state->name] = $mergedDefinition;
+            if (isset($existingConfig['documentation']['components']['links'][$state->name])) {
+                $mergedLink = array_merge($existingConfig['documentation']['components']['links'][$state->name], $link);
+                $array['documentation']['components']['links'][$state->name] = $mergedLink;
             }
         } else {
             $outputDir = u($state->outputDir)->ensureStart('/')->ensureEnd('/');
@@ -281,6 +294,6 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }
 
-        $this->currentOutput->writeln(sprintf('<info>Security Scheme "%s" generated successfully in %s</info>', $state->name, $dumpLocation));
+        $this->currentOutput->writeln(sprintf('<info>Link "%s" generated successfully in %s</info>', $state->name, $dumpLocation));
     }
 }

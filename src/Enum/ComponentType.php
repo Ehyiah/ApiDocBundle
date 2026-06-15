@@ -11,5 +11,8 @@ enum ComponentType: string
     case Responses = 'responses';
     case SecuritySchemes = 'securitySchemes';
     case Examples = 'examples';
+    case Links = 'links';
+    case Callbacks = 'callbacks';
+    case PathItems = 'pathItems';
     case Routes = 'routes';
 }

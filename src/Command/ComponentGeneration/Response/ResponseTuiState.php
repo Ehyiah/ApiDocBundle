@@ -9,6 +9,8 @@ class ResponseTuiState
     public string $description = '';
     public ?string $schemaRef = null;
     public string $contentType = 'application/json';
+    public string $headers = '';
+    public string $links = '';
     public string $format_output = 'yaml';
     public string $outputDir = '';
     public ?string $loadedFrom = null;

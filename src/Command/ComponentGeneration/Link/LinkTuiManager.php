@@ -1,6 +1,6 @@
 <?php
 
-namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Header;
+namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Link;
 
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Finder\Finder;
@@ -9,7 +9,7 @@ use Symfony\Component\Yaml\Yaml;
 
 use function Symfony\Component\String\u;
 
-class HeaderTuiManager
+class LinkTuiManager
 {
     public function __construct(
         private readonly KernelInterface $kernel,
@@ -31,8 +31,8 @@ class HeaderTuiManager
             $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
             foreach ($finder as $file) {
                 $config = Yaml::parseFile($file->getRealPath());
-                if (isset($config['documentation']['components']['headers'])) {
-                    $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['headers'])));
+                if (isset($config['documentation']['components']['links'])) {
+                    $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['links'])));
                 }
             }
         }
@@ -48,9 +48,9 @@ class HeaderTuiManager
     }
 
     /**
-     * Load the configuration of an existing header from YAML files.
+     * Load the configuration of an existing link from YAML files.
      *
-     * @return array{name: string, description: string, required: bool, deprecated: bool, schemaType: string, format: string, example: string}|null
+     * @return array{operationRef: string, operationId: string, parameters: string, requestBody: string, description: string, serverUrl: string, serverDescription: string}|null
      */
     public function loadComponentConfig(string $name): ?array
     {
@@ -65,17 +65,22 @@ class HeaderTuiManager
         $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
         foreach ($finder as $file) {
             $config = Yaml::parseFile($file->getRealPath());
-            if (isset($config['documentation']['components']['headers'][$name])) {
-                $header = $config['documentation']['components']['headers'][$name];
+            if (isset($config['documentation']['components']['links'][$name])) {
+                $link = $config['documentation']['components']['links'][$name];
+
+                $parametersJson = '';
+                if (isset($link['parameters']) && is_array($link['parameters'])) {
+                    $parametersJson = (string)json_encode($link['parameters'], JSON_THROW_ON_ERROR);
+                }
 
                 return [
-                    'name' => $name,
-                    'description' => (string)($header['description'] ?? ''),
-                    'required' => (bool)($header['required'] ?? false),
-                    'deprecated' => (bool)($header['deprecated'] ?? false),
-                    'schemaType' => (string)($header['schema']['type'] ?? 'string'),
-                    'format' => (string)($header['schema']['format'] ?? ''),
-                    'example' => isset($header['example']) ? (string)$header['example'] : '',
+                    'operationRef' => (string)($link['operationRef'] ?? ''),
+                    'operationId' => (string)($link['operationId'] ?? ''),
+                    'parameters' => $parametersJson,
+                    'requestBody' => is_string($link['requestBody'] ?? null) ? $link['requestBody'] : '',
+                    'description' => (string)($link['description'] ?? ''),
+                    'serverUrl' => (string)($link['server']['url'] ?? ''),
+                    'serverDescription' => (string)($link['server']['description'] ?? ''),
                 ];
             }
         }
@@ -105,7 +110,7 @@ class HeaderTuiManager
                 }
             } else {
                 $config = Yaml::parseFile($file->getRealPath());
-                if (isset($config['documentation']['components']['headers'][$name])) {
+                if (isset($config['documentation']['components']['links'][$name])) {
                     return $file->getRealPath();
                 }
             }

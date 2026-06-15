@@ -1,15 +1,13 @@
 <?php
 
-namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Example;
+namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\PathItem;
 
-class ExampleTuiState
+class PathItemTuiState
 {
     public string $name = '';
     public string $summary = '';
     public string $description = '';
-    public string $value = '';
-    public string $externalValue = '';
-    public ?string $schemaRef = null;
+    public string $ref = '';
     public string $format_output = 'yaml';
     public string $outputDir = '';
     public ?string $loadedFrom = null;

@@ -40,11 +40,108 @@ class ExampleTuiManager
         return array_values(array_unique($names));
     }
 
+    /**
+     * @return array<int, string>
+     */
+    public function getAvailableSchemas(): array
+    {
+        $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
+        $dumpPath = (string)$this->parameterBag->get('ehyiah_api_doc.dump_path');
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
+
+        $names = [];
+        if (is_dir($directory)) {
+            $finder = new Finder();
+            $finder->files()->in($directory)->name(['*.yaml', '*.yml', '*.php']);
+            foreach ($finder as $file) {
+                if (in_array($file->getExtension(), ['yaml', 'yml'], true)) {
+                    $config = Yaml::parseFile($file->getRealPath());
+                    if (isset($config['documentation']['components']['schemas'])) {
+                        $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['schemas'])));
+                    }
+                } else {
+                    $content = file_get_contents($file->getRealPath());
+                    if (false !== $content && preg_match_all('/->addSchema\s*\(\s*[\'"]([\w]+)[\'"]\s*\)/', $content, $matches)) {
+                        $names = array_merge($names, $matches[1]);
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
+     * Load a schema definition by name from YAML/PHP files.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function loadSchemaConfig(string $name): ?array
+    {
+        $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
+        $dumpPath = (string)$this->parameterBag->get('ehyiah_api_doc.dump_path');
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
+
+        if (!is_dir($directory)) {
+            return null;
+        }
+
+        $finder = new Finder();
+        $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
+        foreach ($finder as $file) {
+            $config = Yaml::parseFile($file->getRealPath());
+            if (isset($config['documentation']['components']['schemas'][$name])) {
+                return $config['documentation']['components']['schemas'][$name];
+            }
+        }
+
+        return null;
+    }
+
     public function getDefaultDumpLocation(): string
     {
         $dumpLocation = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
 
         return (string)u($dumpLocation)->ensureStart('/')->ensureEnd('/');
+    }
+
+    /**
+     * Load the configuration of an existing example from YAML files.
+     *
+     * @return array{name: string, summary: string, description: string, value: string, externalValue: string}|null
+     */
+    public function loadComponentConfig(string $name): ?array
+    {
+        $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
+
+        if (!is_dir($directory)) {
+            return null;
+        }
+
+        $finder = new Finder();
+        $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
+        foreach ($finder as $file) {
+            $config = Yaml::parseFile($file->getRealPath());
+            if (isset($config['documentation']['components']['examples'][$name])) {
+                $example = $config['documentation']['components']['examples'][$name];
+
+                $valueStr = '';
+                if (isset($example['value'])) {
+                    $valueStr = is_array($example['value']) ? (string)json_encode($example['value'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) : (string)$example['value'];
+                }
+
+                return [
+                    'name' => $name,
+                    'summary' => (string)($example['summary'] ?? ''),
+                    'description' => (string)($example['description'] ?? ''),
+                    'value' => $valueStr,
+                    'externalValue' => (string)($example['externalValue'] ?? ''),
+                ];
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -103,6 +103,21 @@ class ParameterTuiGenerator extends AbstractTuiComponentGenerator
             $state->outputDir = $this->manager->getDefaultDumpLocation();
             if ('__new__' !== $value) {
                 $state->name = $value;
+                $existing = $this->manager->loadComponentConfig($value);
+                if (null !== $existing) {
+                    $state->name = $existing['name'];
+                    $state->in = $existing['in'];
+                    $state->description = $existing['description'];
+                    $state->required = $existing['required'];
+                    $state->deprecated = $existing['deprecated'];
+                    $state->allowEmptyValue = $existing['allowEmptyValue'];
+                    $state->style = $existing['style'];
+                    $state->explode = $existing['explode'];
+                    $state->allowReserved = $existing['allowReserved'];
+                    $state->schemaType = $existing['schemaType'];
+                    $state->format = $existing['format'];
+                    $state->example = $existing['example'];
+                }
                 $state->loadedFrom = $this->manager->findComponentFile($value);
             }
             $this->showForm($tui, $state, $onBack);
@@ -141,6 +156,11 @@ class ParameterTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem('in', 'In', $state->in, 'Parameter location', ['query', 'path', 'header', 'cookie']);
         $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Parameter description', [], $textInputCallback);
         $settingItems[] = new SettingItem('required', 'Required', $state->required ? 'yes' : 'no', 'Required parameter', ['yes', 'no']);
+        $settingItems[] = new SettingItem('deprecated', 'Deprecated', $state->deprecated ? 'yes' : 'no', 'Deprecated parameter', ['yes', 'no']);
+        $settingItems[] = new SettingItem('allowEmptyValue', 'Allow Empty', $state->allowEmptyValue ? 'yes' : 'no', 'Allow empty value', ['yes', 'no']);
+        $settingItems[] = new SettingItem('style', 'Style', $state->style, 'Parameter style (optional)', ['', 'simple', 'form', 'label', 'matrix', 'spaceDelimited', 'pipeDelimited', 'deepObject']);
+        $settingItems[] = new SettingItem('explode', 'Explode', $state->explode, 'Explode (optional)', ['', 'true', 'false']);
+        $settingItems[] = new SettingItem('allowReserved', 'Allow Reserved', $state->allowReserved ? 'yes' : 'no', 'Allow reserved characters', ['yes', 'no']);
         $settingItems[] = new SettingItem('schema_type', 'Type', $state->schemaType, 'Schema type', ['string', 'integer', 'number', 'boolean', 'array']);
         $settingItems[] = new SettingItem('format', 'Format', $state->format, 'Format (optional)', [], $textInputCallback);
         $settingItems[] = new SettingItem('example', 'Example', $state->example, 'Example value', [], $textInputCallback);
@@ -181,6 +201,11 @@ class ParameterTuiGenerator extends AbstractTuiComponentGenerator
                     $state->in = $settingsWidget->getValue('in') ?? 'query';
                     $state->description = $settingsWidget->getValue('desc') ?? '';
                     $state->required = 'yes' === ($settingsWidget->getValue('required') ?? 'no');
+                    $state->deprecated = 'yes' === ($settingsWidget->getValue('deprecated') ?? 'no');
+                    $state->allowEmptyValue = 'yes' === ($settingsWidget->getValue('allowEmptyValue') ?? 'no');
+                    $state->style = $settingsWidget->getValue('style') ?? '';
+                    $state->explode = $settingsWidget->getValue('explode') ?? '';
+                    $state->allowReserved = 'yes' === ($settingsWidget->getValue('allowReserved') ?? 'no');
                     $state->schemaType = $settingsWidget->getValue('schema_type') ?? 'string';
                     $state->format = $settingsWidget->getValue('format') ?? '';
                     $state->example = $settingsWidget->getValue('example') ?? '';
@@ -214,30 +239,53 @@ class ParameterTuiGenerator extends AbstractTuiComponentGenerator
             $schema['format'] = $state->format;
         }
 
+        $parameter = [
+            'name' => $state->name,
+            'in' => $state->in,
+            'description' => $state->description,
+            'required' => $state->required,
+            'schema' => $schema,
+        ];
+
+        if ($state->deprecated) {
+            $parameter['deprecated'] = true;
+        }
+        if ($state->allowEmptyValue) {
+            $parameter['allowEmptyValue'] = true;
+        }
+        if ('' !== $state->style) {
+            $parameter['style'] = $state->style;
+        }
+        if ('' !== $state->explode) {
+            $parameter['explode'] = 'true' === $state->explode;
+        }
+        if ($state->allowReserved) {
+            $parameter['allowReserved'] = true;
+        }
+        if ('' !== $state->example) {
+            $parameter['example'] = $state->example;
+        }
+
         $array = [
             'documentation' => [
                 'components' => [
                     'parameters' => [
-                        $state->name => [
-                            'name' => $state->name,
-                            'in' => $state->in,
-                            'description' => $state->description,
-                            'required' => $state->required,
-                            'schema' => $schema,
-                        ],
+                        $state->name => $parameter,
                     ],
                 ],
             ],
         ];
 
-        if ('' !== $state->example) {
-            $array['documentation']['components']['parameters'][$state->name]['example'] = $state->example;
-        }
-
         $destination = ComponentType::Parameters->value;
 
         if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
             $dumpLocation = dirname($state->loadedFrom) . '/' . $state->name . '.yaml';
+            // Merge with existing config to preserve manually-added fields
+            $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
+            if (isset($existingConfig['documentation']['components']['parameters'][$state->name])) {
+                $mergedParameter = array_merge($existingConfig['documentation']['components']['parameters'][$state->name], $parameter);
+                $array['documentation']['components']['parameters'][$state->name] = $mergedParameter;
+            }
         } else {
             $outputDir = u($state->outputDir)->ensureStart('/')->ensureEnd('/');
             $dumpDirectory = $this->kernel->getProjectDir() . $outputDir . u($destination)->ensureEnd('/');

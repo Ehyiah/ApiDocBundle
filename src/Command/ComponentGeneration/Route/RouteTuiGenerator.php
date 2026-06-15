@@ -142,6 +142,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                         'description' => '',
                         'security' => [],
                         'requestBodySchema' => null,
+                        'requestBodyExample' => null,
                         'responses' => [],
                     ];
                 }
@@ -237,6 +238,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             'description' => '',
             'security' => [],
             'requestBodySchema' => null,
+            'requestBodyExample' => null,
             'responses' => [],
         ];
 
@@ -265,8 +267,22 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         }
 
         $schemas = $this->manager->getAvailableSchemas();
-        $schemaChoices = array_merge(['none'], $schemas);
-        $settingItems[] = new SettingItem('rb_schema', 'Schema RequestBody', $config['requestBodySchema'] ?? 'none', 'Choose a schema', $schemaChoices);
+        $examples = $this->manager->getAvailableExamples();
+
+        $settingItems = [];
+        $settingItems[] = new SettingItem('operationId', 'Operation ID', $config['operationId'], 'Unique operation identifier', [], $textInputCallback);
+        $settingItems[] = new SettingItem('summary', 'Summary', $config['summary'], 'Operation summary', [], $textInputCallback);
+        $settingItems[] = new SettingItem('desc', 'Description', $config['description'], 'Detailed description', [], $textInputCallback);
+
+        foreach ($this->manager->getSecuritySchemes() as $scheme) {
+            $value = in_array($scheme, $config['security'], true) ? 'include' : 'exclude';
+            $settingItems[] = new SettingItem('sec_' . $scheme, 'Security: ' . $scheme, $value, 'Include/Exclude security scheme', ['include', 'exclude']);
+        }
+
+        $settingItems[] = new SettingItem('rb_schema', 'Schema RequestBody', $config['requestBodySchema'] ?? 'none', 'Choose a schema', array_merge(['none'], $schemas));
+
+        $rbExampleLabel = $config['requestBodyExample'] ? "Example RB: {$config['requestBodyExample']}" : 'Example RB: none';
+        $settingItems[] = new SettingItem('action_rb_example', $rbExampleLabel, '[Select]', 'Choose an example for request body', ['[Select]']);
 
         $responseCount = count($config['responses']);
         $responseLabel = $responseCount > 0 ? "Responses ({$responseCount})" : 'Responses (none)';
@@ -313,6 +329,11 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
                     $this->showMethodSchemaSelection($tui, $method, 'requestBodySchema', $state, $onBack);
                     break;
+                case 'action_rb_example':
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showMethodExampleSelection($tui, $method, 'requestBodyExample', $state, $onBack);
+                    break;
                 case 'action_responses':
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
@@ -326,12 +347,16 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                         }
                     }
 
+                    $rbExample = $settingsWidget->getValue('rb_example') ?? 'none';
+                    $rbExample = 'none' !== $rbExample ? $rbExample : null;
+
                     $state->methodsConfig[$method] = [
                         'operationId' => $settingsWidget->getValue('operationId') ?? '',
                         'summary' => $settingsWidget->getValue('summary') ?? '',
                         'description' => $settingsWidget->getValue('desc') ?? '',
                         'security' => $security,
                         'requestBodySchema' => 'none' !== ($settingsWidget->getValue('rb_schema') ?? 'none') ? $settingsWidget->getValue('rb_schema') : null,
+                        'requestBodyExample' => $rbExample,
                         'responses' => $state->methodsConfig[$method]['responses'] ?? [],
                     ];
 
@@ -387,6 +412,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     'description' => '',
                     'security' => [],
                     'requestBodySchema' => null,
+                    'requestBodyExample' => null,
                     'responses' => [],
                 ];
                 $current[$field] = $newValue;
@@ -399,6 +425,120 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $tui->addListener($listener);
     }
 
+    private function showMethodExampleSelection(Tui $tui, string $method, string $field, RouteTuiState $state, callable $onBack): void
+    {
+        $examples = $this->manager->getAvailableExamples();
+        $choices = [['value' => 'none', 'label' => 'None']];
+        foreach ($examples as $example) {
+            $choices[] = ['value' => $example, 'label' => $example];
+        }
+
+        $selectWidget = new SelectListWidget($choices, 12);
+
+        $tui->clear();
+        $container = new ContainerWidget();
+        $container->expandVertically(true);
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  Select Example for {$method}</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add($selectWidget);
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
+        $tui->add($container);
+        $tui->setFocus($selectWidget);
+
+        $listener = function (SelectEvent $event) use ($tui, $selectWidget, $method, $field, $state, $onBack, &$listener) {
+            if ($event->getTarget() === $selectWidget) {
+                $tui->getEventDispatcher()->removeListener(SelectEvent::class, $listener);
+                $newValue = 'none' === $event->getValue() ? null : $event->getValue();
+
+                // Preserve current values for other fields
+                $defaultOperationId = $state->routeName . '_' . strtolower($method);
+                $current = $state->methodsConfig[$method] ?? [
+                    'operationId' => $defaultOperationId,
+                    'summary' => '',
+                    'description' => '',
+                    'security' => [],
+                    'requestBodySchema' => null,
+                    'requestBodyExample' => null,
+                    'responses' => [],
+                ];
+                $current[$field] = $newValue;
+                $state->methodsConfig[$method] = $current; // @phpstan-ignore-line
+
+                $this->showMethodConfig($tui, $method, $state, $onBack);
+            }
+        };
+
+        $cancelListener = static function (CancelEvent $event) use ($tui, $selectWidget, &$listener) {
+            if ($event->getTarget() === $selectWidget) {
+                $tui->getEventDispatcher()->removeListener(SelectEvent::class, $listener);
+                // Go back to method config without changing example
+            }
+        };
+
+        $tui->addListener($listener);
+        $tui->addListener($cancelListener);
+
+        // Re-show method config on cancel (Esc)
+        $cancelHandler = function (CancelEvent $event) use ($tui, $method, $state, $onBack) {
+            $this->showMethodConfig($tui, $method, $state, $onBack);
+        };
+        $tui->addListener($cancelHandler);
+    }
+
+    private function showResponseExampleSelection(Tui $tui, string $method, int $statusCode, RouteTuiState $state, callable $onBack): void
+    {
+        $examples = $this->manager->getAvailableExamples();
+        $choices = [['value' => 'none', 'label' => 'None']];
+        foreach ($examples as $example) {
+            $choices[] = ['value' => $example, 'label' => $example];
+        }
+
+        $selectWidget = new SelectListWidget($choices, 12);
+
+        $tui->clear();
+        $container = new ContainerWidget();
+        $container->expandVertically(true);
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  Select Example for {$method} — {$statusCode}</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add($selectWidget);
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
+        $tui->add($container);
+        $tui->setFocus($selectWidget);
+
+        $listener = function (SelectEvent $event) use ($tui, $selectWidget, $method, $statusCode, $state, $onBack, &$listener) {
+            if ($event->getTarget() === $selectWidget) {
+                $tui->getEventDispatcher()->removeListener(SelectEvent::class, $listener);
+                $newValue = 'none' === $event->getValue() ? null : $event->getValue();
+
+                // Update the response example in state
+                if (isset($state->methodsConfig[$method]['responses'][$statusCode])) {
+                    $state->methodsConfig[$method]['responses'][$statusCode]['example'] = $newValue;
+                }
+
+                $this->showResponseConfig($tui, $method, $statusCode, $state, $onBack);
+            }
+        };
+
+        $cancelListener = static function (CancelEvent $event) use ($tui, $selectWidget, &$listener) {
+            if ($event->getTarget() === $selectWidget) {
+                $tui->getEventDispatcher()->removeListener(SelectEvent::class, $listener);
+            }
+        };
+
+        $tui->addListener($listener);
+        $tui->addListener($cancelListener);
+
+        // Re-show response config on cancel (Esc)
+        $cancelHandler = function (CancelEvent $event) use ($tui, $method, $statusCode, $state, $onBack) {
+            $this->showResponseConfig($tui, $method, $statusCode, $state, $onBack);
+        };
+        $tui->addListener($cancelHandler);
+    }
+
     private function showResponseList(Tui $tui, string $method, RouteTuiState $state, callable $onBack): void
     {
         $config = $state->methodsConfig[$method] ?? [
@@ -407,6 +547,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             'description' => '',
             'security' => [],
             'requestBodySchema' => null,
+            'requestBodyExample' => null,
             'responses' => [],
         ];
         $responses = $config['responses'];
@@ -492,14 +633,15 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             'description' => '',
             'security' => [],
             'requestBodySchema' => null,
+            'requestBodyExample' => null,
             'responses' => [],
         ];
         $responses = $config['responses'];
         $isNew = null === $statusCode;
 
-        $currentResponse = $responses[$statusCode] ?? ['schema' => null, 'description' => ''];
+        $currentResponse = $responses[$statusCode] ?? ['schema' => null, 'description' => '', 'example' => null];
         $schemas = $this->manager->getAvailableSchemas();
-        $schemaChoices = array_merge(['none'], $schemas);
+        $examples = $this->manager->getAvailableExamples();
 
         $textInputCallback = static function (string $currentValue, callable $onDone) {
             $inputWidget = new InputWidget();
@@ -522,7 +664,11 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             $settingItems[] = new SettingItem('statusCode', 'HTTP Code', '200', 'HTTP response code (e.g. 200, 404, 500)', [], $textInputCallback);
         }
 
-        $settingItems[] = new SettingItem('res_schema', 'Schema', $currentResponse['schema'] ?? 'none', 'Response schema', $schemaChoices);
+        $settingItems[] = new SettingItem('res_schema', 'Schema', $currentResponse['schema'] ?? 'none', 'Response schema', array_merge(['none'], $schemas));
+
+        $resExampleLabel = ($currentResponse['example'] ?? null) ? "Example: {$currentResponse['example']}" : 'Example: none';
+        $settingItems[] = new SettingItem('action_res_example', $resExampleLabel, '[Select]', 'Choose a response example', ['[Select]']);
+
         $settingItems[] = new SettingItem('res_desc', 'Description', $currentResponse['description'], 'Response description', [], $textInputCallback);
 
         $settingItems[] = new SettingItem('action_validate', 'Save', '✓ Confirm', 'Save', ['✓ Confirm']);
@@ -565,6 +711,24 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
                     $this->showResponseList($tui, $method, $state, $onBack);
                     break;
+                case 'action_res_example':
+                    // Save current values before going to example selection
+                    if ($isNew) {
+                        $newStatusCode = (int)($settingsWidget->getValue('statusCode') ?? 200);
+                    } else {
+                        $newStatusCode = (int)$statusCode;
+                    }
+                    $currentSchema = $settingsWidget->getValue('res_schema') ?? 'none';
+                    $state->methodsConfig[$method]['responses'][$newStatusCode] = [
+                        'schema' => 'none' !== $currentSchema ? $currentSchema : null,
+                        'description' => $settingsWidget->getValue('res_desc') ?? '',
+                        'example' => $state->methodsConfig[$method]['responses'][$statusCode]['example'] ?? null,
+                    ];
+
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showResponseExampleSelection($tui, $method, $newStatusCode, $state, $onBack);
+                    break;
                 case 'action_validate':
                     $newStatusCode = $isNew ? (int)($settingsWidget->getValue('statusCode') ?? 200) : (int)$statusCode;
                     $schema = $settingsWidget->getValue('res_schema') ?? 'none';
@@ -573,6 +737,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     $state->methodsConfig[$method]['responses'][$newStatusCode] = [
                         'schema' => $schema,
                         'description' => $settingsWidget->getValue('res_desc') ?? '',
+                        'example' => $state->methodsConfig[$method]['responses'][$statusCode]['example'] ?? null,
                     ];
 
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
@@ -627,11 +792,16 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             }
 
             if ($config['requestBodySchema']) {
-                $routeBuilder->requestBody()
+                $contentBuilder = $routeBuilder->requestBody()
                     ->content('application/json')
                     ->refByName($config['requestBodySchema'])
-                    ->end()
                 ;
+                if ($config['requestBodyExample']) {
+                    $contentBuilder->addExample($config['requestBodyExample'])
+                        ->ref('#/components/examples/' . $config['requestBodyExample'])
+                    ;
+                }
+                $contentBuilder->end();
             }
 
             foreach ($config['responses'] as $statusCode => $responseData) {
@@ -640,10 +810,15 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     $responseBuilder->description($responseData['description']);
                 }
                 if ($responseData['schema']) {
-                    $responseBuilder->content('application/json')
+                    $contentBuilder = $responseBuilder->content('application/json')
                         ->refByName($responseData['schema'])
-                        ->end()
                     ;
+                    if ($responseData['example'] ?? null) {
+                        $contentBuilder->addExample($responseData['example'])
+                            ->ref('#/components/examples/' . $responseData['example'])
+                        ;
+                    }
+                    $contentBuilder->end();
                 }
                 $responseBuilder->end();
             }
@@ -660,6 +835,11 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
         if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
             $dumpLocation = dirname($state->loadedFrom) . '/' . $state->routeName . '.' . $extension;
+            // Merge with existing config to preserve manually-added fields
+            $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
+            if (isset($existingConfig['paths'])) {
+                $array = array_replace_recursive($existingConfig, $array);
+            }
         } else {
             $dumpDirectory = $this->kernel->getProjectDir() . $state->outputDir . u($destination)->ensureEnd('/');
 

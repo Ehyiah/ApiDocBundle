@@ -130,6 +130,58 @@ PHP
         $this->assertStringContainsString('page.php', $file);
     }
 
+    public function testLoadComponentConfigReturnsConfig(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/parameters/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'userId.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'parameters' => [
+                        'userId' => [
+                            'name' => 'userId',
+                            'in' => 'path',
+                            'description' => 'User ID',
+                            'required' => true,
+                            'deprecated' => true,
+                            'allowEmptyValue' => false,
+                            'style' => 'simple',
+                            'explode' => false,
+                            'allowReserved' => true,
+                            'schema' => ['type' => 'integer', 'format' => 'int64'],
+                            'example' => '123',
+                        ],
+                    ],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $config = $manager->loadComponentConfig('userId');
+
+        $this->assertNotNull($config);
+        $this->assertSame('userId', $config['name']);
+        $this->assertSame('path', $config['in']);
+        $this->assertSame('User ID', $config['description']);
+        $this->assertTrue($config['required']);
+        $this->assertTrue($config['deprecated']);
+        $this->assertFalse($config['allowEmptyValue']);
+        $this->assertSame('simple', $config['style']);
+        $this->assertSame('false', $config['explode']);
+        $this->assertTrue($config['allowReserved']);
+        $this->assertSame('integer', $config['schemaType']);
+        $this->assertSame('int64', $config['format']);
+        $this->assertSame('123', $config['example']);
+    }
+
+    public function testLoadComponentConfigReturnsNullWhenNotFound(): void
+    {
+        $manager = $this->createManager();
+        $config = $manager->loadComponentConfig('NonExistent');
+
+        $this->assertNull($config);
+    }
+
     private function createManager(): ParameterTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

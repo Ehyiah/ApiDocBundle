@@ -31,6 +31,15 @@ class ApiDocBuilder
     /** @var array<string, array<string, mixed>> */
     private array $securitySchemes = [];
 
+    /** @var array<string, array<string, mixed>> */
+    private array $links = [];
+
+    /** @var array<string, array<string, mixed>> */
+    private array $callbacks = [];
+
+    /** @var array<string, array<string, mixed>> */
+    private array $pathItems = [];
+
     /**
      * Start building a new route/path definition.
      */
@@ -75,6 +84,36 @@ class ApiDocBuilder
     public function addTag(string $name): TagBuilder
     {
         return new TagBuilder($this, $name);
+    }
+
+    /**
+     * Start building a new link component.
+     *
+     * @param string $name The link name
+     */
+    public function addLink(string $name): LinkBuilder
+    {
+        return new LinkBuilder($this, $name);
+    }
+
+    /**
+     * Start building a new callback component.
+     *
+     * @param string $name The callback name
+     */
+    public function addCallback(string $name): CallbackBuilder
+    {
+        return new CallbackBuilder($this, $name);
+    }
+
+    /**
+     * Start building a new path item component.
+     *
+     * @param string $name The path item name
+     */
+    public function addPathItem(string $name): PathItemBuilder
+    {
+        return new PathItemBuilder($this, $name);
     }
 
     /**
@@ -233,6 +272,45 @@ class ApiDocBuilder
     }
 
     /**
+     * Internal method to register a link definition.
+     *
+     * @param string $name The link name
+     * @param array<string, mixed> $definition The link definition
+     *
+     * @internal
+     */
+    public function registerLink(string $name, array $definition): void
+    {
+        $this->links[$name] = $definition;
+    }
+
+    /**
+     * Internal method to register a callback definition.
+     *
+     * @param string $name The callback name
+     * @param array<string, mixed> $definition The callback definition
+     *
+     * @internal
+     */
+    public function registerCallback(string $name, array $definition): void
+    {
+        $this->callbacks[$name] = $definition;
+    }
+
+    /**
+     * Internal method to register a path item definition.
+     *
+     * @param string $name The path item name
+     * @param array<string, mixed> $definition The path item definition
+     *
+     * @internal
+     */
+    public function registerPathItem(string $name, array $definition): void
+    {
+        $this->pathItems[$name] = $definition;
+    }
+
+    /**
      * Get all paths (routes) as an array.
      *
      * @return array<string, mixed>
@@ -292,13 +370,28 @@ class ApiDocBuilder
             $spec['paths'] = $this->paths;
         }
 
-        // Add components (schemas and securitySchemes)
-        if (!empty($this->schemas) || !empty($this->securitySchemes)) {
+        // Add components (schemas, securitySchemes, links, callbacks, pathItems)
+        $hasComponents = !empty($this->schemas)
+            || !empty($this->securitySchemes)
+            || !empty($this->links)
+            || !empty($this->callbacks)
+            || !empty($this->pathItems);
+
+        if ($hasComponents) {
             if (!empty($this->schemas)) {
                 $spec['components']['schemas'] = $this->schemas;
             }
             if (!empty($this->securitySchemes)) {
                 $spec['components']['securitySchemes'] = $this->securitySchemes;
+            }
+            if (!empty($this->links)) {
+                $spec['components']['links'] = $this->links;
+            }
+            if (!empty($this->callbacks)) {
+                $spec['components']['callbacks'] = $this->callbacks;
+            }
+            if (!empty($this->pathItems)) {
+                $spec['components']['pathItems'] = $this->pathItems;
             }
         }
 

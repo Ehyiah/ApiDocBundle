@@ -96,6 +96,27 @@ class RouteTuiManager
         return array_values(array_unique($schemas));
     }
 
+    /** @return array<int, string> */
+    public function getAvailableExamples(): array
+    {
+        $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
+
+        $names = [];
+        if (is_dir($directory)) {
+            $finder = new \Symfony\Component\Finder\Finder();
+            $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
+            foreach ($finder as $file) {
+                $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
+                if (isset($config['documentation']['components']['examples'])) {
+                    $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['examples'])));
+                }
+            }
+        }
+
+        return array_values(array_unique($names));
+    }
+
     public function registerSchema(\Ehyiah\ApiDocBundle\Builder\ApiDocBuilder $builder, string $schemaName): void
     {
         $builder->addSchema($schemaName)->setRefName($schemaName)->end();
@@ -135,7 +156,7 @@ class RouteTuiManager
     /**
      * Load existing route configuration from YAML file, returning per-method config.
      *
-     * @return array{methodsConfig: array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responses: array<int, array{schema: ?string, description: string}>, operationId: string}>}
+     * @return array{methodsConfig: array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, requestBodyExample: ?string, responses: array<int, array{schema: ?string, description: string, example: ?string}>, operationId: string}>}
      */
     public function loadRouteConfig(string $routeName, string $componentType): array
     {
@@ -169,7 +190,7 @@ class RouteTuiManager
      *
      * @param array<string, mixed> $config
      *
-     * @return array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responses: array<int, array{schema: ?string, description: string}>, operationId: string}>
+     * @return array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, requestBodyExample: ?string, responses: array<int, array{schema: ?string, description: string, example: ?string}>, operationId: string}>
      */
     private function extractMethodsConfig(array $config, string $path): array
     {
@@ -196,6 +217,18 @@ class RouteTuiManager
                 $requestBodySchema = $this->extractSchemaName($definition['requestBody']['content']['application/json']['schema']['$ref']);
             }
 
+            $requestBodyExample = null;
+            if (isset($definition['requestBody']['content']['application/json']['examples'])) {
+                $examples = $definition['requestBody']['content']['application/json']['examples'];
+                $firstExampleKey = array_key_first($examples);
+                if (is_string($firstExampleKey)) {
+                    $exampleDef = $examples[$firstExampleKey];
+                    if (is_array($exampleDef) && isset($exampleDef['$ref'])) {
+                        $requestBodyExample = str_replace('#/components/examples/', '', (string)$exampleDef['$ref']);
+                    }
+                }
+            }
+
             $responses = [];
             if (isset($definition['responses']) && is_array($definition['responses'])) {
                 foreach ($definition['responses'] as $statusCode => $responseDef) {
@@ -207,9 +240,21 @@ class RouteTuiManager
                     if (isset($responseDef['content']['application/json']['schema']['$ref'])) {
                         $schema = $this->extractSchemaName($responseDef['content']['application/json']['schema']['$ref']);
                     }
+                    $example = null;
+                    if (isset($responseDef['content']['application/json']['examples'])) {
+                        $examples = $responseDef['content']['application/json']['examples'];
+                        $firstExampleKey = array_key_first($examples);
+                        if (is_string($firstExampleKey)) {
+                            $exampleDef = $examples[$firstExampleKey];
+                            if (is_array($exampleDef) && isset($exampleDef['$ref'])) {
+                                $example = str_replace('#/components/examples/', '', (string)$exampleDef['$ref']);
+                            }
+                        }
+                    }
                     $responses[$statusCodeInt] = [
                         'schema' => $schema,
                         'description' => (string)($responseDef['description'] ?? ''),
+                        'example' => $example,
                     ];
                 }
             }
@@ -219,6 +264,7 @@ class RouteTuiManager
                 'description' => (string)($definition['description'] ?? ''),
                 'security' => array_values(array_unique($security)),
                 'requestBodySchema' => $requestBodySchema,
+                'requestBodyExample' => $requestBodyExample,
                 'responses' => $responses,
                 'operationId' => (string)($definition['operationId'] ?? ''),
             ];

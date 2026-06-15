@@ -241,6 +241,12 @@ class RequestBodyTuiGenerator extends AbstractTuiComponentGenerator
 
         if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
             $dumpLocation = dirname($state->loadedFrom) . '/' . $state->name . '.yaml';
+            // Merge with existing config to preserve manually-added fields
+            $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
+            if (isset($existingConfig['documentation']['components']['requestBodies'][$state->name])) {
+                $mergedBody = array_merge($existingConfig['documentation']['components']['requestBodies'][$state->name], $requestBody);
+                $array['documentation']['components']['requestBodies'][$state->name] = $mergedBody;
+            }
         } else {
             $outputDir = u($state->outputDir)->ensureStart('/')->ensureEnd('/');
             $dumpDirectory = $this->kernel->getProjectDir() . $outputDir . u($destination)->ensureEnd('/');

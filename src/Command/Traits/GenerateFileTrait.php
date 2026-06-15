@@ -303,6 +303,15 @@ trait GenerateFileTrait
         } elseif ('examples' === $componentType) {
             $example = $array['documentation']['components']['examples'][$componentName] ?? [];
             $code .= $this->buildExampleCode($componentName, $example, 2);
+        } elseif ('links' === $componentType) {
+            $link = $array['documentation']['components']['links'][$componentName] ?? [];
+            $code .= $this->buildLinkCode($componentName, $link, 2);
+        } elseif ('callbacks' === $componentType) {
+            $callback = $array['documentation']['components']['callbacks'][$componentName] ?? [];
+            $code .= $this->buildCallbackCode($componentName, $callback, 2);
+        } elseif ('pathItems' === $componentType) {
+            $pathItem = $array['documentation']['components']['pathItems'][$componentName] ?? [];
+            $code .= $this->buildPathItemCode($componentName, $pathItem, 2);
         }
 
         $code .= "    }\n";
@@ -462,6 +471,26 @@ trait GenerateFileTrait
             $code .= "{$pad}    ->required()\n";
         }
 
+        if (isset($parameter['deprecated']) && $parameter['deprecated']) {
+            $code .= "{$pad}    ->deprecated()\n";
+        }
+
+        if (isset($parameter['allowEmptyValue']) && $parameter['allowEmptyValue']) {
+            $code .= "{$pad}    ->allowEmptyValue()\n";
+        }
+
+        if (isset($parameter['style'])) {
+            $code .= "{$pad}    ->style('{$parameter['style']}')\n";
+        }
+
+        if (isset($parameter['explode'])) {
+            $code .= "{$pad}    ->explode(" . ($parameter['explode'] ? 'true' : 'false') . ")\n";
+        }
+
+        if (isset($parameter['allowReserved']) && $parameter['allowReserved']) {
+            $code .= "{$pad}    ->allowReserved()\n";
+        }
+
         if (isset($parameter['schema'])) {
             $code .= "{$pad}    ->schema(['type' => '{$parameter['schema']['type']}'])\n";
         }
@@ -482,6 +511,14 @@ trait GenerateFileTrait
         if (isset($header['description'])) {
             $description = addslashes($header['description']);
             $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($header['required']) && $header['required']) {
+            $code .= "{$pad}    ->required()\n";
+        }
+
+        if (isset($header['deprecated']) && $header['deprecated']) {
+            $code .= "{$pad}    ->deprecated()\n";
         }
 
         if (isset($header['schema'])) {
@@ -515,6 +552,13 @@ trait GenerateFileTrait
             $code .= "{$pad}    ->jsonContent()\n";
             $code .= "{$pad}        ->ref('{$ref}')\n";
             $code .= "{$pad}    ->end()\n";
+        }
+
+        if (isset($response['links']) && is_array($response['links'])) {
+            foreach ($response['links'] as $linkName => $linkDef) {
+                $linkJson = addslashes(json_encode($linkDef, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+                $code .= "{$pad}    ->link('{$linkName}', json_decode('{$linkJson}', true))\n";
+            }
         }
 
         $code .= "{$pad}->end();\n";
@@ -571,6 +615,103 @@ trait GenerateFileTrait
         if (isset($example['value'])) {
             $value = var_export($example['value'], true);
             $code .= "{$pad}    ->value({$value})\n";
+        }
+
+        if (isset($example['externalValue'])) {
+            $code .= "{$pad}    ->externalValue('{$example['externalValue']}')\n";
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $link
+     */
+    protected function buildLinkCode(string $name, array $link, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addLink('{$name}')\n";
+
+        if (isset($link['operationRef'])) {
+            $code .= "{$pad}    ->operationRef('{$link['operationRef']}')\n";
+        }
+
+        if (isset($link['operationId'])) {
+            $code .= "{$pad}    ->operationId('{$link['operationId']}')\n";
+        }
+
+        if (isset($link['parameters']) && is_array($link['parameters'])) {
+            foreach ($link['parameters'] as $paramName => $paramValue) {
+                $code .= "{$pad}    ->parameter('{$paramName}', '{$paramValue}')\n";
+            }
+        }
+
+        if (isset($link['requestBody']) && is_string($link['requestBody'])) {
+            $code .= "{$pad}    ->requestBody('{$link['requestBody']}')\n";
+        }
+
+        if (isset($link['description'])) {
+            $description = addslashes($link['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($link['server']['url'])) {
+            $serverDescription = $link['server']['description'] ?? null;
+            if (null !== $serverDescription) {
+                $serverDescription = addslashes($serverDescription);
+                $code .= "{$pad}    ->server('{$link['server']['url']}', '{$serverDescription}')\n";
+            } else {
+                $code .= "{$pad}    ->server('{$link['server']['url']}')\n";
+            }
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $callback
+     */
+    protected function buildCallbackCode(string $name, array $callback, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addCallback('{$name}')\n";
+
+        foreach ($callback as $expression => $pathItem) {
+            if (is_array($pathItem)) {
+                $pathItemJson = addslashes(json_encode($pathItem, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+                $code .= "{$pad}    ->pathItem('{$expression}', json_decode('{$pathItemJson}', true))\n";
+            }
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $pathItem
+     */
+    protected function buildPathItemCode(string $name, array $pathItem, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addPathItem('{$name}')\n";
+
+        if (isset($pathItem['$ref'])) {
+            $code .= "{$pad}    ->ref('{$pathItem['$ref']}')\n";
+        }
+
+        if (isset($pathItem['summary'])) {
+            $summary = addslashes($pathItem['summary']);
+            $code .= "{$pad}    ->summary('{$summary}')\n";
+        }
+
+        if (isset($pathItem['description'])) {
+            $description = addslashes($pathItem['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
         }
 
         $code .= "{$pad}->end();\n";

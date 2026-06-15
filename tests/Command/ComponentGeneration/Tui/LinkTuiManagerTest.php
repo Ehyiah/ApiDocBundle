@@ -2,7 +2,7 @@
 
 namespace Ehyiah\ApiDocBundle\Tests\Command\ComponentGeneration\Tui;
 
-use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Header\HeaderTuiManager;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Link\LinkTuiManager;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
@@ -11,7 +11,7 @@ use Symfony\Component\Yaml\Yaml;
 /**
  * @coversNothing
  */
-class HeaderTuiManagerTest extends TestCase
+class LinkTuiManagerTest extends TestCase
 {
     private string $tmpDir;
 
@@ -43,13 +43,13 @@ class HeaderTuiManagerTest extends TestCase
 
     public function testGetExistingComponentsFindsYamlFiles(): void
     {
-        $dir = $this->tmpDir . '/Swagger/headers/';
+        $dir = $this->tmpDir . '/Swagger/links/';
         mkdir($dir, 0755, true);
-        file_put_contents($dir . 'X-Request-ID.yaml', Yaml::dump([
+        file_put_contents($dir . 'GetUserOrders.yaml', Yaml::dump([
             'documentation' => [
                 'components' => [
-                    'headers' => [
-                        'X-Request-ID' => ['description' => 'Request ID', 'schema' => ['type' => 'string']],
+                    'links' => [
+                        'GetUserOrders' => ['operationId' => 'getUserOrders', 'description' => 'User orders'],
                     ],
                 ],
             ],
@@ -58,17 +58,17 @@ class HeaderTuiManagerTest extends TestCase
         $manager = $this->createManager();
         $components = $manager->getExistingComponents();
 
-        $this->assertContains('X-Request-ID', $components);
+        $this->assertContains('GetUserOrders', $components);
     }
 
     public function testGetExistingComponentsFindsYamlInAnySubdirectory(): void
     {
-        $dir = $this->tmpDir . '/Swagger/custom/headers/';
+        $dir = $this->tmpDir . '/Swagger/custom/links/';
         mkdir($dir, 0755, true);
-        file_put_contents($dir . 'my_header.yaml', Yaml::dump([
+        file_put_contents($dir . 'my_link.yaml', Yaml::dump([
             'documentation' => [
                 'components' => [
-                    'headers' => ['CustomHeader' => ['description' => 'Custom', 'schema' => ['type' => 'string']]],
+                    'links' => ['CustomLink' => ['operationRef' => '/users/{id}']],
                 ],
             ],
         ]));
@@ -76,26 +76,68 @@ class HeaderTuiManagerTest extends TestCase
         $manager = $this->createManager();
         $components = $manager->getExistingComponents();
 
-        $this->assertContains('CustomHeader', $components);
+        $this->assertContains('CustomLink', $components);
+    }
+
+    public function testLoadComponentConfigReturnsConfig(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/links/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'GetOrders.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'links' => [
+                        'GetOrders' => [
+                            'operationId' => 'getOrders',
+                            'operationRef' => '/users/{id}/orders',
+                            'description' => 'Get user orders',
+                            'parameters' => ['userId' => '$response.body#/id'],
+                            'requestBody' => '$request.body',
+                            'server' => ['url' => 'https://api.example.com', 'description' => 'API'],
+                        ],
+                    ],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $config = $manager->loadComponentConfig('GetOrders');
+
+        $this->assertNotNull($config);
+        $this->assertSame('getOrders', $config['operationId']);
+        $this->assertSame('/users/{id}/orders', $config['operationRef']);
+        $this->assertSame('Get user orders', $config['description']);
+        $this->assertStringContainsString('userId', $config['parameters']);
+        $this->assertSame('$request.body', $config['requestBody']);
+        $this->assertSame('https://api.example.com', $config['serverUrl']);
+        $this->assertSame('API', $config['serverDescription']);
+    }
+
+    public function testLoadComponentConfigReturnsNullWhenNotFound(): void
+    {
+        $manager = $this->createManager();
+        $config = $manager->loadComponentConfig('NonExistent');
+
+        $this->assertNull($config);
     }
 
     public function testFindComponentFileReturnsFilePath(): void
     {
         $dir = $this->tmpDir . '/Swagger/custom/';
         mkdir($dir, 0755, true);
-        file_put_contents($dir . 'etag.yaml', Yaml::dump([
+        file_put_contents($dir . 'my_link.yaml', Yaml::dump([
             'documentation' => [
                 'components' => [
-                    'headers' => ['ETag' => ['description' => 'Cache tag', 'schema' => ['type' => 'string']]],
+                    'links' => ['MyLink' => ['operationId' => 'myLink']],
                 ],
             ],
         ]));
 
         $manager = $this->createManager();
-        $file = $manager->findComponentFile('ETag');
+        $file = $manager->findComponentFile('MyLink');
 
         $this->assertNotNull($file);
-        $this->assertStringContainsString('etag.yaml', $file);
+        $this->assertStringContainsString('my_link.yaml', $file);
     }
 
     public function testFindComponentFileReturnsNullWhenNotFound(): void
@@ -110,13 +152,13 @@ class HeaderTuiManagerTest extends TestCase
     {
         $dir = $this->tmpDir . '/Swagger/custom/';
         mkdir($dir, 0755, true);
-        file_put_contents($dir . 'ETag.php', <<<'PHP'
+        file_put_contents($dir . 'MyLink.php', <<<'PHP'
 <?php
 return new class implements \Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface {
     public function configure(\Ehyiah\ApiDocBundle\Builder\ApiDocBuilder $builder): void
     {
-        $builder->addHeader('ETag')
-            ->typeString('uuid')
+        $builder->addLink('MyLink')
+            ->operationId('myLink')
         ->end();
     }
 };
@@ -124,54 +166,13 @@ PHP
         );
 
         $manager = $this->createManager();
-        $file = $manager->findComponentFile('ETag');
+        $file = $manager->findComponentFile('MyLink');
 
         $this->assertNotNull($file);
-        $this->assertStringContainsString('ETag.php', $file);
+        $this->assertStringContainsString('MyLink.php', $file);
     }
 
-    public function testLoadComponentConfigReturnsConfig(): void
-    {
-        $dir = $this->tmpDir . '/Swagger/headers/';
-        mkdir($dir, 0755, true);
-        file_put_contents($dir . 'X-Request-ID.yaml', Yaml::dump([
-            'documentation' => [
-                'components' => [
-                    'headers' => [
-                        'X-Request-ID' => [
-                            'description' => 'Unique request identifier',
-                            'required' => true,
-                            'deprecated' => false,
-                            'schema' => ['type' => 'string', 'format' => 'uuid'],
-                            'example' => 'abc-123',
-                        ],
-                    ],
-                ],
-            ],
-        ]));
-
-        $manager = $this->createManager();
-        $config = $manager->loadComponentConfig('X-Request-ID');
-
-        $this->assertNotNull($config);
-        $this->assertSame('X-Request-ID', $config['name']);
-        $this->assertSame('Unique request identifier', $config['description']);
-        $this->assertTrue($config['required']);
-        $this->assertFalse($config['deprecated']);
-        $this->assertSame('string', $config['schemaType']);
-        $this->assertSame('uuid', $config['format']);
-        $this->assertSame('abc-123', $config['example']);
-    }
-
-    public function testLoadComponentConfigReturnsNullWhenNotFound(): void
-    {
-        $manager = $this->createManager();
-        $config = $manager->loadComponentConfig('NonExistent');
-
-        $this->assertNull($config);
-    }
-
-    private function createManager(): HeaderTuiManager
+    private function createManager(): LinkTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);
         $parameterBag->method('get')->willReturnMap([
@@ -181,7 +182,7 @@ PHP
         $kernel = $this->createMock(KernelInterface::class);
         $kernel->method('getProjectDir')->willReturn($this->tmpDir);
 
-        return new HeaderTuiManager($kernel, $parameterBag);
+        return new LinkTuiManager($kernel, $parameterBag);
     }
 
     private function removeDir(string $dir): void

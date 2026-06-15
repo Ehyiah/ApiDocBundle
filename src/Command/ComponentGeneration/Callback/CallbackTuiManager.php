@@ -1,6 +1,6 @@
 <?php
 
-namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Response;
+namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Callback;
 
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Finder\Finder;
@@ -9,7 +9,7 @@ use Symfony\Component\Yaml\Yaml;
 
 use function Symfony\Component\String\u;
 
-class ResponseTuiManager
+class CallbackTuiManager
 {
     public function __construct(
         private readonly KernelInterface $kernel,
@@ -31,35 +31,13 @@ class ResponseTuiManager
             $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
             foreach ($finder as $file) {
                 $config = Yaml::parseFile($file->getRealPath());
-                if (isset($config['documentation']['components']['responses'])) {
-                    $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['responses'])));
+                if (isset($config['documentation']['components']['callbacks'])) {
+                    $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['callbacks'])));
                 }
             }
         }
 
         return array_values(array_unique($names));
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    public function getAvailableSchemas(): array
-    {
-        $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
-        $dumpDirectory = $this->kernel->getProjectDir() . $sourcePath;
-
-        $schemas = [];
-        if (is_dir($dumpDirectory)) {
-            $finder = new Finder();
-            $finder->files()->in($dumpDirectory)->name(['*.yaml', '*.php']);
-            foreach ($finder as $file) {
-                if (str_contains($file->getPathname(), DIRECTORY_SEPARATOR . 'schemas' . DIRECTORY_SEPARATOR)) {
-                    $schemas[] = $file->getBasename('.' . $file->getExtension());
-                }
-            }
-        }
-
-        return array_values(array_unique($schemas));
     }
 
     public function getDefaultDumpLocation(): string
@@ -70,9 +48,9 @@ class ResponseTuiManager
     }
 
     /**
-     * Load the configuration of an existing response from YAML files.
+     * Load the configuration of an existing callback from YAML files.
      *
-     * @return array{name: string, description: string, schemaRef: string|null, contentType: string, headers: string, links: string}|null
+     * @return array{expression: string, path: string, method: string, description: string, operationId: string, requestBodyRef: string, responseDescription: string}|null
      */
     public function loadComponentConfig(string $name): ?array
     {
@@ -87,36 +65,46 @@ class ResponseTuiManager
         $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
         foreach ($finder as $file) {
             $config = Yaml::parseFile($file->getRealPath());
-            if (isset($config['documentation']['components']['responses'][$name])) {
-                $response = $config['documentation']['components']['responses'][$name];
+            if (isset($config['documentation']['components']['callbacks'][$name])) {
+                $callback = $config['documentation']['components']['callbacks'][$name];
 
-                $schemaRef = null;
-                $contentType = 'application/json';
-                if (isset($response['content'])) {
-                    $contentType = (string)(array_key_first($response['content']) ?? 'application/json');
-                    if (isset($response['content'][$contentType]['schema']['$ref'])) {
-                        $ref = (string)$response['content'][$contentType]['schema']['$ref'];
-                        $schemaRef = str_replace('#/components/schemas/', '', $ref);
+                // Find the first expression key (it's the expression string)
+                $expression = array_key_first($callback) ?? '';
+                $pathItem = $callback[$expression] ?? [];
+
+                $path = '';
+                $method = 'post';
+                $description = '';
+                $operationId = '';
+                $requestBodyRef = '';
+                $responseDescription = '';
+
+                // Find the first path entry
+                foreach ($pathItem as $key => $value) {
+                    if (in_array($key, ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'], true)) {
+                        $path = $key;
+                        $method = $key;
+                        $operation = is_array($value) ? $value : [];
+                        $description = $operation['description'] ?? '';
+                        $operationId = $operation['operationId'] ?? '';
+                        if (isset($operation['requestBody']['content']['application/json']['schema']['$ref'])) {
+                            $requestBodyRef = $operation['requestBody']['content']['application/json']['schema']['$ref'];
+                        }
+                        if (isset($operation['responses']['200']['description'])) {
+                            $responseDescription = $operation['responses']['200']['description'];
+                        }
+                        break;
                     }
                 }
 
-                $headersJson = '';
-                if (isset($response['headers']) && is_array($response['headers'])) {
-                    $headersJson = (string)json_encode($response['headers'], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-                }
-
-                $linksJson = '';
-                if (isset($response['links']) && is_array($response['links'])) {
-                    $linksJson = (string)json_encode($response['links'], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-                }
-
                 return [
-                    'name' => $name,
-                    'description' => (string)($response['description'] ?? ''),
-                    'schemaRef' => $schemaRef,
-                    'contentType' => $contentType,
-                    'headers' => $headersJson,
-                    'links' => $linksJson,
+                    'expression' => $expression,
+                    'path' => $path,
+                    'method' => $method,
+                    'description' => $description,
+                    'operationId' => $operationId,
+                    'requestBodyRef' => $requestBodyRef,
+                    'responseDescription' => $responseDescription,
                 ];
             }
         }
@@ -146,7 +134,7 @@ class ResponseTuiManager
                 }
             } else {
                 $config = Yaml::parseFile($file->getRealPath());
-                if (isset($config['documentation']['components']['responses'][$name])) {
+                if (isset($config['documentation']['components']['callbacks'][$name])) {
                     return $file->getRealPath();
                 }
             }

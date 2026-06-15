@@ -1,6 +1,6 @@
 <?php
 
-namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Security;
+namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Callback;
 
 use Ehyiah\ApiDocBundle\Attributes\AsTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\AbstractTuiComponentGenerator;
@@ -26,12 +26,12 @@ use Symfony\Component\Tui\Widget\TextWidget;
 use function Symfony\Component\String\u;
 
 #[AsTuiGenerator]
-class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
+class CallbackTuiGenerator extends AbstractTuiComponentGenerator
 {
     private ?OutputInterface $currentOutput = null;
 
     public function __construct(
-        private readonly SecuritySchemeTuiManager $manager,
+        private readonly CallbackTuiManager $manager,
         KernelInterface $kernel,
         ParameterBagInterface $parameterBag,
         PropertyInfoExtractorInterface $propertyInfoExtractor,
@@ -42,12 +42,12 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
 
     public function getLabel(): string
     {
-        return 'Security Scheme';
+        return 'Callback';
     }
 
     public function getDescription(): string
     {
-        return 'Generate a security scheme component';
+        return 'Generate a callback component';
     }
 
     public function isSupported(): bool
@@ -67,7 +67,7 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         $choices = [];
         foreach ($existing as $name) {
             $config = $this->manager->loadComponentConfig($name);
-            $info = $config ? $config['type'] . ' / ' . ($config['scheme'] ?: $config['name']) : '';
+            $info = $config ? $config['expression'] : '';
             $choices[] = ['value' => $name, 'label' => $this->currentOutput->getFormatter()->format(sprintf('  %-20s <fg=gray>%s</fg=gray>', $name, $info))];
         }
         $choices[] = ['value' => '__new__', 'label' => $this->currentOutput->getFormatter()->format('  <fg=green>[+ New]</fg=green>')];
@@ -79,7 +79,7 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<info>|  Security Schemes                          |</info>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<info>|  Callbacks                                |</info>')));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
@@ -101,19 +101,19 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
                 return;
             }
 
-            $state = new SecuritySchemeTuiState();
+            $state = new CallbackTuiState();
             $state->outputDir = $this->manager->getDefaultDumpLocation();
             if ('__new__' !== $value) {
                 $state->name = $value;
                 $existing = $this->manager->loadComponentConfig($value);
                 if (null !== $existing) {
-                    $state->type = $existing['type'];
-                    $state->scheme = $existing['scheme'];
-                    $state->bearerFormat = $existing['bearerFormat'];
-                    $state->apiKeyName = $existing['name'];
-                    $state->apiKeyIn = $existing['in'];
-                    $state->openIdConnectUrl = $existing['openIdConnectUrl'];
+                    $state->expression = $existing['expression'];
+                    $state->path = $existing['path'];
+                    $state->method = $existing['method'];
                     $state->description = $existing['description'];
+                    $state->operationId = $existing['operationId'];
+                    $state->requestBodyRef = $existing['requestBodyRef'];
+                    $state->responseDescription = $existing['responseDescription'];
                 }
                 $state->loadedFrom = $this->manager->findComponentFile($value);
             }
@@ -132,7 +132,7 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         $tui->addListener($cancelListener);
     }
 
-    private function showForm(Tui $tui, SecuritySchemeTuiState $state, callable $onBack): void
+    private function showForm(Tui $tui, CallbackTuiState $state, callable $onBack): void
     {
         $textInputCallback = static function (string $currentValue, callable $onDone) {
             $inputWidget = new InputWidget();
@@ -149,14 +149,14 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         };
 
         $settingItems = [];
-        $settingItems[] = new SettingItem('name', 'Name', $state->name, 'Schema name (e.g. BearerAuth)', [], $textInputCallback);
-        $settingItems[] = new SettingItem('type', 'Type', $state->type, 'Authentication type', ['http', 'apiKey', 'openIdConnect']);
-        $settingItems[] = new SettingItem('scheme', 'Scheme', $state->scheme, 'HTTP scheme', ['bearer', 'basic']);
-        $settingItems[] = new SettingItem('bearerFormat', 'Bearer Format', $state->bearerFormat, 'Token format', [], $textInputCallback);
-        $settingItems[] = new SettingItem('apiKeyName', 'API Key Name', $state->apiKeyName, 'Header/query parameter name', [], $textInputCallback);
-        $settingItems[] = new SettingItem('apiKeyIn', 'API Key In', $state->apiKeyIn, 'Key location', ['header', 'query', 'cookie']);
-        $settingItems[] = new SettingItem('openIdConnectUrl', 'OpenID Connect URL', $state->openIdConnectUrl, 'Discovery URL', [], $textInputCallback);
-        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Schema description', [], $textInputCallback);
+        $settingItems[] = new SettingItem('name', 'Name', $state->name, 'Callback name (e.g. OnOrderCreated)', [], $textInputCallback);
+        $settingItems[] = new SettingItem('expression', 'Expression', $state->expression, 'Path expression (e.g. {$request.body#/callbackUrl})', [], $textInputCallback);
+        $settingItems[] = new SettingItem('path', 'Path', $state->path, 'Callback path (e.g. /callback)', [], $textInputCallback);
+        $settingItems[] = new SettingItem('method', 'Method', $state->method, 'HTTP method', ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace']);
+        $settingItems[] = new SettingItem('operationId', 'Operation ID', $state->operationId, 'Operation ID', [], $textInputCallback);
+        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Operation description', [], $textInputCallback);
+        $settingItems[] = new SettingItem('requestBodyRef', 'Request Body Ref', $state->requestBodyRef, 'Schema $ref (e.g. #/components/schemas/Order)', [], $textInputCallback);
+        $settingItems[] = new SettingItem('responseDesc', 'Response Description', $state->responseDescription, 'Response description', [], $textInputCallback);
 
         $settingItems[] = new SettingItem('format_output', 'Output Format', $state->format_output, 'YAML or PHP', ['yaml', 'php']);
         $settingItems[] = new SettingItem('output', 'Output Directory', $state->outputDir, 'Target directory', [], $textInputCallback);
@@ -169,7 +169,7 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $title = $state->name ? "Edit: {$state->name}" : 'New Security Scheme';
+        $title = $state->name ? "Edit: {$state->name}" : 'New Callback';
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  {$title}</info>")));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
@@ -190,15 +190,20 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
                     $this->showComponentList($tui, $onBack);
                     break;
+                case 'action_delete':
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showComponentList($tui, $onBack);
+                    break;
                 case 'action_validate':
                     $state->name = $settingsWidget->getValue('name') ?? '';
-                    $state->type = $settingsWidget->getValue('type') ?? 'http';
-                    $state->scheme = $settingsWidget->getValue('scheme') ?? 'bearer';
-                    $state->bearerFormat = $settingsWidget->getValue('bearerFormat') ?? 'JWT';
-                    $state->apiKeyName = $settingsWidget->getValue('apiKeyName') ?? '';
-                    $state->apiKeyIn = $settingsWidget->getValue('apiKeyIn') ?? 'header';
-                    $state->openIdConnectUrl = $settingsWidget->getValue('openIdConnectUrl') ?? '';
+                    $state->expression = $settingsWidget->getValue('expression') ?? '';
+                    $state->path = $settingsWidget->getValue('path') ?? '';
+                    $state->method = $settingsWidget->getValue('method') ?? 'post';
+                    $state->operationId = $settingsWidget->getValue('operationId') ?? '';
                     $state->description = $settingsWidget->getValue('desc') ?? '';
+                    $state->requestBodyRef = $settingsWidget->getValue('requestBodyRef') ?? '';
+                    $state->responseDescription = $settingsWidget->getValue('responseDesc') ?? '';
                     $state->format_output = $settingsWidget->getValue('format_output') ?? 'yaml';
                     $state->outputDir = $settingsWidget->getValue('output') ?? $this->manager->getDefaultDumpLocation();
 
@@ -222,45 +227,62 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         $tui->addListener($cancelListener);
     }
 
-    private function generateComponent(SecuritySchemeTuiState $state): void
+    private function generateComponent(CallbackTuiState $state): void
     {
-        $definition = ['type' => $state->type];
-
-        if ('http' === $state->type) {
-            $definition['scheme'] = $state->scheme;
-            if ('bearer' === $state->scheme && '' !== $state->bearerFormat) {
-                $definition['bearerFormat'] = $state->bearerFormat;
-            }
-        } elseif ('apiKey' === $state->type) {
-            $definition['name'] = $state->apiKeyName;
-            $definition['in'] = $state->apiKeyIn;
-        } elseif ('openIdConnect' === $state->type) {
-            $definition['openIdConnectUrl'] = $state->openIdConnectUrl;
+        $operation = [];
+        if ('' !== $state->operationId) {
+            $operation['operationId'] = $state->operationId;
         }
-
         if ('' !== $state->description) {
-            $definition['description'] = $state->description;
+            $operation['description'] = $state->description;
         }
+        if ('' !== $state->requestBodyRef) {
+            $operation['requestBody'] = [
+                'content' => [
+                    'application/json' => [
+                        'schema' => [
+                            '$ref' => $state->requestBodyRef,
+                        ],
+                    ],
+                ],
+            ];
+        }
+        if ('' !== $state->responseDescription) {
+            $operation['responses'] = [
+                '200' => [
+                    'description' => $state->responseDescription,
+                ],
+            ];
+        }
+
+        $pathItem = [
+            $state->method => $operation,
+        ];
+
+        $expression = '' !== $state->expression ? $state->expression : '{$request.body#/callbackUrl}';
+        $callback = [
+            $expression => $pathItem,
+        ];
 
         $array = [
             'documentation' => [
                 'components' => [
-                    'securitySchemes' => [
-                        $state->name => $definition,
+                    'callbacks' => [
+                        $state->name => $callback,
                     ],
                 ],
             ],
         ];
 
-        $destination = ComponentType::SecuritySchemes->value;
+        $destination = ComponentType::Callbacks->value;
 
         if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
             $dumpLocation = dirname($state->loadedFrom) . '/' . $state->name . '.yaml';
             // Merge with existing config to preserve manually-added fields
             $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
-            if (isset($existingConfig['documentation']['components']['securitySchemes'][$state->name])) {
-                $mergedDefinition = array_merge($existingConfig['documentation']['components']['securitySchemes'][$state->name], $definition);
-                $array['documentation']['components']['securitySchemes'][$state->name] = $mergedDefinition;
+            if (isset($existingConfig['documentation']['components']['callbacks'][$state->name])) {
+                $mergedCallback = array_replace_recursive($existingConfig['documentation']['components']['callbacks'][$state->name], $callback);
+                $array['documentation']['components']['callbacks'][$state->name] = $mergedCallback;
             }
         } else {
             $outputDir = u($state->outputDir)->ensureStart('/')->ensureEnd('/');
@@ -281,6 +303,6 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }
 
-        $this->currentOutput->writeln(sprintf('<info>Security Scheme "%s" generated successfully in %s</info>', $state->name, $dumpLocation));
+        $this->currentOutput->writeln(sprintf('<info>Callback "%s" generated successfully in %s</info>', $state->name, $dumpLocation));
     }
 }

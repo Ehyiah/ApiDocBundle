@@ -138,6 +138,53 @@ PHP
         $this->assertStringContainsString('Error.php', $file);
     }
 
+    public function testLoadComponentConfigReturnsConfig(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/responses/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'NotFound.yaml', Yaml::dump([
+            'documentation' => [
+                'components' => [
+                    'responses' => [
+                        'NotFound' => [
+                            'description' => 'Resource not found',
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => ['$ref' => '#/components/schemas/Error'],
+                                ],
+                            ],
+                            'headers' => [
+                                'X-Request-ID' => ['description' => 'Request ID', 'schema' => ['type' => 'string']],
+                            ],
+                            'links' => [
+                                'GetUser' => ['operationId' => 'getUser', 'parameters' => ['userId' => '$response.body#/id']],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]));
+
+        $manager = $this->createManager();
+        $config = $manager->loadComponentConfig('NotFound');
+
+        $this->assertNotNull($config);
+        $this->assertSame('NotFound', $config['name']);
+        $this->assertSame('Resource not found', $config['description']);
+        $this->assertSame('Error', $config['schemaRef']);
+        $this->assertSame('application/json', $config['contentType']);
+        $this->assertStringContainsString('X-Request-ID', $config['headers']);
+        $this->assertStringContainsString('GetUser', $config['links']);
+    }
+
+    public function testLoadComponentConfigReturnsNullWhenNotFound(): void
+    {
+        $manager = $this->createManager();
+        $config = $manager->loadComponentConfig('NonExistent');
+
+        $this->assertNull($config);
+    }
+
     private function createManager(): ResponseTuiManager
     {
         $parameterBag = $this->createMock(ParameterBagInterface::class);

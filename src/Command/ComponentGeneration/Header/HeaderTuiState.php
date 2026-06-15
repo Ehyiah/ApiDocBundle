@@ -6,6 +6,8 @@ class HeaderTuiState
 {
     public string $name = '';
     public string $description = '';
+    public bool $required = false;
+    public bool $deprecated = false;
     public string $schemaType = 'string';
     public string $format = '';
     public string $example = '';

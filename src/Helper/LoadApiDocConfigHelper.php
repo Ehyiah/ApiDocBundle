@@ -209,6 +209,24 @@ final class LoadApiDocConfigHelper
             ->name('*.php')
         ;
 
+        $methodName = match ($componentType) {
+            'schemas' => 'addSchema',
+            'requestBodies' => 'addRequestBody',
+            'parameters' => 'addParameter',
+            'headers' => 'addHeader',
+            'responses' => 'addResponse',
+            'securitySchemes' => 'addSecurityScheme',
+            'examples' => 'addExample',
+            'links' => 'addLink',
+            'callbacks' => 'addCallback',
+            'pathItems' => 'addPathItem',
+            default => null,
+        };
+
+        if (null === $methodName) {
+            return null;
+        }
+
         if ($finder->hasResults()) {
             foreach ($finder->getIterator() as $file) {
                 $content = file_get_contents($file->getPathname());
@@ -216,13 +234,7 @@ final class LoadApiDocConfigHelper
                     continue;
                 }
 
-                // Check for schema component: ->addSchema('ComponentName')
-                if ('schemas' === $componentType && preg_match('/->addSchema\s*\(\s*[\'"]' . preg_quote($componentName, '/') . '[\'"]\s*\)/', $content)) {
-                    return $file;
-                }
-
-                // Check for requestBody component: ->addRequestBody('ComponentName')
-                if ('requestBodies' === $componentType && preg_match('/->addRequestBody\s*\(\s*[\'"]' . preg_quote($componentName, '/') . '[\'"]\s*\)/', $content)) {
+                if (preg_match('/->' . preg_quote($methodName, '/') . '\s*\(\s*[\'"]' . preg_quote($componentName, '/') . '[\'"]\s*\)/', $content)) {
                     return $file;
                 }
             }
