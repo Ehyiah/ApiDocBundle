@@ -25,7 +25,7 @@ use function Symfony\Component\String\u;
 
 #[AsCommand(
     name: 'apidocbundle:component:tui',
-    description: 'Interface interactive TUI pour générer des composants de documentation API'
+    description: 'Interactive TUI for generating API documentation components'
 )]
 final class GenerateComponentTuiCommand extends Command
 {
@@ -94,7 +94,7 @@ final class GenerateComponentTuiCommand extends Command
     {
         $tui = new Tui();
 
-        // Passer le HelperSet de la console aux générateurs pour gérer la confirmation d'écrasement
+        // Pass the console HelperSet to generators to handle overwrite confirmation
         foreach ($this->generators as $generator) {
             if ($generator instanceof SchemaTuiGenerator) {
                 $generator->setHelperSet($this->getHelperSet());
@@ -115,7 +115,7 @@ final class GenerateComponentTuiCommand extends Command
 
         $formatter = $output->getFormatter();
 
-        // 1. Ajouter les générateurs enregistrés via DI
+        // 1. Add generators registered via DI
         foreach ($this->generators as $generator) {
             $choices[] = [
                 'value' => $generator->getLabel(),
@@ -124,10 +124,10 @@ final class GenerateComponentTuiCommand extends Command
             $generatorsMap[$generator->getLabel()] = $generator;
         }
 
-        // Option Quitter
+        // Quit option
         $choices[] = [
             'value' => 'quit',
-            'label' => $formatter->format('  <fg=red>Quitter</fg=red>'),
+            'label' => $formatter->format('  <fg=red>Quit</fg=red>'),
         ];
 
         $selectWidget = new SelectListWidget($choices, 12);
@@ -138,10 +138,10 @@ final class GenerateComponentTuiCommand extends Command
         $container->add(new TextWidget($formatter->format("\n<info>+══════════════════════════════════════════════════+</info>")));
         $container->add(new TextWidget($formatter->format('<info>║       ApiDocBundle TUI Generator                ║</info>')));
         $container->add(new TextWidget($formatter->format("<info>+══════════════════════════════════════════════════+</info>\n")));
-        $container->add(new TextWidget($formatter->format("<comment>  Choisissez le type de composant :</comment>\n")));
+        $container->add(new TextWidget($formatter->format("<comment>  Choose the component type:</comment>\n")));
         $container->add($selectWidget);
         $container->add(new TextWidget($formatter->format("\n<fg=gray>------------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Quitter</fg=gray>')));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Quit</fg=gray>')));
 
         $tui->add($container);
         $tui->setFocus($selectWidget);

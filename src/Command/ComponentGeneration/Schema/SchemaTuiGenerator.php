@@ -54,7 +54,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
 
     public function getDescription(): string
     {
-        return 'Générer un composant de schéma à partir d\'une classe PHP';
+        return 'Generate a schema component from a PHP class';
     }
 
     public function isSupported(): bool
@@ -79,9 +79,9 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $formatter = $output->getFormatter();
 
         $choices = [
-            ['value' => 'class', 'label' => $formatter->format('  Depuis une classe PHP')],
+            ['value' => 'class', 'label' => $formatter->format('  From a PHP class')],
             ['value' => 'composition', 'label' => $formatter->format('  Composition (allOf / anyOf / oneOf)')],
-            ['value' => '__back__', 'label' => $formatter->format('  <comment>[← Retour]</comment>')],
+            ['value' => '__back__', 'label' => $formatter->format('  <comment>[← Back]</comment>')],
         ];
 
         $selectWidget = new SelectListWidget($choices, 12);
@@ -90,11 +90,11 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($formatter->format('<info>|  Génération de Schéma</info>')));
+        $container->add(new TextWidget($formatter->format('<info>|  Schema Generation</info>')));
         $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
         $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Retour</fg=gray>')));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -140,13 +140,13 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
             $tui->clear();
             $container = new ContainerWidget();
             $container->expandVertically(true);
-            $container->add(new TextWidget($formatter->format("<error>Erreur : Aucune classe trouvée dans les répertoires configurés.</error>\n")));
+            $container->add(new TextWidget($formatter->format("<error>Error: No classes found in configured directories.</error>\n")));
 
             $backWidget = new SelectListWidget([
-                ['value' => 'back', 'label' => 'Retour au menu principal'],
+                ['value' => 'back', 'label' => 'Back to main menu'],
             ]);
             $container->add($backWidget);
-            $container->add(new TextWidget($formatter->format("\n<comment>Appuyez sur Entrée ou Échap pour revenir.</comment>")));
+            $container->add(new TextWidget($formatter->format("\n<comment>Press Enter or Esc to go back.</comment>")));
 
             $tui->add($container);
             $tui->setFocus($backWidget);
@@ -184,7 +184,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
 
             $label = $className;
             if (!empty($formats)) {
-                $label .= sprintf(' (Existe en : %s)', implode(', ', $formats));
+                $label .= sprintf(' (Exists in: %s)', implode(', ', $formats));
             }
 
             $choices[] = [
@@ -195,16 +195,16 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
 
         $classListWidget = new SelectListWidget($choices, 12);
         $searchWidget = new InputWidget();
-        $searchWidget->setPrompt($formatter->format('Rechercher une classe : '));
+        $searchWidget->setPrompt($formatter->format('Search for a class: '));
 
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($formatter->format("<info>Génération de Schéma : Sélection de classe</info>\n")));
+        $container->add(new TextWidget($formatter->format("<info>Schema Generation: Class Selection</info>\n")));
         $container->add($searchWidget);
         $container->add(new TextWidget(''));
         $container->add($classListWidget);
-        $container->add(new TextWidget($formatter->format("\n<comment>Navigation :\n- Tapez pour filtrer les classes\n- Entrée : Valider la recherche et passer à la liste\n- Échap : Retour au menu principal</comment>")));
+        $container->add(new TextWidget($formatter->format("\n<comment>Navigation:\n- Type to filter classes\n- Enter: Confirm search and switch to the list\n- Esc: Back to main menu</comment>")));
 
         $tui->add($container);
         $tui->setFocus($searchWidget);
@@ -256,10 +256,10 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $formatter = $this->currentOutput->getFormatter();
 
         $choices = [
-            ['value' => 'allOf', 'label' => $formatter->format('  allOf  — Tous les schémas doivent matcher (AND)')],
-            ['value' => 'anyOf', 'label' => $formatter->format('  anyOf  — Au moins un schéma doit matcher (OR)')],
-            ['value' => 'oneOf', 'label' => $formatter->format('  oneOf  — Un seul schéma doit matcher (XOR)')],
-            ['value' => '__back__', 'label' => $formatter->format('  <comment>[← Retour]</comment>')],
+            ['value' => 'allOf', 'label' => $formatter->format('  allOf  — All schemas must match (AND)')],
+            ['value' => 'anyOf', 'label' => $formatter->format('  anyOf  — At least one schema must match (OR)')],
+            ['value' => 'oneOf', 'label' => $formatter->format('  oneOf  — Only one schema must match (XOR)')],
+            ['value' => '__back__', 'label' => $formatter->format('  <comment>[← Back]</comment>')],
         ];
 
         $selectWidget = new SelectListWidget($choices, 12);
@@ -268,11 +268,11 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($formatter->format('<info>|  Type de composition</info>')));
+        $container->add(new TextWidget($formatter->format('<info>|  Composition Type</info>')));
         $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
         $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Retour</fg=gray>')));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -312,7 +312,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $textInputCallback = static function (string $currentValue, callable $onDone) {
             $inputWidget = new InputWidget();
             $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Saisie : ');
+            $inputWidget->setPrompt('Input: ');
             $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
                 $onDone($event->getValue());
             });
@@ -324,19 +324,19 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         };
 
         $settingItems = [];
-        $settingItems[] = new SettingItem('schemaName', 'Nom du schéma', '', 'Nom du nouveau schéma de composition', [], $textInputCallback);
+        $settingItems[] = new SettingItem('schemaName', 'Schema Name', '', 'Name of the new composition schema', [], $textInputCallback);
 
         $schemaChoices = array_merge([''], $schemas);
-        $settingItems[] = new SettingItem('schema_1', 'Schéma 1', '', 'Premier schéma à composer', $schemaChoices);
-        $settingItems[] = new SettingItem('schema_2', 'Schéma 2', '', 'Deuxième schéma à composer', $schemaChoices);
-        $settingItems[] = new SettingItem('schema_3', 'Schéma 3', '', 'Troisième schéma (optionnel)', $schemaChoices);
+        $settingItems[] = new SettingItem('schema_1', 'Schema 1', '', 'First schema to compose', $schemaChoices);
+        $settingItems[] = new SettingItem('schema_2', 'Schema 2', '', 'Second schema to compose', $schemaChoices);
+        $settingItems[] = new SettingItem('schema_3', 'Schema 3', '', 'Third schema (optional)', $schemaChoices);
 
         $defaultDumpLocation = $this->manager->getDefaultDumpLocation();
-        $settingItems[] = new SettingItem('format', 'Format', 'both', 'Format de sortie', ['both', 'php', 'yaml']);
-        $settingItems[] = new SettingItem('output', 'Dossier de sortie', $defaultDumpLocation, 'Répertoire cible', [], $textInputCallback);
+        $settingItems[] = new SettingItem('format', 'Format', 'both', 'Output format', ['both', 'php', 'yaml']);
+        $settingItems[] = new SettingItem('output', 'Output Directory', $defaultDumpLocation, 'Target directory', [], $textInputCallback);
 
-        $settingItems[] = new SettingItem('action_generate', 'Générer', '✓ Confirmer', 'Lancer la génération', ['✓ Confirmer']);
-        $settingItems[] = new SettingItem('action_cancel', 'Retour', '← Annuler', 'Retourner', ['← Annuler']);
+        $settingItems[] = new SettingItem('action_generate', 'Generate', '✓ Confirm', 'Start generation', ['✓ Confirm']);
+        $settingItems[] = new SettingItem('action_cancel', 'Back', '← Cancel', 'Go back', ['← Cancel']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
 
@@ -348,7 +348,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($settingsWidget);
         $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↵ Valider    Échap Annuler</fg=gray>')));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↵ Save    Esc Cancel</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 
@@ -465,7 +465,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
             }
         }
 
-        $output->writeln("\n<info>Composition \"{$schemaName}\" générée avec succès !</info>");
+        $output->writeln("\n<info>Composition \"{$schemaName}\" generated successfully!</info>");
     }
 
     private function showConfigurationDashboard(Tui $tui, string $selectedClass, callable $onBack): void
@@ -477,55 +477,55 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
 
         $settingItems = [];
 
-        // 1. Liste des propriétés de la classe (Boutons inclure/exclure)
+        // 1. Class property list (Include/Exclude buttons)
         foreach ($properties as $property) {
             $settingItems[] = new SettingItem(
                 'prop_' . $property,
-                'Propriété : ' . $property,
-                'inclure',
-                'Inclure ou exclure la propriété "' . $property . '" du schéma généré.',
-                ['inclure', 'exclure']
+                'Property: ' . $property,
+                'include',
+                'Include or exclude property "' . $property . '" from the generated schema.',
+                ['include', 'exclude']
             );
         }
 
-        // 2. Options globales pour les propriétés
+        // 2. Global property options
         $settingItems[] = new SettingItem(
             'action_select_all',
-            'Propriétés : TOUT inclure',
+            'Properties: Include all',
             '[Action]',
-            'Appuyez sur Entrée pour inclure toutes les propriétés ci-dessus.',
+            'Press Enter to include all properties above.',
             ['[Action]']
         );
 
         $settingItems[] = new SettingItem(
             'action_deselect_all',
-            'Propriétés : TOUT exclure',
+            'Properties: Exclude all',
             '[Action]',
-            'Appuyez sur Entrée pour exclure toutes les propriétés ci-dessus.',
+            'Press Enter to exclude all properties above.',
             ['[Action]']
         );
 
         // 3. Options de format
         $settingItems[] = new SettingItem(
             'format',
-            'Format de sortie',
+            'Output format',
             'both',
-            'Format sous lequel générer le composant.',
+            'Format in which to generate the component.',
             ['both', 'php', 'yaml']
         );
 
-        // 3. Dossier de sortie (modifiable)
+        // 3. Output directory (editable)
         $defaultDumpLocation = $this->manager->getDefaultDumpLocation();
         $settingItems[] = new SettingItem(
             'output',
-            'Dossier de sortie',
+            'Output Directory',
             $defaultDumpLocation,
-            'Répertoire cible pour l\'écriture du fichier. Appuyez sur Entrée pour modifier.',
+            'Target directory for file writing. Press Enter to edit.',
             [],
             static function (string $currentValue, callable $onDone) {
                 $inputWidget = new InputWidget();
                 $inputWidget->setValue($currentValue);
-                $inputWidget->setPrompt('Chemin : ');
+                $inputWidget->setPrompt('Path: ');
                 $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
                     $onDone($event->getValue());
                 });
@@ -540,18 +540,18 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         // 4. Actions
         $settingItems[] = new SettingItem(
             'action_generate',
-            'Générer le Schéma',
-            '✓ Confirmer',
-            'Appuyez sur Entrée pour lancer la génération physique des fichiers.',
-            ['✓ Confirmer']
+            'Generate Schema',
+            '✓ Confirm',
+            'Press Enter to start generating the files.',
+            ['✓ Confirm']
         );
 
         $settingItems[] = new SettingItem(
             'action_cancel',
-            'Retour',
-            '← Annuler',
-            'Retourner à la liste de sélection des classes.',
-            ['← Annuler']
+            'Back',
+            '← Cancel',
+            'Return to the class selection list.',
+            ['← Cancel']
         );
 
         $formatter = $this->currentOutput->getFormatter();
@@ -560,9 +560,9 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($formatter->format('<info>Configuration du Schéma pour : ' . $selectedClass . "</info>\n")));
+        $container->add(new TextWidget($formatter->format('<info>Schema Configuration for: ' . $selectedClass . "</info>\n")));
         $container->add($settingsWidget);
-        $container->add(new TextWidget($formatter->format("\n<comment>Navigation : ↑/↓  Modifier : Espace/Gauche/Droite  Valider : Entrée  Retour : Échap</comment>")));
+        $container->add(new TextWidget($formatter->format("\n<comment>Navigation: ↑/↓  Edit: Space/Left/Right  Confirm: Enter  Back: Esc</comment>")));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 
@@ -600,13 +600,13 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
                 break;
             case 'action_select_all':
                 foreach ($properties as $property) {
-                    $settingsWidget->updateValue('prop_' . $property, 'inclure');
+                    $settingsWidget->updateValue('prop_' . $property, 'include');
                 }
                 $tui->requestRender();
                 break;
             case 'action_deselect_all':
                 foreach ($properties as $property) {
-                    $settingsWidget->updateValue('prop_' . $property, 'exclure');
+                    $settingsWidget->updateValue('prop_' . $property, 'exclude');
                 }
                 $tui->requestRender();
                 break;
@@ -615,7 +615,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
                 $outputDir = $settingsWidget->getValue('output') ?? $this->manager->getDefaultDumpLocation();
                 $propertiesToSkip = [];
                 foreach ($properties as $property) {
-                    if ('exclure' === $settingsWidget->getValue('prop_' . $property)) {
+                    if ('exclude' === $settingsWidget->getValue('prop_' . $property)) {
                         $propertiesToSkip[] = $property;
                     }
                 }
@@ -683,7 +683,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
                         }
                     }
                 } catch (ReflectionException) {
-                    // Ignorer
+                    // Ignore
                 }
             }
 
@@ -720,7 +720,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
             }
         }
 
-        // Compléter la structure
+        // Complete the structure
         $array['documentation']['components']['schemas'][$shortClassName]['required'] = $requiredProperties;
         $array['documentation']['components']['schemas'][$shortClassName]['properties'] = $propertiesArray;
 
@@ -791,6 +791,6 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
             }
         }
 
-        $output->writeln("\n<info>Génération terminée avec succès !</info>");
+        $output->writeln("\n<info>Generation completed successfully!</info>");
     }
 }

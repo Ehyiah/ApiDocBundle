@@ -47,7 +47,7 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
 
     public function getDescription(): string
     {
-        return 'Générer un composant de sécurité';
+        return 'Generate a security scheme component';
     }
 
     public function isSupported(): bool
@@ -70,8 +70,8 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
             $info = $config ? $config['type'] . ' / ' . ($config['scheme'] ?: $config['name']) : '';
             $choices[] = ['value' => $name, 'label' => $this->currentOutput->getFormatter()->format(sprintf('  %-20s <fg=gray>%s</fg=gray>', $name, $info))];
         }
-        $choices[] = ['value' => '__new__', 'label' => $this->currentOutput->getFormatter()->format('  <fg=green>[+ Nouveau]</fg=green>')];
-        $choices[] = ['value' => '__back__', 'label' => $this->currentOutput->getFormatter()->format('  <comment>[← Retour]</comment>')];
+        $choices[] = ['value' => '__new__', 'label' => $this->currentOutput->getFormatter()->format('  <fg=green>[+ New]</fg=green>')];
+        $choices[] = ['value' => '__back__', 'label' => $this->currentOutput->getFormatter()->format('  <comment>[← Back]</comment>')];
 
         $selectWidget = new SelectListWidget($choices, 12);
 
@@ -83,7 +83,7 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Retour</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -137,7 +137,7 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         $textInputCallback = static function (string $currentValue, callable $onDone) {
             $inputWidget = new InputWidget();
             $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Saisie : ');
+            $inputWidget->setPrompt('Input: ');
             $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
                 $onDone($event->getValue());
             });
@@ -149,33 +149,33 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         };
 
         $settingItems = [];
-        $settingItems[] = new SettingItem('name', 'Nom', $state->name, 'Nom du schéma (ex: BearerAuth)', [], $textInputCallback);
-        $settingItems[] = new SettingItem('type', 'Type', $state->type, 'Type d\'authentification', ['http', 'apiKey', 'openIdConnect']);
-        $settingItems[] = new SettingItem('scheme', 'Scheme', $state->scheme, 'Schéma HTTP', ['bearer', 'basic']);
-        $settingItems[] = new SettingItem('bearerFormat', 'Bearer Format', $state->bearerFormat, 'Format du token', [], $textInputCallback);
-        $settingItems[] = new SettingItem('apiKeyName', 'API Key Name', $state->apiKeyName, 'Nom du header/query param', [], $textInputCallback);
-        $settingItems[] = new SettingItem('apiKeyIn', 'API Key In', $state->apiKeyIn, 'Localisation de la clé', ['header', 'query', 'cookie']);
-        $settingItems[] = new SettingItem('openIdConnectUrl', 'OpenID Connect URL', $state->openIdConnectUrl, 'URL de découverte', [], $textInputCallback);
-        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Description du schéma', [], $textInputCallback);
+        $settingItems[] = new SettingItem('name', 'Name', $state->name, 'Schema name (e.g. BearerAuth)', [], $textInputCallback);
+        $settingItems[] = new SettingItem('type', 'Type', $state->type, 'Authentication type', ['http', 'apiKey', 'openIdConnect']);
+        $settingItems[] = new SettingItem('scheme', 'Scheme', $state->scheme, 'HTTP scheme', ['bearer', 'basic']);
+        $settingItems[] = new SettingItem('bearerFormat', 'Bearer Format', $state->bearerFormat, 'Token format', [], $textInputCallback);
+        $settingItems[] = new SettingItem('apiKeyName', 'API Key Name', $state->apiKeyName, 'Header/query parameter name', [], $textInputCallback);
+        $settingItems[] = new SettingItem('apiKeyIn', 'API Key In', $state->apiKeyIn, 'Key location', ['header', 'query', 'cookie']);
+        $settingItems[] = new SettingItem('openIdConnectUrl', 'OpenID Connect URL', $state->openIdConnectUrl, 'Discovery URL', [], $textInputCallback);
+        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Schema description', [], $textInputCallback);
 
-        $settingItems[] = new SettingItem('format_output', 'Format sortie', $state->format_output, 'YAML ou PHP', ['yaml', 'php']);
-        $settingItems[] = new SettingItem('output', 'Dossier de sortie', $state->outputDir, 'Répertoire cible', [], $textInputCallback);
-        $settingItems[] = new SettingItem('action_validate', 'Valider', '✓ Confirmer', 'Sauvegarder et revenir à la liste.', ['✓ Confirmer']);
-        $settingItems[] = new SettingItem('action_delete', 'Supprimer', '✗ Supprimer', 'Supprimer ce composant.', ['✗ Supprimer']);
-        $settingItems[] = new SettingItem('action_cancel', 'Annuler', '← Annuler', 'Retourner sans sauvegarder.', ['← Annuler']);
+        $settingItems[] = new SettingItem('format_output', 'Output Format', $state->format_output, 'YAML or PHP', ['yaml', 'php']);
+        $settingItems[] = new SettingItem('output', 'Output Directory', $state->outputDir, 'Target directory', [], $textInputCallback);
+        $settingItems[] = new SettingItem('action_validate', 'Save', '✓ Confirm', 'Save and return to the list.', ['✓ Confirm']);
+        $settingItems[] = new SettingItem('action_delete', 'Delete', '✗ Delete', 'Delete this component.', ['✗ Delete']);
+        $settingItems[] = new SettingItem('action_cancel', 'Cancel', '← Cancel', 'Return without saving.', ['← Cancel']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
 
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $title = $state->name ? "Modifier: {$state->name}" : 'Nouveau Security Scheme';
+        $title = $state->name ? "Edit: {$state->name}" : 'New Security Scheme';
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  {$title}</info>")));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($settingsWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Valider    ⌫ Supprimer    Échap Annuler</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Save    ⌫ Delete    Esc Cancel</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 
@@ -275,6 +275,6 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }
 
-        $this->currentOutput->writeln(sprintf('<info>Security Scheme "%s" généré avec succès dans %s</info>', $state->name, $dumpLocation));
+        $this->currentOutput->writeln(sprintf('<info>Security Scheme "%s" generated successfully in %s</info>', $state->name, $dumpLocation));
     }
 }

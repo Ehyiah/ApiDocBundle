@@ -47,7 +47,7 @@ class HeaderTuiGenerator extends AbstractTuiComponentGenerator
 
     public function getDescription(): string
     {
-        return 'Générer un composant d\'en-tête HTTP';
+        return 'Generate an HTTP header component';
     }
 
     public function isSupported(): bool
@@ -68,8 +68,8 @@ class HeaderTuiGenerator extends AbstractTuiComponentGenerator
         foreach ($existing as $name) {
             $choices[] = ['value' => $name, 'label' => $this->currentOutput->getFormatter()->format(sprintf('  %-20s', $name))];
         }
-        $choices[] = ['value' => '__new__', 'label' => $this->currentOutput->getFormatter()->format('  <fg=green>[+ Nouveau]</fg=green>')];
-        $choices[] = ['value' => '__back__', 'label' => $this->currentOutput->getFormatter()->format('  <comment>[← Retour]</comment>')];
+        $choices[] = ['value' => '__new__', 'label' => $this->currentOutput->getFormatter()->format('  <fg=green>[+ New]</fg=green>')];
+        $choices[] = ['value' => '__back__', 'label' => $this->currentOutput->getFormatter()->format('  <comment>[← Back]</comment>')];
 
         $selectWidget = new SelectListWidget($choices, 12);
 
@@ -81,7 +81,7 @@ class HeaderTuiGenerator extends AbstractTuiComponentGenerator
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Retour</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -125,7 +125,7 @@ class HeaderTuiGenerator extends AbstractTuiComponentGenerator
         $textInputCallback = static function (string $currentValue, callable $onDone) {
             $inputWidget = new InputWidget();
             $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Saisie : ');
+            $inputWidget->setPrompt('Input: ');
             $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
                 $onDone($event->getValue());
             });
@@ -137,29 +137,29 @@ class HeaderTuiGenerator extends AbstractTuiComponentGenerator
         };
 
         $settingItems = [];
-        $settingItems[] = new SettingItem('name', 'Nom', $state->name, 'Nom du header (ex: X-Request-ID)', [], $textInputCallback);
-        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Description du header', [], $textInputCallback);
-        $settingItems[] = new SettingItem('schema_type', 'Type', $state->schemaType, 'Type schéma', ['string', 'integer', 'number', 'boolean', 'array']);
-        $settingItems[] = new SettingItem('format', 'Format', $state->format, 'Format (optionnel)', [], $textInputCallback);
-        $settingItems[] = new SettingItem('example', 'Exemple', $state->example, 'Valeur exemple', [], $textInputCallback);
+        $settingItems[] = new SettingItem('name', 'Name', $state->name, 'Header name (e.g. X-Request-ID)', [], $textInputCallback);
+        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Header description', [], $textInputCallback);
+        $settingItems[] = new SettingItem('schema_type', 'Type', $state->schemaType, 'Schema type', ['string', 'integer', 'number', 'boolean', 'array']);
+        $settingItems[] = new SettingItem('format', 'Format', $state->format, 'Format (optional)', [], $textInputCallback);
+        $settingItems[] = new SettingItem('example', 'Example', $state->example, 'Example value', [], $textInputCallback);
 
-        $settingItems[] = new SettingItem('format_output', 'Format sortie', $state->format_output, 'YAML ou PHP', ['yaml', 'php']);
-        $settingItems[] = new SettingItem('output', 'Dossier de sortie', $state->outputDir, 'Répertoire cible', [], $textInputCallback);
-        $settingItems[] = new SettingItem('action_validate', 'Valider', '✓ Confirmer', 'Sauvegarder et revenir à la liste.', ['✓ Confirmer']);
-        $settingItems[] = new SettingItem('action_cancel', 'Annuler', '← Annuler', 'Retourner sans sauvegarder.', ['← Annuler']);
+        $settingItems[] = new SettingItem('format_output', 'Output Format', $state->format_output, 'YAML or PHP', ['yaml', 'php']);
+        $settingItems[] = new SettingItem('output', 'Output Directory', $state->outputDir, 'Target directory', [], $textInputCallback);
+        $settingItems[] = new SettingItem('action_validate', 'Save', '✓ Confirm', 'Save and return to the list.', ['✓ Confirm']);
+        $settingItems[] = new SettingItem('action_cancel', 'Cancel', '← Cancel', 'Return without saving.', ['← Cancel']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
 
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $title = $state->name ? "Modifier: {$state->name}" : 'Nouveau Header';
+        $title = $state->name ? "Edit: {$state->name}" : 'New Header';
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  {$title}</info>")));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($settingsWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Valider    Échap Annuler</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Save    Esc Cancel</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 
@@ -250,6 +250,6 @@ class HeaderTuiGenerator extends AbstractTuiComponentGenerator
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }
 
-        $this->currentOutput->writeln(sprintf('<info>Header "%s" généré avec succès dans %s</info>', $state->name, $dumpLocation));
+        $this->currentOutput->writeln(sprintf('<info>Header "%s" generated successfully in %s</info>', $state->name, $dumpLocation));
     }
 }

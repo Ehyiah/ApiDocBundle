@@ -47,7 +47,7 @@ class RequestBodyTuiGenerator extends AbstractTuiComponentGenerator
 
     public function getDescription(): string
     {
-        return 'Générer un composant de corps de requête';
+        return 'Generate a request body component';
     }
 
     public function isSupported(): bool
@@ -68,8 +68,8 @@ class RequestBodyTuiGenerator extends AbstractTuiComponentGenerator
         foreach ($existing as $name) {
             $choices[] = ['value' => $name, 'label' => $this->currentOutput->getFormatter()->format(sprintf('  %-20s', $name))];
         }
-        $choices[] = ['value' => '__new__', 'label' => $this->currentOutput->getFormatter()->format('  <fg=green>[+ Nouveau]</fg=green>')];
-        $choices[] = ['value' => '__back__', 'label' => $this->currentOutput->getFormatter()->format('  <comment>[← Retour]</comment>')];
+        $choices[] = ['value' => '__new__', 'label' => $this->currentOutput->getFormatter()->format('  <fg=green>[+ New]</fg=green>')];
+        $choices[] = ['value' => '__back__', 'label' => $this->currentOutput->getFormatter()->format('  <comment>[← Back]</comment>')];
 
         $selectWidget = new SelectListWidget($choices, 12);
 
@@ -81,7 +81,7 @@ class RequestBodyTuiGenerator extends AbstractTuiComponentGenerator
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Retour</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -125,7 +125,7 @@ class RequestBodyTuiGenerator extends AbstractTuiComponentGenerator
         $textInputCallback = static function (string $currentValue, callable $onDone) {
             $inputWidget = new InputWidget();
             $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Saisie : ');
+            $inputWidget->setPrompt('Input: ');
             $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
                 $onDone($event->getValue());
             });
@@ -137,32 +137,32 @@ class RequestBodyTuiGenerator extends AbstractTuiComponentGenerator
         };
 
         $schemas = $this->manager->getAvailableSchemas();
-        $schemaChoices = array_merge(['aucun'], $schemas);
+        $schemaChoices = array_merge(['none'], $schemas);
 
         $settingItems = [];
-        $settingItems[] = new SettingItem('name', 'Nom', $state->name, 'Nom du body (ex: CreateUserRequest)', [], $textInputCallback);
-        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Description du body', [], $textInputCallback);
-        $settingItems[] = new SettingItem('required', 'Requis', $state->required ? 'oui' : 'non', 'Body requis', ['oui', 'non']);
-        $settingItems[] = new SettingItem('schema_ref', 'Schema $ref', $state->schemaRef ?? 'aucun', 'Référence au schéma', $schemaChoices);
-        $settingItems[] = new SettingItem('content_type', 'Content-Type', $state->contentType, 'Type de contenu', ['application/json', 'application/xml', 'multipart/form-data']);
+        $settingItems[] = new SettingItem('name', 'Name', $state->name, 'Body name (e.g. CreateUserRequest)', [], $textInputCallback);
+        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Body description', [], $textInputCallback);
+        $settingItems[] = new SettingItem('required', 'Required', $state->required ? 'yes' : 'no', 'Required body', ['yes', 'no']);
+        $settingItems[] = new SettingItem('schema_ref', 'Schema $ref', $state->schemaRef ?? 'none', 'Schema reference', $schemaChoices);
+        $settingItems[] = new SettingItem('content_type', 'Content-Type', $state->contentType, 'Content type', ['application/json', 'application/xml', 'multipart/form-data']);
 
-        $settingItems[] = new SettingItem('format_output', 'Format sortie', $state->format_output, 'YAML ou PHP', ['yaml', 'php']);
-        $settingItems[] = new SettingItem('output', 'Dossier de sortie', $state->outputDir, 'Répertoire cible', [], $textInputCallback);
-        $settingItems[] = new SettingItem('action_validate', 'Valider', '✓ Confirmer', 'Sauvegarder et revenir à la liste.', ['✓ Confirmer']);
-        $settingItems[] = new SettingItem('action_cancel', 'Annuler', '← Annuler', 'Retourner sans sauvegarder.', ['← Annuler']);
+        $settingItems[] = new SettingItem('format_output', 'Output Format', $state->format_output, 'YAML or PHP', ['yaml', 'php']);
+        $settingItems[] = new SettingItem('output', 'Output Directory', $state->outputDir, 'Target directory', [], $textInputCallback);
+        $settingItems[] = new SettingItem('action_validate', 'Save', '✓ Confirm', 'Save and return to the list.', ['✓ Confirm']);
+        $settingItems[] = new SettingItem('action_cancel', 'Cancel', '← Cancel', 'Return without saving.', ['← Cancel']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
 
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $title = $state->name ? "Modifier: {$state->name}" : 'Nouveau Request Body';
+        $title = $state->name ? "Edit: {$state->name}" : 'New Request Body';
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  {$title}</info>")));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($settingsWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Valider    Échap Annuler</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Save    Esc Cancel</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 
@@ -180,9 +180,9 @@ class RequestBodyTuiGenerator extends AbstractTuiComponentGenerator
                 case 'action_validate':
                     $state->name = $settingsWidget->getValue('name') ?? '';
                     $state->description = $settingsWidget->getValue('desc') ?? '';
-                    $state->required = 'oui' === ($settingsWidget->getValue('required') ?? 'non');
-                    $schemaRef = $settingsWidget->getValue('schema_ref') ?? 'aucun';
-                    $state->schemaRef = 'aucun' !== $schemaRef ? $schemaRef : null;
+                    $state->required = 'yes' === ($settingsWidget->getValue('required') ?? 'no');
+                    $schemaRef = $settingsWidget->getValue('schema_ref') ?? 'none';
+                    $state->schemaRef = 'none' !== $schemaRef ? $schemaRef : null;
                     $state->contentType = $settingsWidget->getValue('content_type') ?? 'application/json';
                     $state->format_output = $settingsWidget->getValue('format_output') ?? 'yaml';
                     $state->outputDir = $settingsWidget->getValue('output') ?? $this->manager->getDefaultDumpLocation();
@@ -260,6 +260,6 @@ class RequestBodyTuiGenerator extends AbstractTuiComponentGenerator
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }
 
-        $this->currentOutput->writeln(sprintf('<info>Request Body "%s" généré avec succès dans %s</info>', $state->name, $dumpLocation));
+        $this->currentOutput->writeln(sprintf('<info>Request Body "%s" generated successfully in %s</info>', $state->name, $dumpLocation));
     }
 }

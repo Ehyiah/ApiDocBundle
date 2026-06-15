@@ -47,7 +47,7 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
 
     public function getDescription(): string
     {
-        return 'Générer un composant de réponse HTTP';
+        return 'Generate an HTTP response component';
     }
 
     public function isSupported(): bool
@@ -68,8 +68,8 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
         foreach ($existing as $name) {
             $choices[] = ['value' => $name, 'label' => $this->currentOutput->getFormatter()->format(sprintf('  %-20s', $name))];
         }
-        $choices[] = ['value' => '__new__', 'label' => $this->currentOutput->getFormatter()->format('  <fg=green>[+ Nouveau]</fg=green>')];
-        $choices[] = ['value' => '__back__', 'label' => $this->currentOutput->getFormatter()->format('  <comment>[← Retour]</comment>')];
+        $choices[] = ['value' => '__new__', 'label' => $this->currentOutput->getFormatter()->format('  <fg=green>[+ New]</fg=green>')];
+        $choices[] = ['value' => '__back__', 'label' => $this->currentOutput->getFormatter()->format('  <comment>[← Back]</comment>')];
 
         $selectWidget = new SelectListWidget($choices, 12);
 
@@ -81,7 +81,7 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Retour</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -125,7 +125,7 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
         $textInputCallback = static function (string $currentValue, callable $onDone) {
             $inputWidget = new InputWidget();
             $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Saisie : ');
+            $inputWidget->setPrompt('Input: ');
             $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
                 $onDone($event->getValue());
             });
@@ -137,32 +137,32 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
         };
 
         $schemas = $this->manager->getAvailableSchemas();
-        $schemaChoices = array_merge(['aucun'], $schemas);
+        $schemaChoices = array_merge(['none'], $schemas);
 
         $settingItems = [];
-        $settingItems[] = new SettingItem('name', 'Nom', $state->name, 'Nom de la réponse (ex: NotFound)', [], $textInputCallback);
-        $settingItems[] = new SettingItem('statusCode', 'Code HTTP', $state->statusCode, 'Code de statut', ['200', '201', '204', '400', '401', '403', '404', '500']);
-        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Description de la réponse', [], $textInputCallback);
-        $settingItems[] = new SettingItem('schema_ref', 'Schema $ref', $state->schemaRef ?? 'aucun', 'Référence au schéma', $schemaChoices);
-        $settingItems[] = new SettingItem('content_type', 'Content-Type', $state->contentType, 'Type de contenu', ['application/json', 'application/xml', 'text/plain']);
+        $settingItems[] = new SettingItem('name', 'Name', $state->name, 'Response name (e.g. NotFound)', [], $textInputCallback);
+        $settingItems[] = new SettingItem('statusCode', 'HTTP Code', $state->statusCode, 'Status code', ['200', '201', '204', '400', '401', '403', '404', '500']);
+        $settingItems[] = new SettingItem('desc', 'Description', $state->description, 'Response description', [], $textInputCallback);
+        $settingItems[] = new SettingItem('schema_ref', 'Schema $ref', $state->schemaRef ?? 'none', 'Schema reference', $schemaChoices);
+        $settingItems[] = new SettingItem('content_type', 'Content-Type', $state->contentType, 'Content type', ['application/json', 'application/xml', 'text/plain']);
 
-        $settingItems[] = new SettingItem('format_output', 'Format sortie', $state->format_output, 'YAML ou PHP', ['yaml', 'php']);
-        $settingItems[] = new SettingItem('output', 'Dossier de sortie', $state->outputDir, 'Répertoire cible', [], $textInputCallback);
-        $settingItems[] = new SettingItem('action_validate', 'Valider', '✓ Confirmer', 'Sauvegarder et revenir à la liste.', ['✓ Confirmer']);
-        $settingItems[] = new SettingItem('action_cancel', 'Annuler', '← Annuler', 'Retourner sans sauvegarder.', ['← Annuler']);
+        $settingItems[] = new SettingItem('format_output', 'Output Format', $state->format_output, 'YAML or PHP', ['yaml', 'php']);
+        $settingItems[] = new SettingItem('output', 'Output Directory', $state->outputDir, 'Target directory', [], $textInputCallback);
+        $settingItems[] = new SettingItem('action_validate', 'Save', '✓ Confirm', 'Save and return to the list.', ['✓ Confirm']);
+        $settingItems[] = new SettingItem('action_cancel', 'Cancel', '← Cancel', 'Return without saving.', ['← Cancel']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
 
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $title = $state->name ? "Modifier: {$state->name}" : 'Nouveau Response';
+        $title = $state->name ? "Edit: {$state->name}" : 'New Response';
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  {$title}</info>")));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($settingsWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Valider    Échap Annuler</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Save    Esc Cancel</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 
@@ -181,8 +181,8 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
                     $state->name = $settingsWidget->getValue('name') ?? '';
                     $state->statusCode = $settingsWidget->getValue('statusCode') ?? '200';
                     $state->description = $settingsWidget->getValue('desc') ?? '';
-                    $schemaRef = $settingsWidget->getValue('schema_ref') ?? 'aucun';
-                    $state->schemaRef = 'aucun' !== $schemaRef ? $schemaRef : null;
+                    $schemaRef = $settingsWidget->getValue('schema_ref') ?? 'none';
+                    $state->schemaRef = 'none' !== $schemaRef ? $schemaRef : null;
                     $state->contentType = $settingsWidget->getValue('content_type') ?? 'application/json';
                     $state->format_output = $settingsWidget->getValue('format_output') ?? 'yaml';
                     $state->outputDir = $settingsWidget->getValue('output') ?? $this->manager->getDefaultDumpLocation();
@@ -259,6 +259,6 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }
 
-        $this->currentOutput->writeln(sprintf('<info>Response "%s" générée avec succès dans %s</info>', $state->name, $dumpLocation));
+        $this->currentOutput->writeln(sprintf('<info>Response "%s" generated successfully in %s</info>', $state->name, $dumpLocation));
     }
 }

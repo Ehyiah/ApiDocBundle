@@ -49,7 +49,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
     public function getDescription(): string
     {
-        return 'Générer un composant de route API';
+        return 'Generate an API route component';
     }
 
     public function isSupported(): bool
@@ -75,7 +75,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         }
         $choices[] = [
             'value' => '__back__',
-            'label' => $this->currentOutput->getFormatter()->format('  <comment>[← Retour]</comment>'),
+            'label' => $this->currentOutput->getFormatter()->format('  <comment>[← Back]</comment>'),
         ];
 
         $selectWidget = new SelectListWidget($choices, 12);
@@ -84,11 +84,11 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<info>|  Sélection de route</info>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<info>|  Route Selection</info>')));
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Retour</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -155,7 +155,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         foreach (self::HTTP_METHODS as $method) {
             $configured = isset($state->methodsConfig[$method]);
             $indicator = $configured ? '<fg=green>✓</fg=green>' : '<fg=gray>○</fg=gray>';
-            $status = $configured ? '<fg=green>Configuré</fg=green>' : '<fg=gray>Non configuré</fg=gray>';
+            $status = $configured ? '<fg=green>Configured</fg=green>' : '<fg=gray>Not configured</fg=gray>';
             $choices[] = [
                 'value' => $method,
                 'label' => $this->currentOutput->getFormatter()->format(sprintf('  %s %-10s %s', $indicator, $method, $status)),
@@ -166,13 +166,13 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         if ($hasConfig) {
             $choices[] = [
                 'value' => '__generate__',
-                'label' => $this->currentOutput->getFormatter()->format('  <info>▸ Générer</info>'),
+                'label' => $this->currentOutput->getFormatter()->format('  <info>▸ Generate</info>'),
             ];
         }
 
         $choices[] = [
             'value' => '__back__',
-            'label' => $this->currentOutput->getFormatter()->format('  <comment>← Retour</comment>'),
+            'label' => $this->currentOutput->getFormatter()->format('  <comment>← Back</comment>'),
         ];
 
         $selectWidget = new SelectListWidget($choices, 12);
@@ -187,7 +187,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Naviguer  ↵ Configurer  Échap Retour</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Configure  Esc Back</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -243,7 +243,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $textInputCallback = static function (string $currentValue, callable $onDone) {
             $inputWidget = new InputWidget();
             $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Saisie : ');
+            $inputWidget->setPrompt('Input: ');
             $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
                 $onDone($event->getValue());
             });
@@ -255,27 +255,27 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         };
 
         $settingItems = [];
-        $settingItems[] = new SettingItem('operationId', 'Operation ID', $config['operationId'], 'Identifiant unique de l\'opération', [], $textInputCallback);
-        $settingItems[] = new SettingItem('summary', 'Résumé', $config['summary'], 'Résumé de l\'opération', [], $textInputCallback);
-        $settingItems[] = new SettingItem('desc', 'Description', $config['description'], 'Description détaillée', [], $textInputCallback);
+        $settingItems[] = new SettingItem('operationId', 'Operation ID', $config['operationId'], 'Unique operation identifier', [], $textInputCallback);
+        $settingItems[] = new SettingItem('summary', 'Summary', $config['summary'], 'Operation summary', [], $textInputCallback);
+        $settingItems[] = new SettingItem('desc', 'Description', $config['description'], 'Detailed description', [], $textInputCallback);
 
         foreach ($this->manager->getSecuritySchemes() as $scheme) {
-            $value = in_array($scheme, $config['security'], true) ? 'inclure' : 'exclure';
-            $settingItems[] = new SettingItem('sec_' . $scheme, 'Sécurité : ' . $scheme, $value, 'Inclure/Exclure schéma de sécurité', ['inclure', 'exclure']);
+            $value = in_array($scheme, $config['security'], true) ? 'include' : 'exclude';
+            $settingItems[] = new SettingItem('sec_' . $scheme, 'Security: ' . $scheme, $value, 'Include/Exclude security scheme', ['include', 'exclude']);
         }
 
         $schemas = $this->manager->getAvailableSchemas();
-        $schemaChoices = array_merge(['aucun'], $schemas);
-        $settingItems[] = new SettingItem('rb_schema', 'Schema RequestBody', $config['requestBodySchema'] ?? 'aucun', 'Choisir un schéma', $schemaChoices);
+        $schemaChoices = array_merge(['none'], $schemas);
+        $settingItems[] = new SettingItem('rb_schema', 'Schema RequestBody', $config['requestBodySchema'] ?? 'none', 'Choose a schema', $schemaChoices);
 
         $responseCount = count($config['responses']);
-        $responseLabel = $responseCount > 0 ? "Réponses ({$responseCount})" : 'Réponses (aucune)';
-        $settingItems[] = new SettingItem('action_responses', $responseLabel, '[Configurer]', 'Gérer les codes de réponse', ['[Configurer]']);
+        $responseLabel = $responseCount > 0 ? "Responses ({$responseCount})" : 'Responses (none)';
+        $settingItems[] = new SettingItem('action_responses', $responseLabel, '[Configure]', 'Manage response codes', ['[Configure]']);
 
-        $settingItems[] = new SettingItem('format', 'Format', $state->format, 'YAML ou PHP', ['yaml', 'php']);
-        $settingItems[] = new SettingItem('action_validate', 'Valider', '✓ Confirmer', 'Sauvegarder et revenir à la liste.', ['✓ Confirmer']);
-        $settingItems[] = new SettingItem('action_delete', 'Supprimer', '✗ Supprimer', 'Supprimer cette méthode de la route.', ['✗ Supprimer']);
-        $settingItems[] = new SettingItem('action_cancel', 'Annuler', '← Annuler', 'Retourner sans sauvegarder.', ['← Annuler']);
+        $settingItems[] = new SettingItem('format', 'Format', $state->format, 'YAML or PHP', ['yaml', 'php']);
+        $settingItems[] = new SettingItem('action_validate', 'Save', '✓ Confirm', 'Save and return to the list.', ['✓ Confirm']);
+        $settingItems[] = new SettingItem('action_delete', 'Delete', '✗ Delete', 'Delete this method from the route.', ['✗ Delete']);
+        $settingItems[] = new SettingItem('action_cancel', 'Cancel', '← Cancel', 'Return without saving.', ['← Cancel']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
 
@@ -287,7 +287,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($settingsWidget);
         $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Valider    ⌫ Supprimer    Échap Annuler</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Save    ⌫ Delete    Esc Cancel</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 
@@ -321,7 +321,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                 case 'action_validate':
                     $security = [];
                     foreach ($this->manager->getSecuritySchemes() as $scheme) {
-                        if ('inclure' === $settingsWidget->getValue('sec_' . $scheme)) {
+                        if ('include' === $settingsWidget->getValue('sec_' . $scheme)) {
                             $security[] = $scheme;
                         }
                     }
@@ -331,7 +331,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                         'summary' => $settingsWidget->getValue('summary') ?? '',
                         'description' => $settingsWidget->getValue('desc') ?? '',
                         'security' => $security,
-                        'requestBodySchema' => 'aucun' !== ($settingsWidget->getValue('rb_schema') ?? 'aucun') ? $settingsWidget->getValue('rb_schema') : null,
+                        'requestBodySchema' => 'none' !== ($settingsWidget->getValue('rb_schema') ?? 'none') ? $settingsWidget->getValue('rb_schema') : null,
                         'responses' => $state->methodsConfig[$method]['responses'] ?? [],
                     ];
 
@@ -359,7 +359,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
     private function showMethodSchemaSelection(Tui $tui, string $method, string $field, RouteTuiState $state, callable $onBack): void
     {
         $schemas = $this->manager->getAvailableSchemas();
-        $choices = [['value' => 'aucun', 'label' => 'Aucun']];
+        $choices = [['value' => 'none', 'label' => 'None']];
         foreach ($schemas as $schema) {
             $choices[] = ['value' => $schema, 'label' => $schema];
         }
@@ -369,7 +369,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>Sélectionnez un schéma pour {$method} — {$field}</info>\n")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>Select a schema for {$method} — {$field}</info>\n")));
         $container->add($selectWidget);
         $tui->add($container);
         $tui->setFocus($selectWidget);
@@ -377,7 +377,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $listener = function (SelectEvent $event) use ($tui, $selectWidget, $method, $field, $state, $onBack, &$listener) {
             if ($event->getTarget() === $selectWidget) {
                 $tui->getEventDispatcher()->removeListener(SelectEvent::class, $listener);
-                $newValue = 'aucun' === $event->getValue() ? null : $event->getValue();
+                $newValue = 'none' === $event->getValue() ? null : $event->getValue();
 
                 // Preserve current values for other fields
                 $defaultOperationId = $state->routeName . '_' . strtolower($method);
@@ -415,7 +415,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $choices = [];
 
         foreach ($responses as $statusCode => $responseData) {
-            $schema = $responseData['schema'] ?? 'aucun';
+            $schema = $responseData['schema'] ?? 'none';
             $desc = $responseData['description'];
             $label = sprintf('  %d — %s%s', $statusCode, $schema, $desc ? " ({$desc})" : '');
             $choices[] = [
@@ -426,11 +426,11 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
         $choices[] = [
             'value' => '__add__',
-            'label' => $formatter->format('  <info>+ Ajouter un code de réponse</info>'),
+            'label' => $formatter->format('  <info>+ Add a response code</info>'),
         ];
         $choices[] = [
             'value' => '__back__',
-            'label' => $formatter->format('  <comment>← Retour</comment>'),
+            'label' => $formatter->format('  <comment>← Back</comment>'),
         ];
 
         $selectWidget = new SelectListWidget($choices, 12);
@@ -439,11 +439,11 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($formatter->format("<info>|  Réponses — {$method} — {$state->routeName}</info>")));
+        $container->add(new TextWidget($formatter->format("<info>|  Responses — {$method} — {$state->routeName}</info>")));
         $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($selectWidget);
         $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Naviguer  ↵ Configurer  Échap Retour</fg=gray>')));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Navigate  ↵ Configure  Esc Back</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -499,12 +499,12 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
         $currentResponse = $responses[$statusCode] ?? ['schema' => null, 'description' => ''];
         $schemas = $this->manager->getAvailableSchemas();
-        $schemaChoices = array_merge(['aucun'], $schemas);
+        $schemaChoices = array_merge(['none'], $schemas);
 
         $textInputCallback = static function (string $currentValue, callable $onDone) {
             $inputWidget = new InputWidget();
             $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Saisie : ');
+            $inputWidget->setPrompt('Input: ');
             $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
                 $onDone($event->getValue());
             });
@@ -519,32 +519,32 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems = [];
 
         if ($isNew) {
-            $settingItems[] = new SettingItem('statusCode', 'Code HTTP', '200', 'Code de réponse HTTP (ex: 200, 404, 500)', [], $textInputCallback);
+            $settingItems[] = new SettingItem('statusCode', 'HTTP Code', '200', 'HTTP response code (e.g. 200, 404, 500)', [], $textInputCallback);
         }
 
-        $settingItems[] = new SettingItem('res_schema', 'Schéma', $currentResponse['schema'] ?? 'aucun', 'Schéma de réponse', $schemaChoices);
-        $settingItems[] = new SettingItem('res_desc', 'Description', $currentResponse['description'], 'Description de la réponse', [], $textInputCallback);
+        $settingItems[] = new SettingItem('res_schema', 'Schema', $currentResponse['schema'] ?? 'none', 'Response schema', $schemaChoices);
+        $settingItems[] = new SettingItem('res_desc', 'Description', $currentResponse['description'], 'Response description', [], $textInputCallback);
 
-        $settingItems[] = new SettingItem('action_validate', 'Valider', '✓ Confirmer', 'Sauvegarder', ['✓ Confirmer']);
+        $settingItems[] = new SettingItem('action_validate', 'Save', '✓ Confirm', 'Save', ['✓ Confirm']);
 
         if (!$isNew) {
-            $settingItems[] = new SettingItem('action_delete', 'Supprimer', '✗ Supprimer', 'Supprimer cette réponse', ['✗ Supprimer']);
+            $settingItems[] = new SettingItem('action_delete', 'Delete', '✗ Delete', 'Delete this response', ['✗ Delete']);
         }
 
-        $settingItems[] = new SettingItem('action_cancel', 'Retour', '← Annuler', 'Retourner sans sauvegarder', ['← Annuler']);
+        $settingItems[] = new SettingItem('action_cancel', 'Back', '← Cancel', 'Return without saving', ['← Cancel']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
 
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $title = $isNew ? 'Nouvelle réponse' : "Réponse {$statusCode}";
+        $title = $isNew ? 'New response' : "Response {$statusCode}";
         $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
         $container->add(new TextWidget($formatter->format("<info>|  {$title} — {$method}</info>")));
         $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
         $container->add($settingsWidget);
         $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↵ Valider    Échap Annuler</fg=gray>')));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↵ Save    Esc Cancel</fg=gray>')));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 
@@ -567,8 +567,8 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     break;
                 case 'action_validate':
                     $newStatusCode = $isNew ? (int)($settingsWidget->getValue('statusCode') ?? 200) : (int)$statusCode;
-                    $schema = $settingsWidget->getValue('res_schema') ?? 'aucun';
-                    $schema = 'aucun' !== $schema ? $schema : null;
+                    $schema = $settingsWidget->getValue('res_schema') ?? 'none';
+                    $schema = 'none' !== $schema ? $schema : null;
 
                     $state->methodsConfig[$method]['responses'][$newStatusCode] = [
                         'schema' => $schema,
@@ -597,7 +597,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
     private function generateRoute(Tui $tui, RouteTuiState $state): void
     {
         $tui->stop();
-        $this->currentOutput->writeln(sprintf('<info>Génération de la route "%s"...</info>', $state->routeName));
+        $this->currentOutput->writeln(sprintf('<info>Generating route "%s"...</info>', $state->routeName));
 
         $routeData = $this->manager->getAllRoutes()[$state->routeName];
         $builder = new \Ehyiah\ApiDocBundle\Builder\ApiDocBuilder();
@@ -677,6 +677,6 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }
 
-        $this->currentOutput->writeln(sprintf('<info>Route "%s" générée avec succès dans %s</info>', $state->routeName, $dumpLocation));
+        $this->currentOutput->writeln(sprintf('<info>Route "%s" generated successfully in %s</info>', $state->routeName, $dumpLocation));
     }
 }
