@@ -64,7 +64,9 @@ class RouteBuilder
      */
     public function operationId(string $operationId): self
     {
-        $this->definition['operationId'] = $operationId;
+        if ('' !== $operationId) {
+            $this->definition['operationId'] = $operationId;
+        }
 
         return $this;
     }

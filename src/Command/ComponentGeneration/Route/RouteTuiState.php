@@ -14,7 +14,7 @@ class RouteTuiState
      * Key: HTTP method (GET, POST, PUT, DELETE, PATCH)
      * Value: method-specific config
      *
-     * @var array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string}>
+     * @var array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string, operationId: string}>
      */
     public array $methodsConfig = [];
 }

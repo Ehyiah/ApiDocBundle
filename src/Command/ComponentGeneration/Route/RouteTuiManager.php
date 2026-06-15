@@ -27,13 +27,30 @@ class RouteTuiManager
         $routes = $this->router->getRouteCollection();
         $routeList = [];
         foreach ($routes as $name => $route) {
+            $methods = $route->getMethods() ?: ['GET'];
             $routeList[$name] = [
                 'path' => $route->getPath(),
-                'methods' => $route->getMethods() ?: ['GET'],
+                'methods' => $methods,
+                'operationId' => self::deriveOperationId($name, $methods, $route->getDefault('_controller')),
             ];
         }
 
         return $routeList;
+    }
+
+    /** @param string[] $methods */
+    private static function deriveOperationId(string $routeName, array $methods, mixed $controller): string
+    {
+        $suffix = strtolower($methods[0]);
+
+        if (is_string($controller) && str_contains($controller, '::')) {
+            $parts = explode('::', $controller);
+            $methodName = $parts[1];
+
+            return $routeName . '_' . $methodName . '_' . $suffix;
+        }
+
+        return $routeName . '_' . $suffix;
     }
 
     /** @return array<int, string> */
@@ -118,7 +135,7 @@ class RouteTuiManager
     /**
      * Load existing route configuration from YAML file, returning per-method config.
      *
-     * @return array{methodsConfig: array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string}>}
+     * @return array{methodsConfig: array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string, operationId: string}>}
      */
     public function loadRouteConfig(string $routeName, string $componentType): array
     {
@@ -152,7 +169,7 @@ class RouteTuiManager
      *
      * @param array<string, mixed> $config
      *
-     * @return array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string}>
+     * @return array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string, operationId: string}>
      */
     private function extractMethodsConfig(array $config, string $path): array
     {
@@ -191,6 +208,7 @@ class RouteTuiManager
                 'security' => array_values(array_unique($security)),
                 'requestBodySchema' => $requestBodySchema,
                 'responseSchema' => $responseSchema,
+                'operationId' => (string)($definition['operationId'] ?? ''),
             ];
         }
 

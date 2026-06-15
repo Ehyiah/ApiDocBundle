@@ -135,7 +135,9 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             $allRoutes = $this->manager->getAllRoutes();
             if (isset($allRoutes[$state->routeName])) {
                 foreach ($allRoutes[$state->routeName]['methods'] as $method) {
-                    $state->methodsConfig[strtoupper($method)] = [
+                    $upperMethod = strtoupper($method);
+                    $state->methodsConfig[$upperMethod] = [
+                        'operationId' => $state->routeName . '_' . strtolower($upperMethod),
                         'summary' => '',
                         'description' => '',
                         'security' => [],
@@ -228,7 +230,9 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
     private function showMethodConfig(Tui $tui, string $method, RouteTuiState $state, callable $onBack): void
     {
+        $defaultOperationId = $state->routeName . '_' . strtolower($method);
         $config = $state->methodsConfig[$method] ?? [
+            'operationId' => $defaultOperationId,
             'summary' => '',
             'description' => '',
             'security' => [],
@@ -251,6 +255,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         };
 
         $settingItems = [];
+        $settingItems[] = new SettingItem('operationId', 'Operation ID', $config['operationId'], 'Identifiant unique de l\'opération', [], $textInputCallback);
         $settingItems[] = new SettingItem('summary', 'Résumé', $config['summary'], 'Résumé de l\'opération', [], $textInputCallback);
         $settingItems[] = new SettingItem('desc', 'Description', $config['description'], 'Description détaillée', [], $textInputCallback);
 
@@ -316,6 +321,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     }
 
                     $state->methodsConfig[$method] = [
+                        'operationId' => $settingsWidget->getValue('operationId') ?? '',
                         'summary' => $settingsWidget->getValue('summary') ?? '',
                         'description' => $settingsWidget->getValue('desc') ?? '',
                         'security' => $security,
@@ -368,7 +374,9 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                 $newValue = 'aucun' === $event->getValue() ? null : $event->getValue();
 
                 // Preserve current values for other fields
+                $defaultOperationId = $state->routeName . '_' . strtolower($method);
                 $current = $state->methodsConfig[$method] ?? [
+                    'operationId' => $defaultOperationId,
                     'summary' => '',
                     'description' => '',
                     'security' => [],
@@ -406,6 +414,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             $routeBuilder = $builder->addRoute()
                 ->path($routeData['path'])
                 ->method($method)
+                ->operationId($config['operationId'])
                 ->summary($config['summary'])
                 ->description($config['description'])
             ;
