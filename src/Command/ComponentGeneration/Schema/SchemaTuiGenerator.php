@@ -335,8 +335,8 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem('format', 'Format', 'both', 'Format de sortie', ['both', 'php', 'yaml']);
         $settingItems[] = new SettingItem('output', 'Dossier de sortie', $defaultDumpLocation, 'Répertoire cible', [], $textInputCallback);
 
-        $settingItems[] = new SettingItem('action_generate', 'Générer', '[Confirmer]', 'Lancer la génération', ['[Confirmer]']);
-        $settingItems[] = new SettingItem('action_cancel', 'Retour', '[Annuler]', 'Retourner', ['[Annuler]']);
+        $settingItems[] = new SettingItem('action_generate', 'Générer', '✓ Confirmer', 'Lancer la génération', ['✓ Confirmer']);
+        $settingItems[] = new SettingItem('action_cancel', 'Retour', '← Annuler', 'Retourner', ['← Annuler']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
 
@@ -541,17 +541,17 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem(
             'action_generate',
             'Générer le Schéma',
-            '[Confirmer]',
+            '✓ Confirmer',
             'Appuyez sur Entrée pour lancer la génération physique des fichiers.',
-            ['[Confirmer]']
+            ['✓ Confirmer']
         );
 
         $settingItems[] = new SettingItem(
             'action_cancel',
             'Retour',
-            '[Annuler]',
+            '← Annuler',
             'Retourner à la liste de sélection des classes.',
-            ['[Annuler]']
+            ['← Annuler']
         );
 
         $formatter = $this->currentOutput->getFormatter();

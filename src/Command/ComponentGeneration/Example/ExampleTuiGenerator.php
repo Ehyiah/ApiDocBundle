@@ -144,8 +144,8 @@ class ExampleTuiGenerator extends AbstractTuiComponentGenerator
 
         $settingItems[] = new SettingItem('format_output', 'Format sortie', $state->format_output, 'YAML ou PHP', ['yaml', 'php']);
         $settingItems[] = new SettingItem('output', 'Dossier de sortie', $state->outputDir, 'Répertoire cible', [], $textInputCallback);
-        $settingItems[] = new SettingItem('action_validate', 'Valider', '[Confirmer]', 'Sauvegarder et revenir à la liste.', ['[Confirmer]']);
-        $settingItems[] = new SettingItem('action_cancel', 'Annuler', '[Annuler]', 'Retourner sans sauvegarder.', ['[Annuler]']);
+        $settingItems[] = new SettingItem('action_validate', 'Valider', '✓ Confirmer', 'Sauvegarder et revenir à la liste.', ['✓ Confirmer']);
+        $settingItems[] = new SettingItem('action_cancel', 'Annuler', '← Annuler', 'Retourner sans sauvegarder.', ['← Annuler']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
 

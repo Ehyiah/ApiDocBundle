@@ -135,7 +135,7 @@ class RouteTuiManager
     /**
      * Load existing route configuration from YAML file, returning per-method config.
      *
-     * @return array{methodsConfig: array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string, operationId: string}>}
+     * @return array{methodsConfig: array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responses: array<int, array{schema: ?string, description: string}>, operationId: string}>}
      */
     public function loadRouteConfig(string $routeName, string $componentType): array
     {
@@ -169,7 +169,7 @@ class RouteTuiManager
      *
      * @param array<string, mixed> $config
      *
-     * @return array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responseSchema: ?string, operationId: string}>
+     * @return array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, responses: array<int, array{schema: ?string, description: string}>, operationId: string}>
      */
     private function extractMethodsConfig(array $config, string $path): array
     {
@@ -196,10 +196,22 @@ class RouteTuiManager
                 $requestBodySchema = $this->extractSchemaName($definition['requestBody']['content']['application/json']['schema']['$ref']);
             }
 
-            $responseSchema = null;
-            $response200 = $definition['responses'][200] ?? $definition['responses']['200'] ?? null;
-            if (isset($response200['content']['application/json']['schema']['$ref'])) {
-                $responseSchema = $this->extractSchemaName($response200['content']['application/json']['schema']['$ref']);
+            $responses = [];
+            if (isset($definition['responses']) && is_array($definition['responses'])) {
+                foreach ($definition['responses'] as $statusCode => $responseDef) {
+                    if (!is_array($responseDef)) {
+                        continue;
+                    }
+                    $statusCodeInt = (int)$statusCode;
+                    $schema = null;
+                    if (isset($responseDef['content']['application/json']['schema']['$ref'])) {
+                        $schema = $this->extractSchemaName($responseDef['content']['application/json']['schema']['$ref']);
+                    }
+                    $responses[$statusCodeInt] = [
+                        'schema' => $schema,
+                        'description' => (string)($responseDef['description'] ?? ''),
+                    ];
+                }
             }
 
             $methodsConfig[strtoupper($method)] = [
@@ -207,7 +219,7 @@ class RouteTuiManager
                 'description' => (string)($definition['description'] ?? ''),
                 'security' => array_values(array_unique($security)),
                 'requestBodySchema' => $requestBodySchema,
-                'responseSchema' => $responseSchema,
+                'responses' => $responses,
                 'operationId' => (string)($definition['operationId'] ?? ''),
             ];
         }

@@ -142,7 +142,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                         'description' => '',
                         'security' => [],
                         'requestBodySchema' => null,
-                        'responseSchema' => null,
+                        'responses' => [],
                     ];
                 }
             }
@@ -237,7 +237,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             'description' => '',
             'security' => [],
             'requestBodySchema' => null,
-            'responseSchema' => null,
+            'responses' => [],
         ];
 
         $textInputCallback = static function (string $currentValue, callable $onDone) {
@@ -267,12 +267,15 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $schemas = $this->manager->getAvailableSchemas();
         $schemaChoices = array_merge(['aucun'], $schemas);
         $settingItems[] = new SettingItem('rb_schema', 'Schema RequestBody', $config['requestBodySchema'] ?? 'aucun', 'Choisir un schéma', $schemaChoices);
-        $settingItems[] = new SettingItem('res_schema', 'Schema Réponse 200', $config['responseSchema'] ?? 'aucun', 'Choisir un schéma', $schemaChoices);
+
+        $responseCount = count($config['responses']);
+        $responseLabel = $responseCount > 0 ? "Réponses ({$responseCount})" : 'Réponses (aucune)';
+        $settingItems[] = new SettingItem('action_responses', $responseLabel, '[Configurer]', 'Gérer les codes de réponse', ['[Configurer]']);
 
         $settingItems[] = new SettingItem('format', 'Format', $state->format, 'YAML ou PHP', ['yaml', 'php']);
-        $settingItems[] = new SettingItem('action_validate', 'Valider', '[Confirmer]', 'Sauvegarder et revenir à la liste.', ['[Confirmer]']);
-        $settingItems[] = new SettingItem('action_delete', 'Supprimer', '[Supprimer]', 'Supprimer cette méthode de la route.', ['[Supprimer]']);
-        $settingItems[] = new SettingItem('action_cancel', 'Annuler', '[Annuler]', 'Retourner sans sauvegarder.', ['[Annuler]']);
+        $settingItems[] = new SettingItem('action_validate', 'Valider', '✓ Confirmer', 'Sauvegarder et revenir à la liste.', ['✓ Confirmer']);
+        $settingItems[] = new SettingItem('action_delete', 'Supprimer', '✗ Supprimer', 'Supprimer cette méthode de la route.', ['✗ Supprimer']);
+        $settingItems[] = new SettingItem('action_cancel', 'Annuler', '← Annuler', 'Retourner sans sauvegarder.', ['← Annuler']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
 
@@ -306,11 +309,14 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     $this->showMethodList($tui, $state, $onBack);
                     break;
                 case 'rb_schema':
-                case 'res_schema':
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-                    $field = ('rb_schema' === $event->getId()) ? 'requestBodySchema' : 'responseSchema';
-                    $this->showMethodSchemaSelection($tui, $method, $field, $state, $onBack);
+                    $this->showMethodSchemaSelection($tui, $method, 'requestBodySchema', $state, $onBack);
+                    break;
+                case 'action_responses':
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showResponseList($tui, $method, $state, $onBack);
                     break;
                 case 'action_validate':
                     $security = [];
@@ -326,7 +332,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                         'description' => $settingsWidget->getValue('desc') ?? '',
                         'security' => $security,
                         'requestBodySchema' => 'aucun' !== ($settingsWidget->getValue('rb_schema') ?? 'aucun') ? $settingsWidget->getValue('rb_schema') : null,
-                        'responseSchema' => 'aucun' !== ($settingsWidget->getValue('res_schema') ?? 'aucun') ? $settingsWidget->getValue('res_schema') : null,
+                        'responses' => $state->methodsConfig[$method]['responses'] ?? [],
                     ];
 
                     $state->format = $settingsWidget->getValue('format') ?? 'yaml';
@@ -381,7 +387,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     'description' => '',
                     'security' => [],
                     'requestBodySchema' => null,
-                    'responseSchema' => null,
+                    'responses' => [],
                 ];
                 $current[$field] = $newValue;
                 $state->methodsConfig[$method] = $current; // @phpstan-ignore-line
@@ -391,6 +397,201 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         };
 
         $tui->addListener($listener);
+    }
+
+    private function showResponseList(Tui $tui, string $method, RouteTuiState $state, callable $onBack): void
+    {
+        $config = $state->methodsConfig[$method] ?? [
+            'operationId' => '',
+            'summary' => '',
+            'description' => '',
+            'security' => [],
+            'requestBodySchema' => null,
+            'responses' => [],
+        ];
+        $responses = $config['responses'];
+
+        $formatter = $this->currentOutput->getFormatter();
+        $choices = [];
+
+        foreach ($responses as $statusCode => $responseData) {
+            $schema = $responseData['schema'] ?? 'aucun';
+            $desc = $responseData['description'];
+            $label = sprintf('  %d — %s%s', $statusCode, $schema, $desc ? " ({$desc})" : '');
+            $choices[] = [
+                'value' => (string)$statusCode,
+                'label' => $formatter->format($label),
+            ];
+        }
+
+        $choices[] = [
+            'value' => '__add__',
+            'label' => $formatter->format('  <info>+ Ajouter un code de réponse</info>'),
+        ];
+        $choices[] = [
+            'value' => '__back__',
+            'label' => $formatter->format('  <comment>← Retour</comment>'),
+        ];
+
+        $selectWidget = new SelectListWidget($choices, 12);
+
+        $tui->clear();
+        $container = new ContainerWidget();
+        $container->expandVertically(true);
+        $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($formatter->format("<info>|  Réponses — {$method} — {$state->routeName}</info>")));
+        $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add($selectWidget);
+        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Naviguer  ↵ Configurer  Échap Retour</fg=gray>')));
+        $tui->add($container);
+        $tui->setFocus($selectWidget);
+
+        $selectListener = function (SelectEvent $event) use ($tui, $selectWidget, $method, $state, $onBack, &$selectListener, &$cancelListener) {
+            if ($event->getTarget() !== $selectWidget) {
+                return;
+            }
+
+            $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
+            $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+
+            $value = $event->getValue();
+            if ('__back__' === $value) {
+                $this->showMethodConfig($tui, $method, $state, $onBack);
+
+                return;
+            }
+
+            if ('__add__' === $value) {
+                $this->showResponseConfig($tui, $method, null, $state, $onBack);
+
+                return;
+            }
+
+            $statusCode = (int)$value;
+            $this->showResponseConfig($tui, $method, $statusCode, $state, $onBack);
+        };
+
+        $cancelListener = function (CancelEvent $event) use ($tui, $selectWidget, $method, $state, $onBack, &$selectListener, &$cancelListener) {
+            if ($event->getTarget() === $selectWidget) {
+                $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                $this->showMethodConfig($tui, $method, $state, $onBack);
+            }
+        };
+
+        $tui->addListener($selectListener);
+        $tui->addListener($cancelListener);
+    }
+
+    private function showResponseConfig(Tui $tui, string $method, ?int $statusCode, RouteTuiState $state, callable $onBack): void
+    {
+        $config = $state->methodsConfig[$method] ?? [
+            'operationId' => '',
+            'summary' => '',
+            'description' => '',
+            'security' => [],
+            'requestBodySchema' => null,
+            'responses' => [],
+        ];
+        $responses = $config['responses'];
+        $isNew = null === $statusCode;
+
+        $currentResponse = $responses[$statusCode] ?? ['schema' => null, 'description' => ''];
+        $schemas = $this->manager->getAvailableSchemas();
+        $schemaChoices = array_merge(['aucun'], $schemas);
+
+        $textInputCallback = static function (string $currentValue, callable $onDone) {
+            $inputWidget = new InputWidget();
+            $inputWidget->setValue($currentValue);
+            $inputWidget->setPrompt('Saisie : ');
+            $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
+                $onDone($event->getValue());
+            });
+            $inputWidget->onCancel(static function (CancelEvent $event) use ($onDone) {
+                $onDone(null);
+            });
+
+            return $inputWidget;
+        };
+
+        $formatter = $this->currentOutput->getFormatter();
+        $settingItems = [];
+
+        if ($isNew) {
+            $settingItems[] = new SettingItem('statusCode', 'Code HTTP', '200', 'Code de réponse HTTP (ex: 200, 404, 500)', [], $textInputCallback);
+        }
+
+        $settingItems[] = new SettingItem('res_schema', 'Schéma', $currentResponse['schema'] ?? 'aucun', 'Schéma de réponse', $schemaChoices);
+        $settingItems[] = new SettingItem('res_desc', 'Description', $currentResponse['description'], 'Description de la réponse', [], $textInputCallback);
+
+        $settingItems[] = new SettingItem('action_validate', 'Valider', '✓ Confirmer', 'Sauvegarder', ['✓ Confirmer']);
+
+        if (!$isNew) {
+            $settingItems[] = new SettingItem('action_delete', 'Supprimer', '✗ Supprimer', 'Supprimer cette réponse', ['✗ Supprimer']);
+        }
+
+        $settingItems[] = new SettingItem('action_cancel', 'Retour', '← Annuler', 'Retourner sans sauvegarder', ['← Annuler']);
+
+        $settingsWidget = new SettingsListWidget($settingItems, 12);
+
+        $tui->clear();
+        $container = new ContainerWidget();
+        $container->expandVertically(true);
+        $title = $isNew ? 'Nouvelle réponse' : "Réponse {$statusCode}";
+        $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($formatter->format("<info>|  {$title} — {$method}</info>")));
+        $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add($settingsWidget);
+        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↵ Valider    Échap Annuler</fg=gray>')));
+        $tui->add($container);
+        $tui->setFocus($settingsWidget);
+
+        $changeListener = function (SettingChangeEvent $event) use ($tui, $settingsWidget, $method, $statusCode, $isNew, $state, $onBack, &$changeListener, &$cancelListener) {
+            if ($event->getTarget() !== $settingsWidget) {
+                return;
+            }
+
+            switch ($event->getId()) {
+                case 'action_cancel':
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showResponseList($tui, $method, $state, $onBack);
+                    break;
+                case 'action_delete':
+                    unset($state->methodsConfig[$method]['responses'][$statusCode]);
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showResponseList($tui, $method, $state, $onBack);
+                    break;
+                case 'action_validate':
+                    $newStatusCode = $isNew ? (int)($settingsWidget->getValue('statusCode') ?? 200) : (int)$statusCode;
+                    $schema = $settingsWidget->getValue('res_schema') ?? 'aucun';
+                    $schema = 'aucun' !== $schema ? $schema : null;
+
+                    $state->methodsConfig[$method]['responses'][$newStatusCode] = [
+                        'schema' => $schema,
+                        'description' => $settingsWidget->getValue('res_desc') ?? '',
+                    ];
+
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showResponseList($tui, $method, $state, $onBack);
+                    break;
+            }
+        };
+
+        $cancelListener = function (CancelEvent $event) use ($tui, $settingsWidget, $method, $state, $onBack, &$changeListener, &$cancelListener) {
+            if ($event->getTarget() === $settingsWidget) {
+                $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                $this->showResponseList($tui, $method, $state, $onBack);
+            }
+        };
+
+        $tui->addListener($changeListener);
+        $tui->addListener($cancelListener);
     }
 
     private function generateRoute(Tui $tui, RouteTuiState $state): void
@@ -405,8 +606,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             if ($config['requestBodySchema']) {
                 $this->manager->registerSchema($builder, $config['requestBodySchema']);
             }
-            if ($config['responseSchema']) {
-                $this->manager->registerSchema($builder, $config['responseSchema']);
+            foreach ($config['responses'] as $responseData) {
+                if ($responseData['schema']) {
+                    $this->manager->registerSchema($builder, $responseData['schema']);
+                }
             }
         }
 
@@ -431,12 +634,18 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                 ;
             }
 
-            if ($config['responseSchema']) {
-                $routeBuilder->response(200)
-                    ->content('application/json')
-                    ->refByName($config['responseSchema'])
-                    ->end()
-                ;
+            foreach ($config['responses'] as $statusCode => $responseData) {
+                $responseBuilder = $routeBuilder->response($statusCode);
+                if ($responseData['description']) {
+                    $responseBuilder->description($responseData['description']);
+                }
+                if ($responseData['schema']) {
+                    $responseBuilder->content('application/json')
+                        ->refByName($responseData['schema'])
+                        ->end()
+                    ;
+                }
+                $responseBuilder->end();
             }
 
             $routeBuilder->end();
