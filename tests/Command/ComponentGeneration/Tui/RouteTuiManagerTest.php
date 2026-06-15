@@ -2,7 +2,7 @@
 
 namespace Ehyiah\ApiDocBundle\Tests\Command\ComponentGeneration\Tui;
 
-use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tui\RouteTuiManager;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Route\RouteTuiManager;
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;

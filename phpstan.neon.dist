@@ -5,7 +5,7 @@ parameters:
         - src
     reportUnmatchedIgnoredErrors: false
     excludePaths:
-        - src/Command/ComponentGeneration/AbstractGenerateComponentCommand.php
+        - src/Command/ComponentGeneration/GenerateComponentTuiCommand.php
         - src/Command/DocGeneration/GenerateBuilderDocCommand.php
     ignoreErrors:
         # Symfony 8 classes not resolved by PHPStan

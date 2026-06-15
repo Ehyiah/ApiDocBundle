@@ -2,7 +2,7 @@
 
 namespace Ehyiah\ApiDocBundle\Tests\Command\ComponentGeneration\Tui;
 
-use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tui\HeaderTuiManager;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Header\HeaderTuiManager;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
