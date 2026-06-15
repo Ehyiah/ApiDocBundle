@@ -77,6 +77,64 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $this->currentInput = $input;
         $this->currentOutput = $output;
         $formatter = $output->getFormatter();
+
+        $choices = [
+            ['value' => 'class', 'label' => $formatter->format('  Depuis une classe PHP')],
+            ['value' => 'composition', 'label' => $formatter->format('  Composition (allOf / anyOf / oneOf)')],
+            ['value' => '__back__', 'label' => $formatter->format('  <comment>[← Retour]</comment>')],
+        ];
+
+        $selectWidget = new SelectListWidget($choices, 12);
+
+        $tui->clear();
+        $container = new ContainerWidget();
+        $container->expandVertically(true);
+        $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($formatter->format('<info>|  Génération de Schéma</info>')));
+        $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add($selectWidget);
+        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Retour</fg=gray>')));
+        $tui->add($container);
+        $tui->setFocus($selectWidget);
+
+        $selectListener = function (SelectEvent $event) use ($tui, $selectWidget, $onBack, &$selectListener, &$cancelListener) {
+            if ($event->getTarget() === $selectWidget) {
+                $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+
+                $value = $event->getValue();
+                if ('__back__' === $value) {
+                    $onBack();
+
+                    return;
+                }
+
+                if ('composition' === $value) {
+                    $this->showCompositionType($tui, $onBack);
+
+                    return;
+                }
+
+                $this->showClassSelection($tui, $onBack);
+            }
+        };
+
+        $cancelListener = static function (CancelEvent $event) use ($tui, $selectWidget, $onBack, &$selectListener, &$cancelListener) {
+            if ($event->getTarget() === $selectWidget) {
+                $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                $onBack();
+            }
+        };
+
+        $tui->addListener($selectListener);
+        $tui->addListener($cancelListener);
+    }
+
+    private function showClassSelection(Tui $tui, callable $onBack): void
+    {
+        $formatter = $this->currentOutput->getFormatter();
         $classes = $this->manager->getAllClasses();
         if (empty($classes)) {
             $tui->clear();
@@ -167,8 +225,8 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
             $tui->setFocus($classListWidget);
         });
 
-        $searchWidget->onCancel(static function (CancelEvent $event) use ($onBack) {
-            $onBack();
+        $searchWidget->onCancel(function (CancelEvent $event) use ($tui, $onBack) {
+            $this->run($tui, $this->currentInput, $this->currentOutput, $onBack);
         });
 
         $selectListener = function (SelectEvent $event) use ($tui, $classListWidget, $onBack, &$selectListener, &$cancelListener) {
@@ -191,6 +249,223 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
 
         $tui->addListener($selectListener);
         $tui->addListener($cancelListener);
+    }
+
+    private function showCompositionType(Tui $tui, callable $onBack): void
+    {
+        $formatter = $this->currentOutput->getFormatter();
+
+        $choices = [
+            ['value' => 'allOf', 'label' => $formatter->format('  allOf  — Tous les schémas doivent matcher (AND)')],
+            ['value' => 'anyOf', 'label' => $formatter->format('  anyOf  — Au moins un schéma doit matcher (OR)')],
+            ['value' => 'oneOf', 'label' => $formatter->format('  oneOf  — Un seul schéma doit matcher (XOR)')],
+            ['value' => '__back__', 'label' => $formatter->format('  <comment>[← Retour]</comment>')],
+        ];
+
+        $selectWidget = new SelectListWidget($choices, 12);
+
+        $tui->clear();
+        $container = new ContainerWidget();
+        $container->expandVertically(true);
+        $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($formatter->format('<info>|  Type de composition</info>')));
+        $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add($selectWidget);
+        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Naviguer  ↵ Sélectionner  Échap Retour</fg=gray>')));
+        $tui->add($container);
+        $tui->setFocus($selectWidget);
+
+        $selectListener = function (SelectEvent $event) use ($tui, $selectWidget, $onBack, &$selectListener, &$cancelListener) {
+            if ($event->getTarget() === $selectWidget) {
+                $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+
+                $value = $event->getValue();
+                if ('__back__' === $value) {
+                    $this->run($tui, $this->currentInput, $this->currentOutput, $onBack);
+
+                    return;
+                }
+
+                $this->showCompositionConfig($tui, $value, $onBack);
+            }
+        };
+
+        $cancelListener = function (CancelEvent $event) use ($tui, $selectWidget, $onBack, &$selectListener, &$cancelListener) {
+            if ($event->getTarget() === $selectWidget) {
+                $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                $this->run($tui, $this->currentInput, $this->currentOutput, $onBack);
+            }
+        };
+
+        $tui->addListener($selectListener);
+        $tui->addListener($cancelListener);
+    }
+
+    private function showCompositionConfig(Tui $tui, string $compositionType, callable $onBack): void
+    {
+        $formatter = $this->currentOutput->getFormatter();
+        $schemas = $this->manager->getAvailableSchemas();
+
+        $textInputCallback = static function (string $currentValue, callable $onDone) {
+            $inputWidget = new InputWidget();
+            $inputWidget->setValue($currentValue);
+            $inputWidget->setPrompt('Saisie : ');
+            $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
+                $onDone($event->getValue());
+            });
+            $inputWidget->onCancel(static function (CancelEvent $event) use ($onDone) {
+                $onDone(null);
+            });
+
+            return $inputWidget;
+        };
+
+        $settingItems = [];
+        $settingItems[] = new SettingItem('schemaName', 'Nom du schéma', '', 'Nom du nouveau schéma de composition', [], $textInputCallback);
+
+        $schemaChoices = array_merge([''], $schemas);
+        $settingItems[] = new SettingItem('schema_1', 'Schéma 1', '', 'Premier schéma à composer', $schemaChoices);
+        $settingItems[] = new SettingItem('schema_2', 'Schéma 2', '', 'Deuxième schéma à composer', $schemaChoices);
+        $settingItems[] = new SettingItem('schema_3', 'Schéma 3', '', 'Troisième schéma (optionnel)', $schemaChoices);
+
+        $defaultDumpLocation = $this->manager->getDefaultDumpLocation();
+        $settingItems[] = new SettingItem('format', 'Format', 'both', 'Format de sortie', ['both', 'php', 'yaml']);
+        $settingItems[] = new SettingItem('output', 'Dossier de sortie', $defaultDumpLocation, 'Répertoire cible', [], $textInputCallback);
+
+        $settingItems[] = new SettingItem('action_generate', 'Générer', '[Confirmer]', 'Lancer la génération', ['[Confirmer]']);
+        $settingItems[] = new SettingItem('action_cancel', 'Retour', '[Annuler]', 'Retourner', ['[Annuler]']);
+
+        $settingsWidget = new SettingsListWidget($settingItems, 12);
+
+        $tui->clear();
+        $container = new ContainerWidget();
+        $container->expandVertically(true);
+        $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($formatter->format("<info>|  Composition : {$compositionType}</info>")));
+        $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add($settingsWidget);
+        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↵ Valider    Échap Annuler</fg=gray>')));
+        $tui->add($container);
+        $tui->setFocus($settingsWidget);
+
+        $changeListener = function (SettingChangeEvent $event) use ($tui, $settingsWidget, $compositionType, $schemas, $onBack, &$changeListener, &$cancelListener) {
+            if ($event->getTarget() !== $settingsWidget) {
+                return;
+            }
+
+            switch ($event->getId()) {
+                case 'action_cancel':
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showCompositionType($tui, $onBack);
+                    break;
+                case 'action_generate':
+                    $schemaName = $settingsWidget->getValue('schemaName') ?? '';
+                    if ('' === $schemaName) {
+                        break;
+                    }
+
+                    $refs = [];
+                    foreach (['schema_1', 'schema_2', 'schema_3'] as $key) {
+                        $selected = $settingsWidget->getValue($key) ?? '';
+                        if ('' !== $selected && in_array($selected, $schemas, true)) {
+                            $refs[] = ['$ref' => '#/components/schemas/' . $selected];
+                        }
+                    }
+
+                    if (count($refs) < 2) {
+                        break;
+                    }
+
+                    $format = $settingsWidget->getValue('format') ?? 'both';
+                    $outputDir = $settingsWidget->getValue('output') ?? $this->manager->getDefaultDumpLocation();
+
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $tui->stop();
+
+                    $this->generateComposition($schemaName, $compositionType, $refs, $format, $outputDir);
+                    break;
+            }
+        };
+
+        $cancelListener = function (CancelEvent $event) use ($tui, $settingsWidget, $onBack, &$changeListener, &$cancelListener) {
+            if ($event->getTarget() === $settingsWidget) {
+                $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                $this->showCompositionType($tui, $onBack);
+            }
+        };
+
+        $tui->addListener($changeListener);
+        $tui->addListener($cancelListener);
+    }
+
+    /** @param array<array<string, string>> $refs */
+    private function generateComposition(string $schemaName, string $compositionType, array $refs, string $format, string $outputDir): void
+    {
+        $output = $this->currentOutput;
+        $input = $this->currentInput;
+
+        $array = SchemaHelper::createComponentArray();
+        $array['documentation']['components']['schemas'][$schemaName][$compositionType] = $refs;
+
+        $destination = ComponentType::Schemas->value;
+
+        if ('yaml' === $format || 'both' === $format) {
+            $outputDirClean = (string)\Symfony\Component\String\u($outputDir)->ensureStart('/')->ensureEnd('/');
+            $dumpPath = $this->parameterBag->get('ehyiah_api_doc.dump_path');
+            $sourcePath = $this->parameterBag->get('ehyiah_api_doc.source_path');
+            $dumpLocation = null;
+
+            if (is_string($sourcePath) && is_string($dumpPath)) {
+                $sourcePath = (string)\Symfony\Component\String\u($sourcePath)->ensureStart('/')->ensureEnd('/');
+                $existingConfigs = LoadApiDocConfigHelper::loadYamlConfigDoc(
+                    $sourcePath,
+                    $this->kernel->getProjectDir(),
+                    $dumpPath,
+                );
+
+                if (isset($existingConfigs['components'][$destination][$schemaName])) {
+                    $componentAlreadyExistFile = $this->apiDocConfigHelper->findYamlComponentFile($schemaName, $destination);
+                    if ($componentAlreadyExistFile) {
+                        $dumpLocation = $componentAlreadyExistFile->getPathname();
+                    }
+                }
+            }
+
+            if (null === $dumpLocation) {
+                $dumpLocation = $this->kernel->getProjectDir() . $outputDirClean . \Symfony\Component\String\u($destination)->ensureEnd('/') . $schemaName . '.yaml';
+            }
+
+            if ($this->checkExistingYamlFile($dumpLocation, $input, $output, $array, interactive: false)) {
+                $this->writeYamlFile($array, $dumpLocation, $output);
+            }
+        }
+
+        if ('php' === $format || 'both' === $format) {
+            $outputDirClean = (string)\Symfony\Component\String\u($outputDir)->ensureStart('/')->ensureEnd('/');
+            $phpComponentFile = $this->apiDocConfigHelper->findPhpComponentFile($schemaName, $destination);
+
+            if (null !== $phpComponentFile) {
+                $dumpLocation = $phpComponentFile->getPathname();
+            } else {
+                $dumpDirectory = $this->kernel->getProjectDir() . $outputDirClean . \Symfony\Component\String\u($destination)->ensureEnd('/');
+                $dumpLocation = $dumpDirectory . $schemaName . '.php';
+            }
+
+            $phpCode = $this->generatePhpBuilderCode($array, $schemaName, $destination);
+
+            if ($this->checkExistingPhpFile($dumpLocation, $input, $output, $phpCode, interactive: false)) {
+                $this->writePhpFile($phpCode, $dumpLocation, $output);
+            }
+        }
+
+        $output->writeln("\n<info>Composition \"{$schemaName}\" générée avec succès !</info>");
     }
 
     private function showConfigurationDashboard(Tui $tui, string $selectedClass, callable $onBack): void

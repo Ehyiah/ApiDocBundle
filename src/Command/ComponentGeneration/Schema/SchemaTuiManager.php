@@ -91,5 +91,27 @@ class SchemaTuiManager
         return is_string($dumpLocation) ? (string)u($dumpLocation)->ensureStart('/')->ensureEnd('/') : '/src/Swagger/';
     }
 
-    // ... move generateFiles logic here eventually
+    /** @return string[] */
+    public function getAvailableSchemas(): array
+    {
+        $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
+        $projectDir = $this->kernel->getProjectDir();
+        if (str_ends_with($projectDir, '/tests/App')) {
+            $projectDir = dirname($projectDir, 2);
+        }
+        $dumpDirectory = $projectDir . $sourcePath;
+
+        $schemas = [];
+        if (is_dir($dumpDirectory)) {
+            $finder = new Finder();
+            $finder->files()->in($dumpDirectory)->name(['*.yaml', '*.php']);
+            foreach ($finder as $file) {
+                if (str_contains($file->getPathname(), DIRECTORY_SEPARATOR . 'schemas' . DIRECTORY_SEPARATOR)) {
+                    $schemas[] = $file->getBasename('.' . $file->getExtension());
+                }
+            }
+        }
+
+        return array_values(array_unique($schemas));
+    }
 }

@@ -131,7 +131,7 @@ class RouteTuiManagerTest extends TestCase
     {
         $routeName = 'app_user_list';
         $route = new Route('/api/users', [], [], [], '', [], ['GET', 'POST']);
-        $route->setDefault('_controller', 'App\\Controller\\UserController::list');
+        $route->setDefault('_controller', 'App\Controller\UserController::list');
 
         $routeCollection = new RouteCollection();
         $routeCollection->add($routeName, $route);
@@ -177,7 +177,7 @@ class RouteTuiManagerTest extends TestCase
     {
         $routeName = 'app_user_show';
         $route = new Route('/api/users/{id}');
-        $route->setDefault('_controller', 'App\\Controller\\UserController');
+        $route->setDefault('_controller', 'App\Controller\UserController');
 
         $routeCollection = new RouteCollection();
         $routeCollection->add($routeName, $route);

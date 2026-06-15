@@ -415,6 +415,34 @@ class PropertyBuilder
     }
 
     /**
+     * Set external documentation for this property.
+     *
+     * @param string $url External documentation URL
+     * @param string|null $description External documentation description
+     */
+    public function externalDocs(string $url, ?string $description = null): self
+    {
+        $this->definition['externalDocs'] = ['url' => $url];
+        if (null !== $description) {
+            $this->definition['externalDocs']['description'] = $description;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Set additional properties constraint for object type.
+     *
+     * @param bool|array<string, mixed> $additionalProperties false to forbid, true to allow, or a schema to validate
+     */
+    public function additionalProperties($additionalProperties = false): self
+    {
+        $this->definition['additionalProperties'] = $additionalProperties;
+
+        return $this;
+    }
+
+    /**
      * Add a custom property to the definition.
      * Use this for any OpenAPI property not covered by the builder methods.
      *

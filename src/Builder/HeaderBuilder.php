@@ -270,6 +270,42 @@ class HeaderBuilder
     }
 
     /**
+     * Set the serialization style.
+     *
+     * @param string $style Serialization style (e.g., 'simple', 'label', 'matrix')
+     */
+    public function style(string $style): self
+    {
+        $this->definition['style'] = $style;
+
+        return $this;
+    }
+
+    /**
+     * Set explode behavior.
+     *
+     * @param bool $explode Whether to explode the parameter
+     */
+    public function explode(bool $explode = true): self
+    {
+        $this->definition['explode'] = $explode;
+
+        return $this;
+    }
+
+    /**
+     * Allow reserved characters in parameter value.
+     *
+     * @param bool $allowReserved Whether to allow reserved characters
+     */
+    public function allowReserved(bool $allowReserved = true): self
+    {
+        $this->definition['allowReserved'] = $allowReserved;
+
+        return $this;
+    }
+
+    /**
      * Finish building this header and return to the response builder.
      */
     public function end(): ResponseBuilder

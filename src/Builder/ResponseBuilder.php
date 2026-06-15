@@ -103,6 +103,21 @@ class ResponseBuilder
     }
 
     /**
+     * Add a link to another operation.
+     *
+     * Links allow outgoing requests to other operations for request/response pairs.
+     *
+     * @param string $name Link name
+     * @param array<string, mixed> $link Link definition
+     */
+    public function link(string $name, array $link): self
+    {
+        $this->definition['links'][$name] = $link;
+
+        return $this;
+    }
+
+    /**
      * Get the status code for this response.
      *
      * @internal
