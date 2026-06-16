@@ -26,6 +26,8 @@ use Ehyiah\ApiDocBundle\Command\ComponentGeneration\RequestBody\RequestBodyTuiSt
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Response\ResponseTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Response\ResponseTuiManager;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Response\ResponseTuiState;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Route\RouteTuiGenerator;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Route\RouteTuiManager;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Security\SecuritySchemeTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Security\SecuritySchemeTuiManager;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Security\SecuritySchemeTuiState;
@@ -284,7 +286,12 @@ class TuiGenerationTest extends TestCase
         $propertyInfo = $this->createMock(PropertyInfoExtractorInterface::class);
         $helper = $this->createMock(LoadApiDocConfigHelper::class);
 
-        $manager = new $managerClass($kernel, $parameterBag);
+        if (RouteTuiManager::class === $managerClass) {
+            $router = $this->createMock(\Symfony\Component\Routing\RouterInterface::class);
+            $manager = new $managerClass($router, $parameterBag, $kernel, $helper);
+        } else {
+            $manager = new $managerClass($kernel, $parameterBag);
+        }
 
         return new $generatorClass($manager, $kernel, $parameterBag, $propertyInfo, $helper);
     }
@@ -1196,5 +1203,62 @@ class TuiGenerationTest extends TestCase
         $yaml = Yaml::parseFile($yamlFile);
         $this->assertArrayNotHasKey('BearerAuth', $yaml['documentation']['components']['securitySchemes']);
         $this->assertArrayHasKey('ApiKeyAuth', $yaml['documentation']['components']['securitySchemes']);
+    }
+
+    public function testRoutePhpGenerationHasSemicolons(): void
+    {
+        $array = [
+            'paths' => [
+                '/api/users' => [
+                    'get' => [
+                        'operationId' => 'getUsers',
+                        'summary' => 'List users',
+                        'tags' => ['Users'],
+                        'responses' => [
+                            200 => ['description' => 'Success'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $generator = $this->createGenerator(RouteTuiGenerator::class, RouteTuiManager::class);
+        $reflection = new ReflectionMethod($generator, 'generatePhpBuilderCode');
+        $reflection->setAccessible(true);
+        $phpCode = $reflection->invoke($generator, $array, 'get_users', 'routes');
+
+        $this->assertStringContainsString('$builder->addRoute()', $phpCode);
+        $this->assertStringContainsString("->path('/api/users')", $phpCode);
+        $this->assertStringContainsString("->method('GET')", $phpCode);
+        $this->assertStringContainsString("->operationId('getUsers')", $phpCode);
+        $this->assertStringContainsString("->tag('Users')", $phpCode);
+        $this->assertStringContainsString('->end();', $phpCode);
+        $this->assertStringContainsString('return new class implements ApiDocConfigInterface', $phpCode);
+    }
+
+    public function testRoutePhpGenerationWithResponses(): void
+    {
+        $array = [
+            'paths' => [
+                '/api/items' => [
+                    'post' => [
+                        'operationId' => 'createItem',
+                        'responses' => [
+                            201 => ['description' => 'Created'],
+                            400 => ['description' => 'Bad Request'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $generator = $this->createGenerator(RouteTuiGenerator::class, RouteTuiManager::class);
+        $reflection = new ReflectionMethod($generator, 'generatePhpBuilderCode');
+        $reflection->setAccessible(true);
+        $phpCode = $reflection->invoke($generator, $array, 'create_item', 'routes');
+
+        $this->assertStringContainsString('->response(201)', $phpCode);
+        $this->assertStringContainsString('->response(400)', $phpCode);
+        $this->assertStringContainsString('->end();', $phpCode);
     }
 }

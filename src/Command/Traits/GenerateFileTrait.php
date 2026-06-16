@@ -315,6 +315,8 @@ trait GenerateFileTrait
         } elseif ('tags' === $componentType) {
             $tag = $this->findTagByName($array, $componentName);
             $code .= $this->buildTagCode($componentName, $tag, 2);
+        } elseif ('routes' === $componentType) {
+            $code .= $this->buildRouteCode($array, $componentName, 2);
         }
 
         $code .= "    }\n";
@@ -765,6 +767,86 @@ trait GenerateFileTrait
         }
 
         $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $array
+     */
+    protected function buildRouteCode(array $array, string $routeName, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = '';
+
+        $paths = $array['paths'] ?? [];
+        foreach ($paths as $path => $methods) {
+            if (!is_array($methods)) {
+                continue;
+            }
+            foreach ($methods as $method => $definition) {
+                if (!is_array($definition)) {
+                    continue;
+                }
+                $upperMethod = strtoupper($method);
+                $code .= "{$pad}\$builder->addRoute()\n";
+                $code .= "{$pad}    ->path('{$path}')\n";
+                $code .= "{$pad}    ->method('{$upperMethod}')\n";
+
+                if (isset($definition['operationId'])) {
+                    $code .= "{$pad}    ->operationId('{$definition['operationId']}')\n";
+                }
+                if (isset($definition['summary'])) {
+                    $code .= "{$pad}    ->summary('" . addslashes($definition['summary']) . "')\n";
+                }
+                if (isset($definition['description'])) {
+                    $code .= "{$pad}    ->description('" . addslashes($definition['description']) . "')\n";
+                }
+                if (isset($definition['tags']) && is_array($definition['tags'])) {
+                    foreach ($definition['tags'] as $tag) {
+                        $code .= "{$pad}    ->tag('{$tag}')\n";
+                    }
+                }
+                if (isset($definition['security']) && is_array($definition['security'])) {
+                    foreach ($definition['security'] as $securityEntry) {
+                        if (is_array($securityEntry)) {
+                            foreach (array_keys($securityEntry) as $schemeName) {
+                                $code .= "{$pad}    ->security('{$schemeName}')\n";
+                            }
+                        }
+                    }
+                }
+
+                if (isset($definition['requestBody']['content']['application/json']['schema']['$ref'])) {
+                    $schemaName = str_replace('#/components/schemas/', '', (string)$definition['requestBody']['content']['application/json']['schema']['$ref']);
+                    $code .= "{$pad}    ->requestBody()\n";
+                    $code .= "{$pad}        ->content('application/json')\n";
+                    $code .= "{$pad}        ->refByName('{$schemaName}')\n";
+                    $code .= "{$pad}    ->end()\n";
+                }
+
+                if (isset($definition['responses']) && is_array($definition['responses'])) {
+                    foreach ($definition['responses'] as $statusCode => $responseDef) {
+                        if (!is_array($responseDef)) {
+                            continue;
+                        }
+                        $code .= "{$pad}    ->response({$statusCode})\n";
+                        if (isset($responseDef['description'])) {
+                            $code .= "{$pad}        ->description('" . addslashes($responseDef['description']) . "')\n";
+                        }
+                        if (isset($responseDef['content']['application/json']['schema']['$ref'])) {
+                            $schemaName = str_replace('#/components/schemas/', '', (string)$responseDef['content']['application/json']['schema']['$ref']);
+                            $code .= "{$pad}        ->content('application/json')\n";
+                            $code .= "{$pad}            ->refByName('{$schemaName}')\n";
+                            $code .= "{$pad}        ->end()\n";
+                        }
+                        $code .= "{$pad}        ->end()\n";
+                    }
+                }
+
+                $code .= "{$pad}    ->end();\n";
+            }
+        }
 
         return $code;
     }

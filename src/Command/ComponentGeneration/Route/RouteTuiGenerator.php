@@ -184,6 +184,11 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         }
 
         $choices[] = [
+            'value' => '__settings__',
+            'label' => $this->currentOutput->getFormatter()->format('  <comment>⚙ Settings (Format: ' . strtoupper($state->format) . ')</comment>'),
+        ];
+
+        $choices[] = [
             'value' => '__back__',
             'label' => $this->currentOutput->getFormatter()->format('  <comment>← Back</comment>'),
         ];
@@ -226,6 +231,12 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                 return;
             }
 
+            if ('__settings__' === $value) {
+                $this->showRouteSettings($tui, $state, $onBack);
+
+                return;
+            }
+
             $this->showMethodConfig($tui, $value, $state, $onBack);
         };
 
@@ -238,6 +249,77 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         };
 
         $tui->addListener($selectListener);
+        $tui->addListener($cancelListener);
+    }
+
+    private function showRouteSettings(Tui $tui, RouteTuiState $state, callable $onBack): void
+    {
+        $textInputCallback = static function (string $currentValue, callable $onDone) {
+            $inputWidget = new InputWidget();
+            $inputWidget->setValue($currentValue);
+            $inputWidget->setPrompt('Input: ');
+            $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
+                $onDone($event->getValue());
+            });
+            $inputWidget->onCancel(static function (CancelEvent $event) use ($onDone) {
+                $onDone(null);
+            });
+
+            return $inputWidget;
+        };
+
+        $settingItems = [];
+        $settingItems[] = new SettingItem('format', 'Format', $state->format, 'YAML or PHP', ['yaml', 'php']);
+        $settingItems[] = new SettingItem('output', 'Output Directory', $state->outputDir, 'Target directory', [], $textInputCallback);
+        $settingItems[] = new SettingItem('action_save', 'Save', '✓ Save', 'Save and return to method list.', ['✓ Save']);
+        $settingItems[] = new SettingItem('action_cancel', 'Cancel', '← Cancel', 'Return without saving.', ['← Cancel']);
+
+        $settingsWidget = new SettingsListWidget($settingItems, 12);
+
+        $tui->clear();
+        $container = new ContainerWidget();
+        $container->expandVertically(true);
+        $routePath = $this->manager->getAllRoutes()[$state->routeName]['path'] ?? '';
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  Route: {$state->routeName} — Settings</info>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>|  ' . $routePath . '</fg=gray>')));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add($settingsWidget);
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Save    Esc Cancel</fg=gray>')));
+        $tui->add($container);
+        $tui->setFocus($settingsWidget);
+
+        $changeListener = function (SettingChangeEvent $event) use ($tui, $settingsWidget, $state, $onBack, &$changeListener, &$cancelListener) {
+            if ($event->getTarget() !== $settingsWidget) {
+                return;
+            }
+
+            switch ($event->getId()) {
+                case 'action_cancel':
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showMethodList($tui, $state, $onBack);
+                    break;
+                case 'action_save':
+                    $state->format = $settingsWidget->getValue('format') ?? 'yaml';
+                    $state->outputDir = $settingsWidget->getValue('output') ?? $this->manager->getDefaultDumpLocation();
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showMethodList($tui, $state, $onBack);
+                    break;
+            }
+        };
+
+        $cancelListener = function (CancelEvent $event) use ($tui, $settingsWidget, $state, $onBack, &$changeListener, &$cancelListener) {
+            if ($event->getTarget() === $settingsWidget) {
+                $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                $this->showMethodList($tui, $state, $onBack);
+            }
+        };
+
+        $tui->addListener($changeListener);
         $tui->addListener($cancelListener);
     }
 
@@ -292,7 +374,6 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $responseLabel = count($responseCodes) > 0 ? 'Responses (' . implode(', ', array_map('strval', $responseCodes)) . ')' : 'Responses (none)';
         $settingItems[] = new SettingItem('action_responses', $responseLabel, '[Configure]', 'Manage response codes', ['[Configure]']);
 
-        $settingItems[] = new SettingItem('format', 'Format', $state->format, 'YAML or PHP', ['yaml', 'php']);
         $settingItems[] = new SettingItem('action_validate', 'Save', '✓ Confirm', 'Save and return to the list.', ['✓ Confirm']);
         $settingItems[] = new SettingItem('action_delete', 'Delete', '✗ Delete', 'Delete this method from the route.', ['✗ Delete']);
         $settingItems[] = new SettingItem('action_cancel', 'Cancel', '← Cancel', 'Return without saving.', ['← Cancel']);
@@ -367,8 +448,6 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                         'requestBodyExample' => $rbExample,
                         'responses' => $state->methodsConfig[$method]['responses'] ?? [],
                     ];
-
-                    $state->format = $settingsWidget->getValue('format') ?? 'yaml';
 
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
