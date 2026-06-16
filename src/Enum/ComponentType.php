@@ -15,4 +15,5 @@ enum ComponentType: string
     case Callbacks = 'callbacks';
     case PathItems = 'pathItems';
     case Routes = 'routes';
+    case Tags = 'tags';
 }

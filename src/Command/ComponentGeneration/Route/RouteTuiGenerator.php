@@ -130,7 +130,18 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $existingConfig = $this->manager->loadRouteConfig($state->routeName, ComponentType::Routes->value);
 
         if (!empty($existingConfig['methodsConfig'])) {
-            $state->methodsConfig = $existingConfig['methodsConfig'];
+            foreach ($existingConfig['methodsConfig'] as $method => $config) {
+                $state->methodsConfig[$method] = [
+                    'operationId' => $config['operationId'],
+                    'summary' => $config['summary'],
+                    'description' => $config['description'],
+                    'security' => $config['security'],
+                    'tags' => $config['tags'],
+                    'requestBodySchema' => $config['requestBodySchema'],
+                    'requestBodyExample' => $config['requestBodyExample'],
+                    'responses' => $config['responses'],
+                ];
+            }
         } else {
             $allRoutes = $this->manager->getAllRoutes();
             if (isset($allRoutes[$state->routeName])) {
@@ -141,6 +152,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                         'summary' => '',
                         'description' => '',
                         'security' => [],
+                        'tags' => [],
                         'requestBodySchema' => null,
                         'requestBodyExample' => null,
                         'responses' => [],
@@ -237,6 +249,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             'summary' => '',
             'description' => '',
             'security' => [],
+            'tags' => [],
             'requestBodySchema' => null,
             'requestBodyExample' => null,
             'responses' => [],
@@ -256,16 +269,6 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             return $inputWidget;
         };
 
-        $settingItems = [];
-        $settingItems[] = new SettingItem('operationId', 'Operation ID', $config['operationId'], 'Unique operation identifier', [], $textInputCallback);
-        $settingItems[] = new SettingItem('summary', 'Summary', $config['summary'], 'Operation summary', [], $textInputCallback);
-        $settingItems[] = new SettingItem('desc', 'Description', $config['description'], 'Detailed description', [], $textInputCallback);
-
-        foreach ($this->manager->getSecuritySchemes() as $scheme) {
-            $value = in_array($scheme, $config['security'], true) ? 'include' : 'exclude';
-            $settingItems[] = new SettingItem('sec_' . $scheme, 'Security: ' . $scheme, $value, 'Include/Exclude security scheme', ['include', 'exclude']);
-        }
-
         $schemas = $this->manager->getAvailableSchemas();
         $examples = $this->manager->getAvailableExamples();
 
@@ -274,18 +277,19 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem('summary', 'Summary', $config['summary'], 'Operation summary', [], $textInputCallback);
         $settingItems[] = new SettingItem('desc', 'Description', $config['description'], 'Detailed description', [], $textInputCallback);
 
-        foreach ($this->manager->getSecuritySchemes() as $scheme) {
-            $value = in_array($scheme, $config['security'], true) ? 'include' : 'exclude';
-            $settingItems[] = new SettingItem('sec_' . $scheme, 'Security: ' . $scheme, $value, 'Include/Exclude security scheme', ['include', 'exclude']);
-        }
+        $secLabel = count($config['security']) > 0 ? 'Security (' . implode(', ', $config['security']) . ')' : 'Security (none)';
+        $settingItems[] = new SettingItem('action_security', $secLabel, '[Configure]', 'Manage security schemes', ['[Configure]']);
+
+        $tagLabel = count($config['tags']) > 0 ? 'Tags (' . implode(', ', $config['tags']) . ')' : 'Tags (none)';
+        $settingItems[] = new SettingItem('action_tags', $tagLabel, '[Configure]', 'Manage tags', ['[Configure]']);
 
         $settingItems[] = new SettingItem('rb_schema', 'Schema RequestBody', $config['requestBodySchema'] ?? 'none', 'Choose a schema', array_merge(['none'], $schemas));
 
         $rbExampleLabel = $config['requestBodyExample'] ? "Example RB: {$config['requestBodyExample']}" : 'Example RB: none';
         $settingItems[] = new SettingItem('action_rb_example', $rbExampleLabel, '[Select]', 'Choose an example for request body', ['[Select]']);
 
-        $responseCount = count($config['responses']);
-        $responseLabel = $responseCount > 0 ? "Responses ({$responseCount})" : 'Responses (none)';
+        $responseCodes = array_keys($config['responses']);
+        $responseLabel = count($responseCodes) > 0 ? 'Responses (' . implode(', ', array_map('strval', $responseCodes)) . ')' : 'Responses (none)';
         $settingItems[] = new SettingItem('action_responses', $responseLabel, '[Configure]', 'Manage response codes', ['[Configure]']);
 
         $settingItems[] = new SettingItem('format', 'Format', $state->format, 'YAML or PHP', ['yaml', 'php']);
@@ -339,14 +343,17 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
                     $this->showResponseList($tui, $method, $state, $onBack);
                     break;
+                case 'action_tags':
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showTagSelection($tui, $method, $state, $onBack);
+                    break;
+                case 'action_security':
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showSecuritySelection($tui, $method, $state, $onBack);
+                    break;
                 case 'action_validate':
-                    $security = [];
-                    foreach ($this->manager->getSecuritySchemes() as $scheme) {
-                        if ('include' === $settingsWidget->getValue('sec_' . $scheme)) {
-                            $security[] = $scheme;
-                        }
-                    }
-
                     $rbExample = $settingsWidget->getValue('rb_example') ?? 'none';
                     $rbExample = 'none' !== $rbExample ? $rbExample : null;
 
@@ -354,7 +361,8 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                         'operationId' => $settingsWidget->getValue('operationId') ?? '',
                         'summary' => $settingsWidget->getValue('summary') ?? '',
                         'description' => $settingsWidget->getValue('desc') ?? '',
-                        'security' => $security,
+                        'security' => $state->methodsConfig[$method]['security'] ?? [],
+                        'tags' => $state->methodsConfig[$method]['tags'] ?? [],
                         'requestBodySchema' => 'none' !== ($settingsWidget->getValue('rb_schema') ?? 'none') ? $settingsWidget->getValue('rb_schema') : null,
                         'requestBodyExample' => $rbExample,
                         'responses' => $state->methodsConfig[$method]['responses'] ?? [],
@@ -411,6 +419,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     'summary' => '',
                     'description' => '',
                     'security' => [],
+                    'tags' => [],
                     'requestBodySchema' => null,
                     'requestBodyExample' => null,
                     'responses' => [],
@@ -459,6 +468,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                     'summary' => '',
                     'description' => '',
                     'security' => [],
+                    'tags' => [],
                     'requestBodySchema' => null,
                     'requestBodyExample' => null,
                     'responses' => [],
@@ -546,6 +556,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             'summary' => '',
             'description' => '',
             'security' => [],
+            'tags' => [],
             'requestBodySchema' => null,
             'requestBodyExample' => null,
             'responses' => [],
@@ -625,6 +636,244 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $tui->addListener($cancelListener);
     }
 
+    /**
+     * @param array<int, string> $selectedTags
+     * @param array<int, string> $availableTags
+     *
+     * @return array<int, array{value: string, label: string|null}>
+     */
+    private function buildTagChoices(array $selectedTags, array $availableTags): array
+    {
+        $formatter = $this->currentOutput->getFormatter();
+        $choices = [];
+        foreach ($availableTags as $tag) {
+            $isChecked = in_array($tag, $selectedTags, true);
+            $indicator = $isChecked ? '<fg=green>✓</fg=green>' : '<fg=gray>○</fg=gray>';
+            $choices[] = [
+                'value' => $tag,
+                'label' => $formatter->format(sprintf('  %s %s', $indicator, $tag)),
+            ];
+        }
+        $choices[] = ['value' => '__save__', 'label' => $formatter->format('  <info>▸ Save</info>')];
+        $choices[] = ['value' => '__back__', 'label' => $formatter->format('  <comment>← Back</comment>')];
+
+        return $choices;
+    }
+
+    private function showTagSelection(Tui $tui, string $method, RouteTuiState $state, callable $onBack): void
+    {
+        $config = $state->methodsConfig[$method] ?? [
+            'operationId' => '',
+            'summary' => '',
+            'description' => '',
+            'security' => [],
+            'tags' => [],
+            'requestBodySchema' => null,
+            'requestBodyExample' => null,
+            'responses' => [],
+        ];
+        $selectedTags = $config['tags'];
+        $availableTags = $this->manager->getAvailableTags();
+
+        $formatter = $this->currentOutput->getFormatter();
+        $choices = $this->buildTagChoices($selectedTags, $availableTags);
+
+        $selectWidget = new SelectListWidget($choices, 12);
+
+        $tui->clear();
+        $container = new ContainerWidget();
+        $container->expandVertically(true);
+        $tagCount = count($selectedTags);
+        $headerWidget = new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>\n<info>|  Tags — {$method} — {$state->routeName}</info>\n<fg=gray>|  Selected: {$tagCount}</fg=gray>\n<info>+---------------------------------------------+</info>\n"));
+        $container->add($headerWidget);
+        $container->add($selectWidget);
+        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Navigate  ↵ Toggle  Esc Back</fg=gray>')));
+        $tui->add($container);
+        $tui->setFocus($selectWidget);
+
+        $selectListener = function (SelectEvent $event) use ($tui, $selectWidget, $method, &$selectedTags, $availableTags, $state, $onBack, &$selectListener, &$cancelListener) {
+            if ($event->getTarget() !== $selectWidget) {
+                return;
+            }
+
+            $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
+            $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+
+            $value = $event->getValue();
+
+            if ('__back__' === $value) {
+                $this->showMethodConfig($tui, $method, $state, $onBack);
+
+                return;
+            }
+
+            if ('__save__' === $value) {
+                $this->showMethodConfig($tui, $method, $state, $onBack);
+
+                return;
+            }
+
+            // Toggle tag
+            if (in_array($value, $selectedTags, true)) {
+                $selectedTags = array_values(array_filter($selectedTags, static fn ($t) => $t !== $value));
+            } else {
+                $selectedTags[] = $value;
+            }
+
+            $state->methodsConfig[$method]['tags'] = $selectedTags;
+
+            // Update widget items in-place and re-register listener
+            $currentIndex = $selectWidget->getSelectedItem();
+            $newChoices = $this->buildTagChoices($selectedTags, $availableTags);
+            $selectWidget->setItems($newChoices);
+
+            // Restore cursor position
+            if (null !== $currentIndex) {
+                $newIndex = array_search($currentIndex['value'], array_column($newChoices, 'value'), true);
+                if (false !== $newIndex) {
+                    $selectWidget->setSelectedIndex($newIndex);
+                }
+            }
+
+            $tui->requestRender();
+
+            // Re-register listeners
+            $tui->getEventDispatcher()->addListener(SelectEvent::class, $selectListener); // @phpstan-ignore-line
+            $tui->getEventDispatcher()->addListener(CancelEvent::class, $cancelListener); // @phpstan-ignore-line
+        };
+
+        $cancelListener = function (CancelEvent $event) use ($tui, $selectWidget, $method, $state, $onBack, &$selectListener, &$cancelListener) {
+            if ($event->getTarget() === $selectWidget) {
+                $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                $this->showMethodConfig($tui, $method, $state, $onBack);
+            }
+        };
+
+        $tui->addListener($selectListener);
+        $tui->addListener($cancelListener);
+    }
+
+    /**
+     * @param array<int, string> $selectedSchemes
+     * @param array<int, string> $availableSchemes
+     *
+     * @return array<int, array{value: string, label: string|null}>
+     */
+    private function buildSecurityChoices(array $selectedSchemes, array $availableSchemes): array
+    {
+        $formatter = $this->currentOutput->getFormatter();
+        $choices = [];
+        foreach ($availableSchemes as $scheme) {
+            $isChecked = in_array($scheme, $selectedSchemes, true);
+            $indicator = $isChecked ? '<fg=green>✓</fg=green>' : '<fg=gray>○</fg=gray>';
+            $choices[] = [
+                'value' => $scheme,
+                'label' => $formatter->format(sprintf('  %s %s', $indicator, $scheme)),
+            ];
+        }
+        $choices[] = ['value' => '__save__', 'label' => $formatter->format('  <info>▸ Save</info>')];
+        $choices[] = ['value' => '__back__', 'label' => $formatter->format('  <comment>← Back</comment>')];
+
+        return $choices;
+    }
+
+    private function showSecuritySelection(Tui $tui, string $method, RouteTuiState $state, callable $onBack): void
+    {
+        $config = $state->methodsConfig[$method] ?? [
+            'operationId' => '',
+            'summary' => '',
+            'description' => '',
+            'security' => [],
+            'tags' => [],
+            'requestBodySchema' => null,
+            'requestBodyExample' => null,
+            'responses' => [],
+        ];
+        $selectedSchemes = $config['security'];
+        $availableSchemes = $this->manager->getSecuritySchemes();
+
+        $formatter = $this->currentOutput->getFormatter();
+        $choices = $this->buildSecurityChoices($selectedSchemes, $availableSchemes);
+
+        $selectWidget = new SelectListWidget($choices, 12);
+
+        $tui->clear();
+        $container = new ContainerWidget();
+        $container->expandVertically(true);
+        $secCount = count($selectedSchemes);
+        $headerWidget = new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>\n<info>|  Security — {$method} — {$state->routeName}</info>\n<fg=gray>|  Selected: {$secCount}</fg=gray>\n<info>+---------------------------------------------+</info>\n"));
+        $container->add($headerWidget);
+        $container->add($selectWidget);
+        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
+        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Navigate  ↵ Toggle  Esc Back</fg=gray>')));
+        $tui->add($container);
+        $tui->setFocus($selectWidget);
+
+        $selectListener = function (SelectEvent $event) use ($tui, $selectWidget, $method, &$selectedSchemes, $availableSchemes, $state, $onBack, &$selectListener, &$cancelListener) {
+            if ($event->getTarget() !== $selectWidget) {
+                return;
+            }
+
+            $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
+            $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+
+            $value = $event->getValue();
+
+            if ('__back__' === $value) {
+                $this->showMethodConfig($tui, $method, $state, $onBack);
+
+                return;
+            }
+
+            if ('__save__' === $value) {
+                $this->showMethodConfig($tui, $method, $state, $onBack);
+
+                return;
+            }
+
+            // Toggle scheme
+            if (in_array($value, $selectedSchemes, true)) {
+                $selectedSchemes = array_values(array_filter($selectedSchemes, static fn ($s) => $s !== $value));
+            } else {
+                $selectedSchemes[] = $value;
+            }
+
+            $state->methodsConfig[$method]['security'] = $selectedSchemes;
+
+            // Update widget items in-place and re-register listener
+            $currentIndex = $selectWidget->getSelectedItem();
+            $newChoices = $this->buildSecurityChoices($selectedSchemes, $availableSchemes);
+            $selectWidget->setItems($newChoices);
+
+            // Restore cursor position
+            if (null !== $currentIndex) {
+                $newIndex = array_search($currentIndex['value'], array_column($newChoices, 'value'), true);
+                if (false !== $newIndex) {
+                    $selectWidget->setSelectedIndex($newIndex);
+                }
+            }
+
+            $tui->requestRender();
+
+            // Re-register listeners
+            $tui->getEventDispatcher()->addListener(SelectEvent::class, $selectListener); // @phpstan-ignore-line
+            $tui->getEventDispatcher()->addListener(CancelEvent::class, $cancelListener); // @phpstan-ignore-line
+        };
+
+        $cancelListener = function (CancelEvent $event) use ($tui, $selectWidget, $method, $state, $onBack, &$selectListener, &$cancelListener) {
+            if ($event->getTarget() === $selectWidget) {
+                $tui->getEventDispatcher()->removeListener(SelectEvent::class, $selectListener);
+                $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                $this->showMethodConfig($tui, $method, $state, $onBack);
+            }
+        };
+
+        $tui->addListener($selectListener);
+        $tui->addListener($cancelListener);
+    }
+
     private function showResponseConfig(Tui $tui, string $method, ?int $statusCode, RouteTuiState $state, callable $onBack): void
     {
         $config = $state->methodsConfig[$method] ?? [
@@ -632,6 +881,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             'summary' => '',
             'description' => '',
             'security' => [],
+            'tags' => [],
             'requestBodySchema' => null,
             'requestBodyExample' => null,
             'responses' => [],
@@ -786,6 +1036,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                 ->summary($config['summary'])
                 ->description($config['description'])
             ;
+
+            foreach ($config['tags'] as $tag) {
+                $routeBuilder->tag($tag);
+            }
 
             foreach ($config['security'] as $scheme) {
                 $routeBuilder->security($scheme);

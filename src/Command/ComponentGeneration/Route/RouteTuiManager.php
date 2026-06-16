@@ -117,6 +117,31 @@ class RouteTuiManager
         return array_values(array_unique($names));
     }
 
+    /** @return array<int, string> */
+    public function getAvailableTags(): array
+    {
+        $sourcePath = (string)$this->parameterBag->get('ehyiah_api_doc.source_path');
+        $directory = $this->kernel->getProjectDir() . $sourcePath;
+
+        $tags = [];
+        if (is_dir($directory)) {
+            $finder = new \Symfony\Component\Finder\Finder();
+            $finder->files()->in($directory)->name(['*.yaml', '*.yml']);
+            foreach ($finder as $file) {
+                $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
+                if (isset($config['documentation']['tags']) && is_array($config['documentation']['tags'])) {
+                    foreach ($config['documentation']['tags'] as $tag) {
+                        if (isset($tag['name'])) {
+                            $tags[] = (string)$tag['name'];
+                        }
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($tags));
+    }
+
     public function registerSchema(\Ehyiah\ApiDocBundle\Builder\ApiDocBuilder $builder, string $schemaName): void
     {
         $builder->addSchema($schemaName)->setRefName($schemaName)->end();
@@ -156,7 +181,7 @@ class RouteTuiManager
     /**
      * Load existing route configuration from YAML file, returning per-method config.
      *
-     * @return array{methodsConfig: array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, requestBodyExample: ?string, responses: array<int, array{schema: ?string, description: string, example: ?string}>, operationId: string}>}
+     * @return array{methodsConfig: array<string, array{summary: string, description: string, security: string[], tags: string[], requestBodySchema: ?string, requestBodyExample: ?string, responses: array<int, array{schema: ?string, description: string, example: ?string}>, operationId: string}>}
      */
     public function loadRouteConfig(string $routeName, string $componentType): array
     {
@@ -190,7 +215,7 @@ class RouteTuiManager
      *
      * @param array<string, mixed> $config
      *
-     * @return array<string, array{summary: string, description: string, security: string[], requestBodySchema: ?string, requestBodyExample: ?string, responses: array<int, array{schema: ?string, description: string, example: ?string}>, operationId: string}>
+     * @return array<string, array{summary: string, description: string, security: string[], tags: string[], requestBodySchema: ?string, requestBodyExample: ?string, responses: array<int, array{schema: ?string, description: string, example: ?string}>, operationId: string}>
      */
     private function extractMethodsConfig(array $config, string $path): array
     {
@@ -210,6 +235,11 @@ class RouteTuiManager
                 foreach ($definition['security'] as $securityEntry) {
                     $security = array_merge($security, array_map('strval', array_keys($securityEntry)));
                 }
+            }
+
+            $tags = [];
+            if (isset($definition['tags']) && is_array($definition['tags'])) {
+                $tags = array_values(array_unique(array_map('strval', $definition['tags'])));
             }
 
             $requestBodySchema = null;
@@ -263,6 +293,7 @@ class RouteTuiManager
                 'summary' => (string)($definition['summary'] ?? ''),
                 'description' => (string)($definition['description'] ?? ''),
                 'security' => array_values(array_unique($security)),
+                'tags' => $tags,
                 'requestBodySchema' => $requestBodySchema,
                 'requestBodyExample' => $requestBodyExample,
                 'responses' => $responses,
