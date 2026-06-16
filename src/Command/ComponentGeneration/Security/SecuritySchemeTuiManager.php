@@ -35,6 +35,19 @@ class SecuritySchemeTuiManager
                     $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['securitySchemes'])));
                 }
             }
+
+            $finderPhp = new Finder();
+            $finderPhp->files()->in($directory)->name(['*.php']);
+            foreach ($finderPhp as $file) {
+                $content = file_get_contents($file->getRealPath());
+                if (false === $content) {
+                    continue;
+                }
+                preg_match_all('/\$builder->addSecurityScheme\(\s*[\'"]([^\'"]+)[\'"]\s*\)/', $content, $phpMatches);
+                if (!empty($phpMatches[1])) {
+                    $names = array_merge($names, $phpMatches[1]);
+                }
+            }
         }
 
         return array_values(array_unique($names));
@@ -78,6 +91,67 @@ class SecuritySchemeTuiManager
                     'description' => $scheme['description'] ?? '',
                 ];
             }
+        }
+
+        $finderPhp = new Finder();
+        $finderPhp->files()->in($directory)->name(['*.php']);
+        foreach ($finderPhp as $file) {
+            $content = file_get_contents($file->getRealPath());
+            if (false === $content) {
+                continue;
+            }
+            if (!str_contains($content, "'{$name}'") && !str_contains($content, "\"{$name}\"")) {
+                continue;
+            }
+
+            $type = 'http';
+            if (preg_match('/->type\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $type = $match[1];
+            }
+
+            $scheme = 'bearer';
+            if (preg_match('/->scheme\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $scheme = $match[1];
+            }
+
+            $bearerFormat = 'JWT';
+            if (preg_match('/->bearerFormat\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $bearerFormat = $match[1];
+            }
+
+            $nameInHeader = '';
+            if (preg_match('/->nameInHeader\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $nameInHeader = $match[1];
+            }
+
+            $in = 'header';
+            if (preg_match('/->in\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $in = $match[1];
+            }
+
+            $description = '';
+            if (preg_match('/->description\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $description = $match[1];
+            }
+
+            if (preg_match('/->bearer\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $scheme = 'bearer';
+                $bearerFormat = $match[1];
+            }
+
+            if (str_contains($content, '->basic()')) {
+                $scheme = 'basic';
+            }
+
+            return [
+                'type' => $type,
+                'scheme' => $scheme,
+                'bearerFormat' => $bearerFormat,
+                'name' => $nameInHeader,
+                'in' => $in,
+                'openIdConnectUrl' => '',
+                'description' => $description,
+            ];
         }
 
         return null;

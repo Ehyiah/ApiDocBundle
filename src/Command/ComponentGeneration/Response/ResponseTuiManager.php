@@ -35,6 +35,19 @@ class ResponseTuiManager
                     $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['responses'])));
                 }
             }
+
+            $finderPhp = new Finder();
+            $finderPhp->files()->in($directory)->name(['*.php']);
+            foreach ($finderPhp as $file) {
+                $content = file_get_contents($file->getRealPath());
+                if (false === $content) {
+                    continue;
+                }
+                preg_match_all('/\$builder->addResponse\(\s*[\'"]([^\'"]+)[\'"]\s*\)/', $content, $phpMatches);
+                if (!empty($phpMatches[1])) {
+                    $names = array_merge($names, $phpMatches[1]);
+                }
+            }
         }
 
         return array_values(array_unique($names));
@@ -119,6 +132,37 @@ class ResponseTuiManager
                     'links' => $linksJson,
                 ];
             }
+        }
+
+        $finderPhp = new Finder();
+        $finderPhp->files()->in($directory)->name(['*.php']);
+        foreach ($finderPhp as $file) {
+            $content = file_get_contents($file->getRealPath());
+            if (false === $content) {
+                continue;
+            }
+            if (!str_contains($content, "'{$name}'") && !str_contains($content, "\"{$name}\"")) {
+                continue;
+            }
+
+            $description = '';
+            if (preg_match('/->description\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $descMatch)) {
+                $description = $descMatch[1];
+            }
+
+            $schemaRef = null;
+            if (preg_match('/->ref\(\s*[\'"]([^\'"]+)[\'"]\s*\)/', $content, $refMatch)) {
+                $schemaRef = str_replace('#/components/schemas/', '', $refMatch[1]);
+            }
+
+            return [
+                'name' => $name,
+                'description' => $description,
+                'schemaRef' => $schemaRef,
+                'contentType' => 'application/json',
+                'headers' => '',
+                'links' => '',
+            ];
         }
 
         return null;

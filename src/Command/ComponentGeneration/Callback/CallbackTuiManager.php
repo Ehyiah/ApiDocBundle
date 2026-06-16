@@ -35,6 +35,19 @@ class CallbackTuiManager
                     $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['callbacks'])));
                 }
             }
+
+            $finderPhp = new Finder();
+            $finderPhp->files()->in($directory)->name(['*.php']);
+            foreach ($finderPhp as $file) {
+                $content = file_get_contents($file->getRealPath());
+                if (false === $content) {
+                    continue;
+                }
+                preg_match_all('/\$builder->addCallback\(\s*[\'"]([^\'"]+)[\'"]\s*\)/', $content, $phpMatches);
+                if (!empty($phpMatches[1])) {
+                    $names = array_merge($names, $phpMatches[1]);
+                }
+            }
         }
 
         return array_values(array_unique($names));
@@ -107,6 +120,33 @@ class CallbackTuiManager
                     'responseDescription' => $responseDescription,
                 ];
             }
+        }
+
+        $finderPhp = new Finder();
+        $finderPhp->files()->in($directory)->name(['*.php']);
+        foreach ($finderPhp as $file) {
+            $content = file_get_contents($file->getRealPath());
+            if (false === $content) {
+                continue;
+            }
+            if (!str_contains($content, "'{$name}'") && !str_contains($content, "\"{$name}\"")) {
+                continue;
+            }
+
+            $expression = '';
+            if (preg_match('/->pathItem\(\s*[\'"]([^\'"]*)[\'"]\s*,/', $content, $match)) {
+                $expression = $match[1];
+            }
+
+            return [
+                'expression' => $expression,
+                'path' => '',
+                'method' => 'post',
+                'description' => '',
+                'operationId' => '',
+                'requestBodyRef' => '',
+                'responseDescription' => '',
+            ];
         }
 
         return null;

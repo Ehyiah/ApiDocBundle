@@ -116,6 +116,9 @@ class LinkTuiGenerator extends AbstractTuiComponentGenerator
                     $state->serverDescription = $existing['serverDescription'];
                 }
                 $state->loadedFrom = $this->manager->findComponentFile($value);
+                if (null !== $state->loadedFrom) {
+                    $state->format_output = str_ends_with($state->loadedFrom, '.php') ? 'php' : 'yaml';
+                }
             }
             $this->showForm($tui, $state, $onBack);
         };

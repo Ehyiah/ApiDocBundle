@@ -35,6 +35,19 @@ class ParameterTuiManager
                     $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['parameters'])));
                 }
             }
+
+            $finderPhp = new Finder();
+            $finderPhp->files()->in($directory)->name(['*.php']);
+            foreach ($finderPhp as $file) {
+                $content = file_get_contents($file->getRealPath());
+                if (false === $content) {
+                    continue;
+                }
+                preg_match_all('/\$builder->addParameter\(\s*[\'"]([^\'"]+)[\'"]\s*\)/', $content, $phpMatches);
+                if (!empty($phpMatches[1])) {
+                    $names = array_merge($names, $phpMatches[1]);
+                }
+            }
         }
 
         return array_values(array_unique($names));
@@ -83,6 +96,64 @@ class ParameterTuiManager
                     'example' => isset($param['example']) ? (string)$param['example'] : '',
                 ];
             }
+        }
+
+        $finderPhp = new Finder();
+        $finderPhp->files()->in($directory)->name(['*.php']);
+        foreach ($finderPhp as $file) {
+            $content = file_get_contents($file->getRealPath());
+            if (false === $content) {
+                continue;
+            }
+            if (!str_contains($content, "'{$name}'") && !str_contains($content, "\"{$name}\"")) {
+                continue;
+            }
+
+            $in = 'query';
+            if (preg_match('/->in\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $inMatch)) {
+                $in = $inMatch[1];
+            }
+
+            $description = '';
+            if (preg_match('/->description\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $descMatch)) {
+                $description = $descMatch[1];
+            }
+
+            $required = str_contains($content, '->required()');
+            $deprecated = str_contains($content, '->deprecated()');
+            $allowEmptyValue = str_contains($content, '->allowEmptyValue()');
+
+            $style = '';
+            if (preg_match('/->style\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $styleMatch)) {
+                $style = $styleMatch[1];
+            }
+
+            $explode = '';
+            if (preg_match('/->explode\((true|false)\)/', $content, $explodeMatch)) {
+                $explode = $explodeMatch[1];
+            }
+
+            $allowReserved = str_contains($content, '->allowReserved()');
+
+            $schemaType = 'string';
+            if (preg_match('/->schema\(\s*\[[^\]]*[\'"]type[\'"]\s*=>\s*[\'"]([^\'"]+)[\'"]/', $content, $typeMatch)) {
+                $schemaType = $typeMatch[1];
+            }
+
+            return [
+                'name' => $name,
+                'in' => $in,
+                'description' => $description,
+                'required' => $required,
+                'deprecated' => $deprecated,
+                'allowEmptyValue' => $allowEmptyValue,
+                'style' => $style,
+                'explode' => $explode,
+                'allowReserved' => $allowReserved,
+                'schemaType' => $schemaType,
+                'format' => '',
+                'example' => '',
+            ];
         }
 
         return null;

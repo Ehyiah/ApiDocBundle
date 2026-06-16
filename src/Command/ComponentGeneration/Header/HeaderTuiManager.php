@@ -35,6 +35,19 @@ class HeaderTuiManager
                     $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['headers'])));
                 }
             }
+
+            $finderPhp = new Finder();
+            $finderPhp->files()->in($directory)->name(['*.php']);
+            foreach ($finderPhp as $file) {
+                $content = file_get_contents($file->getRealPath());
+                if (false === $content) {
+                    continue;
+                }
+                preg_match_all('/\$builder->addHeader\(\s*[\'"]([^\'"]+)[\'"]\s*\)/', $content, $phpMatches);
+                if (!empty($phpMatches[1])) {
+                    $names = array_merge($names, $phpMatches[1]);
+                }
+            }
         }
 
         return array_values(array_unique($names));
@@ -78,6 +91,52 @@ class HeaderTuiManager
                     'example' => isset($header['example']) ? (string)$header['example'] : '',
                 ];
             }
+        }
+
+        $finderPhp = new Finder();
+        $finderPhp->files()->in($directory)->name(['*.php']);
+        foreach ($finderPhp as $file) {
+            $content = file_get_contents($file->getRealPath());
+            if (false === $content) {
+                continue;
+            }
+            if (!str_contains($content, "'{$name}'") && !str_contains($content, "\"{$name}\"")) {
+                continue;
+            }
+
+            $description = '';
+            if (preg_match('/->description\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $descMatch)) {
+                $description = $descMatch[1];
+            }
+
+            $required = str_contains($content, '->required()');
+            $deprecated = str_contains($content, '->deprecated()');
+
+            $schemaType = 'string';
+            $format = '';
+            if (preg_match('/->typeString\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $typeMatch)) {
+                $schemaType = 'string';
+                $format = $typeMatch[1];
+            } elseif (preg_match('/->typeInteger\(\)/', $content)) {
+                $schemaType = 'integer';
+            } elseif (preg_match('/->schema\(\s*\[[^\]]*[\'"]type[\'"]\s*=>\s*[\'"]([^\'"]+)[\'"]/', $content, $typeMatch)) {
+                $schemaType = $typeMatch[1];
+            }
+
+            $example = '';
+            if (preg_match('/->addExample\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $exMatch)) {
+                $example = $exMatch[1];
+            }
+
+            return [
+                'name' => $name,
+                'description' => $description,
+                'required' => $required,
+                'deprecated' => $deprecated,
+                'schemaType' => $schemaType,
+                'format' => $format,
+                'example' => $example,
+            ];
         }
 
         return null;

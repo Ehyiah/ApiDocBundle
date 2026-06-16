@@ -160,18 +160,14 @@ class RouteTuiManager
         }
 
         $finder = new \Symfony\Component\Finder\Finder();
-        $finder->files()->in($directory)->name([$routeName . '.yaml', $routeName . '.php']);
+        $finder->files()->in($directory)->name([$routeName . '.yaml', $routeName . '.yml', $routeName . '.php']);
         foreach ($finder as $file) {
             if ('php' === $file->getExtension()) {
-                $content = file_get_contents($file->getRealPath());
-                if (false !== $content && str_contains($content, "'{$routeName}'")) {
-                    return $file->getRealPath();
-                }
-            } else {
-                $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
-                if (isset($config['paths'])) {
-                    return $file->getRealPath();
-                }
+                return $file->getRealPath();
+            }
+            $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
+            if (isset($config['paths'])) {
+                return $file->getRealPath();
             }
         }
 
@@ -199,15 +195,82 @@ class RouteTuiManager
         }
 
         $finder = new \Symfony\Component\Finder\Finder();
-        $finder->files()->in($directory)->name($routeName . '.yaml');
+        $finder->files()->in($directory)->name([$routeName . '.yaml', $routeName . '.yml', $routeName . '.php']);
         foreach ($finder as $file) {
-            $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
-            if (isset($config['paths'])) {
-                return ['methodsConfig' => $this->extractMethodsConfig($config, $path)];
+            if ('php' === $file->getExtension()) {
+                $config = $this->parseRoutePhpFile($file->getRealPath(), $path);
+                if (null !== $config) {
+                    return ['methodsConfig' => $this->extractMethodsConfig($config, $path)];
+                }
+            } else {
+                $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
+                if (isset($config['paths'])) {
+                    return ['methodsConfig' => $this->extractMethodsConfig($config, $path)];
+                }
             }
         }
 
         return ['methodsConfig' => []];
+    }
+
+    /**
+     * @return array{paths: array<string, array<string, array{summary: string, description: string, security: string[], tags: string[], requestBodySchema: ?string, requestBodyExample: ?string, responses: array<int, array{schema: ?string, description: string, example: ?string}>, operationId: string}>>}|null
+     */
+    private function parseRoutePhpFile(string $filePath, string $path): ?array
+    {
+        $content = file_get_contents($filePath);
+        if (false === $content) {
+            return null;
+        }
+
+        $methodsConfig = [];
+        $currentMethod = null;
+
+        $lines = explode("\n", $content);
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if (preg_match("/->method\\('([A-Z]+)'\\)/", $line, $m)) {
+                $currentMethod = strtolower($m[1]);
+                $methodsConfig[$currentMethod] = [
+                    'operationId' => '',
+                    'summary' => '',
+                    'description' => '',
+                    'security' => [],
+                    'tags' => [],
+                    'requestBodySchema' => null,
+                    'requestBodyExample' => null,
+                    'responses' => [],
+                ];
+            } elseif (null !== $currentMethod) {
+                if (preg_match("/->operationId\\('([^']+)'\\)/", $line, $m)) {
+                    $methodsConfig[$currentMethod]['operationId'] = $m[1];
+                } elseif (preg_match("/->summary\\('([^']*)'\\)/", $line, $m)) {
+                    $methodsConfig[$currentMethod]['summary'] = $m[1];
+                } elseif (preg_match("/->description\\('([^']*)'\\)/", $line, $m)) {
+                    $methodsConfig[$currentMethod]['description'] = $m[1];
+                } elseif (preg_match("/->tag\\('([^']+)'\\)/", $line, $m)) {
+                    $methodsConfig[$currentMethod]['tags'][] = $m[1];
+                } elseif (preg_match("/->security\\('([^']+)'\\)/", $line, $m)) {
+                    $methodsConfig[$currentMethod]['security'][] = $m[1];
+                } elseif (preg_match('/->response\\((\\d+)\\)/', $line, $m)) {
+                    $statusCode = (int)$m[1];
+                    $methodsConfig[$currentMethod]['responses'][$statusCode] = [
+                        'schema' => null,
+                        'description' => '',
+                        'example' => null,
+                    ];
+                } elseif (preg_match("/->description\\('([^']*)'\\)/", $line, $m) && !empty($methodsConfig[$currentMethod]['responses'])) {
+                    $lastStatusCode = array_key_last($methodsConfig[$currentMethod]['responses']);
+                    $methodsConfig[$currentMethod]['responses'][$lastStatusCode]['description'] = $m[1];
+                } elseif (preg_match("/->refByName\\('([^']+)'\\)/", $line, $m) && !empty($methodsConfig[$currentMethod]['responses'])) {
+                    $lastStatusCode = array_key_last($methodsConfig[$currentMethod]['responses']);
+                    $methodsConfig[$currentMethod]['responses'][$lastStatusCode]['schema'] = $m[1];
+                }
+            }
+        }
+
+        return !empty($methodsConfig) ? ['paths' => [$path => $methodsConfig]] : null; // @phpstan-ignore return.type
     }
 
     /**
@@ -233,7 +296,11 @@ class RouteTuiManager
             $security = [];
             if (isset($definition['security'])) {
                 foreach ($definition['security'] as $securityEntry) {
-                    $security = array_merge($security, array_map('strval', array_keys($securityEntry)));
+                    if (is_array($securityEntry)) {
+                        $security = array_merge($security, array_map('strval', array_keys($securityEntry)));
+                    } else {
+                        $security[] = (string)$securityEntry;
+                    }
                 }
             }
 

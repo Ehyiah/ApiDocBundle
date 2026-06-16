@@ -35,6 +35,19 @@ class ExampleTuiManager
                     $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['examples'])));
                 }
             }
+
+            $finderPhp = new Finder();
+            $finderPhp->files()->in($directory)->name(['*.php']);
+            foreach ($finderPhp as $file) {
+                $content = file_get_contents($file->getRealPath());
+                if (false === $content) {
+                    continue;
+                }
+                preg_match_all('/\$builder->addExample\(\s*[\'"]([^\'"]+)[\'"]\s*\)/', $content, $phpMatches);
+                if (!empty($phpMatches[1])) {
+                    $names = array_merge($names, $phpMatches[1]);
+                }
+            }
         }
 
         return array_values(array_unique($names));
@@ -139,6 +152,43 @@ class ExampleTuiManager
                     'externalValue' => (string)($example['externalValue'] ?? ''),
                 ];
             }
+        }
+
+        $finderPhp = new Finder();
+        $finderPhp->files()->in($directory)->name(['*.php']);
+        foreach ($finderPhp as $file) {
+            $content = file_get_contents($file->getRealPath());
+            if (false === $content) {
+                continue;
+            }
+            if (!str_contains($content, "'{$name}'") && !str_contains($content, "\"{$name}\"")) {
+                continue;
+            }
+
+            $summary = '';
+            if (preg_match('/->summary\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $summary = $match[1];
+            }
+
+            $valueStr = '';
+            if (preg_match('/->value\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $valueStr = $match[1];
+            } elseif (preg_match('/->value\(([^)]+)\)/', $content, $match)) {
+                $valueStr = trim($match[1]);
+            }
+
+            $externalValue = '';
+            if (preg_match('/->externalValue\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $externalValue = $match[1];
+            }
+
+            return [
+                'name' => $name,
+                'summary' => $summary,
+                'description' => '',
+                'value' => $valueStr,
+                'externalValue' => $externalValue,
+            ];
         }
 
         return null;

@@ -104,6 +104,9 @@ class RequestBodyTuiGenerator extends AbstractTuiComponentGenerator
             if ('__new__' !== $value) {
                 $state->name = $value;
                 $state->loadedFrom = $this->manager->findComponentFile($value);
+                if (null !== $state->loadedFrom) {
+                    $state->format_output = str_ends_with($state->loadedFrom, '.php') ? 'php' : 'yaml';
+                }
             }
             $this->showForm($tui, $state, $onBack);
         };

@@ -111,6 +111,9 @@ class TagTuiGenerator extends AbstractTuiComponentGenerator
                     $state->externalDocsDescription = $existing['externalDocsDescription'];
                 }
                 $state->loadedFrom = $this->manager->findComponentFile($value);
+                if (null !== $state->loadedFrom) {
+                    $state->format_output = str_ends_with($state->loadedFrom, '.php') ? 'php' : 'yaml';
+                }
             }
             $this->showForm($tui, $state, $onBack);
         };

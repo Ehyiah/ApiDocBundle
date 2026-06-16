@@ -35,6 +35,19 @@ class PathItemTuiManager
                     $names = array_merge($names, array_map('strval', array_keys($config['documentation']['components']['pathItems'])));
                 }
             }
+
+            $finderPhp = new Finder();
+            $finderPhp->files()->in($directory)->name(['*.php']);
+            foreach ($finderPhp as $file) {
+                $content = file_get_contents($file->getRealPath());
+                if (false === $content) {
+                    continue;
+                }
+                preg_match_all('/\$builder->addPathItem\(\s*[\'"]([^\'"]+)[\'"]\s*\)/', $content, $phpMatches);
+                if (!empty($phpMatches[1])) {
+                    $names = array_merge($names, $phpMatches[1]);
+                }
+            }
         }
 
         return array_values(array_unique($names));
@@ -74,6 +87,39 @@ class PathItemTuiManager
                     'ref' => $pathItem['$ref'] ?? '',
                 ];
             }
+        }
+
+        $finderPhp = new Finder();
+        $finderPhp->files()->in($directory)->name(['*.php']);
+        foreach ($finderPhp as $file) {
+            $content = file_get_contents($file->getRealPath());
+            if (false === $content) {
+                continue;
+            }
+            if (!str_contains($content, "'{$name}'") && !str_contains($content, "\"{$name}\"")) {
+                continue;
+            }
+
+            $summary = '';
+            if (preg_match('/->summary\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $summary = $match[1];
+            }
+
+            $description = '';
+            if (preg_match('/->description\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $description = $match[1];
+            }
+
+            $ref = '';
+            if (preg_match('/->ref\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $match)) {
+                $ref = $match[1];
+            }
+
+            return [
+                'summary' => $summary,
+                'description' => $description,
+                'ref' => $ref,
+            ];
         }
 
         return null;

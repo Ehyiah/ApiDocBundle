@@ -109,6 +109,9 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
                 $state->outputDir = $this->manager->getDefaultDumpLocation();
                 $this->loadExistingConfig($state);
                 $state->loadedFrom = $this->manager->findRouteFile($state->routeName);
+                if (null !== $state->loadedFrom) {
+                    $state->format = str_ends_with($state->loadedFrom, '.php') ? 'php' : 'yaml';
+                }
                 $this->showMethodList($tui, $state, $onBack);
             }
         };
@@ -1168,10 +1171,12 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
         if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
             $dumpLocation = dirname($state->loadedFrom) . '/' . $state->routeName . '.' . $extension;
-            // Merge with existing config to preserve manually-added fields
-            $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
-            if (isset($existingConfig['paths'])) {
-                $array = array_replace_recursive($existingConfig, $array);
+            // Merge with existing config to preserve manually-added fields (YAML only)
+            if ('php' !== pathinfo($state->loadedFrom, PATHINFO_EXTENSION)) {
+                $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
+                if (isset($existingConfig['paths'])) {
+                    $array = array_replace_recursive($existingConfig, $array);
+                }
             }
         } else {
             $dumpDirectory = $this->kernel->getProjectDir() . $state->outputDir . u($destination)->ensureEnd('/');

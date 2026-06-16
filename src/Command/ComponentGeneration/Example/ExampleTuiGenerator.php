@@ -113,6 +113,9 @@ class ExampleTuiGenerator extends AbstractTuiComponentGenerator
                     $state->externalValue = $existing['externalValue'];
                 }
                 $state->loadedFrom = $this->manager->findComponentFile($value);
+                if (null !== $state->loadedFrom) {
+                    $state->format_output = str_ends_with($state->loadedFrom, '.php') ? 'php' : 'yaml';
+                }
             }
             $this->showForm($tui, $state, $onBack);
         };

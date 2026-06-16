@@ -39,6 +39,19 @@ class TagTuiManager
                     }
                 }
             }
+
+            $finderPhp = new Finder();
+            $finderPhp->files()->in($directory)->name(['*.php']);
+            foreach ($finderPhp as $file) {
+                $content = file_get_contents($file->getRealPath());
+                if (false === $content) {
+                    continue;
+                }
+                preg_match_all('/\$builder->addTag\(\s*[\'"]([^\'"]+)[\'"]\s*\)/', $content, $phpMatches);
+                if (!empty($phpMatches[1])) {
+                    $names = array_merge($names, $phpMatches[1]);
+                }
+            }
         }
 
         return array_values(array_unique($names));
@@ -81,6 +94,37 @@ class TagTuiManager
                     }
                 }
             }
+        }
+
+        $finderPhp = new Finder();
+        $finderPhp->files()->in($directory)->name(['*.php']);
+        foreach ($finderPhp as $file) {
+            $content = file_get_contents($file->getRealPath());
+            if (false === $content) {
+                continue;
+            }
+            if (!str_contains($content, "'{$name}'") && !str_contains($content, "\"{$name}\"")) {
+                continue;
+            }
+
+            $description = '';
+            if (preg_match('/->description\(\s*[\'"]([^\'"]*)[\'"]\s*\)/', $content, $descMatch)) {
+                $description = $descMatch[1];
+            }
+
+            $externalDocsUrl = '';
+            $externalDocsDescription = '';
+            if (preg_match('/->externalDocs\(\s*[\'"]([^\'"]*)[\'"]\s*(?:,\s*[\'"]([^\'"]*)[\'"]\s*)?\)/', $content, $extMatch)) {
+                $externalDocsUrl = $extMatch[1];
+                $externalDocsDescription = $extMatch[2] ?? '';
+            }
+
+            return [
+                'name' => $name,
+                'description' => $description,
+                'externalDocsUrl' => $externalDocsUrl,
+                'externalDocsDescription' => $externalDocsDescription,
+            ];
         }
 
         return null;
