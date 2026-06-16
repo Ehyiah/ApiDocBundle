@@ -168,6 +168,9 @@ class ParameterTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem('format_output', 'Output Format', $state->format_output, 'YAML or PHP', ['yaml', 'php']);
         $settingItems[] = new SettingItem('output', 'Output Directory', $state->outputDir, 'Target directory', [], $textInputCallback);
         $settingItems[] = new SettingItem('action_validate', 'Save', '✓ Confirm', 'Save and return to the list.', ['✓ Confirm']);
+        if (null !== $state->loadedFrom) {
+            $settingItems[] = new SettingItem('action_delete', 'Delete', '✗ Delete', 'Delete this component.', ['✗ Delete']);
+        }
         $settingItems[] = new SettingItem('action_cancel', 'Cancel', '← Cancel', 'Return without saving.', ['← Cancel']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
@@ -216,6 +219,12 @@ class ParameterTuiGenerator extends AbstractTuiComponentGenerator
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
                     $tui->stop();
                     $this->generateComponent($state);
+                    break;
+                case 'action_delete':
+                    $this->deleteComponent($state);
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showComponentList($tui, $onBack);
                     break;
             }
         };
@@ -306,5 +315,22 @@ class ParameterTuiGenerator extends AbstractTuiComponentGenerator
         }
 
         $this->currentOutput->writeln(sprintf('<info>Parameter "%s" generated successfully in %s</info>', $state->name, $dumpLocation));
+    }
+
+    private function deleteComponent(ParameterTuiState $state): void
+    {
+        if (null === $state->loadedFrom || !file_exists($state->loadedFrom)) {
+            return;
+        }
+
+        $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
+        if (!isset($existingConfig['documentation']['components']['parameters'])) {
+            return;
+        }
+
+        unset($existingConfig['documentation']['components']['parameters'][$state->name]);
+
+        $this->writeYamlFile($existingConfig, $state->loadedFrom, $this->currentOutput);
+        $this->currentOutput->writeln(sprintf('<info>Parameter "%s" deleted from %s</info>', $state->name, $state->loadedFrom));
     }
 }

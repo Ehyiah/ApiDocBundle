@@ -29,6 +29,9 @@ use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Response\ResponseTuiState;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Security\SecuritySchemeTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Security\SecuritySchemeTuiManager;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Security\SecuritySchemeTuiState;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tag\TagTuiGenerator;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tag\TagTuiManager;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Tag\TagTuiState;
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
@@ -793,5 +796,405 @@ class TuiGenerationTest extends TestCase
         $this->assertSame('External user example', $example['summary']);
         $this->assertSame('https://example.com/user.json', $example['externalValue']);
         $this->assertArrayNotHasKey('value', $example);
+    }
+
+    // ── Tag tests ──
+
+    public function testTagYamlGeneration(): void
+    {
+        $state = new TagTuiState();
+        $state->name = 'Users';
+        $state->description = 'User management';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(TagTuiGenerator::class, TagTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $file = $this->tmpDir . '/Swagger/tags/Users.yaml';
+        $this->assertFileExists($file);
+
+        $yaml = Yaml::parseFile($file);
+        $this->assertArrayHasKey('documentation', $yaml);
+        $this->assertArrayHasKey('tags', $yaml['documentation']);
+        $this->assertIsArray($yaml['documentation']['tags']);
+
+        $found = false;
+        foreach ($yaml['documentation']['tags'] as $tag) {
+            if ('Users' === ($tag['name'] ?? '')) {
+                $found = true;
+                $this->assertSame('User management', $tag['description']);
+            }
+        }
+        $this->assertTrue($found, 'Tag "Users" not found in generated YAML');
+    }
+
+    public function testTagYamlWithExternalDocs(): void
+    {
+        $state = new TagTuiState();
+        $state->name = 'Admin';
+        $state->description = 'Admin ops';
+        $state->externalDocsUrl = 'https://example.com/docs';
+        $state->externalDocsDescription = 'Docs';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(TagTuiGenerator::class, TagTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $file = $this->tmpDir . '/Swagger/tags/Admin.yaml';
+        $this->assertFileExists($file);
+
+        $yaml = Yaml::parseFile($file);
+        $found = false;
+        foreach ($yaml['documentation']['tags'] as $tag) {
+            if ('Admin' === ($tag['name'] ?? '')) {
+                $found = true;
+                $this->assertSame('Admin ops', $tag['description']);
+                $this->assertSame([
+                    'url' => 'https://example.com/docs',
+                    'description' => 'Docs',
+                ], $tag['externalDocs']);
+            }
+        }
+        $this->assertTrue($found, 'Tag "Admin" not found in generated YAML');
+    }
+
+    public function testTagPhpGeneration(): void
+    {
+        $state = new TagTuiState();
+        $state->name = 'Simple';
+        $state->description = 'A tag';
+        $state->format_output = 'php';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(TagTuiGenerator::class, TagTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $file = $this->tmpDir . '/Swagger/tags/Simple.php';
+        $this->assertFileExists($file);
+
+        $content = file_get_contents($file);
+        $this->assertStringContainsString("addTag('Simple')", $content);
+        $this->assertStringContainsString("->description('A tag')", $content);
+    }
+
+    public function testTagMinimal(): void
+    {
+        $state = new TagTuiState();
+        $state->name = 'Minimal';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger/';
+
+        $generator = $this->createGenerator(TagTuiGenerator::class, TagTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $file = $this->tmpDir . '/Swagger/tags/Minimal.yaml';
+        $this->assertFileExists($file);
+
+        $yaml = Yaml::parseFile($file);
+        $found = false;
+        foreach ($yaml['documentation']['tags'] as $tag) {
+            if ('Minimal' === ($tag['name'] ?? '')) {
+                $found = true;
+                $this->assertArrayHasKey('name', $tag);
+                $this->assertArrayNotHasKey('description', $tag);
+            }
+        }
+        $this->assertTrue($found, 'Tag "Minimal" not found in generated YAML');
+    }
+
+    public function testDeleteComponentForTag(): void
+    {
+        $tagsDir = $this->tmpDir . '/Swagger/tags/';
+        mkdir($tagsDir, 0755, true);
+        $yamlFile = $tagsDir . 'mixed.yaml';
+        file_put_contents($yamlFile, Yaml::dump([
+            'documentation' => [
+                'tags' => [
+                    ['name' => 'Users', 'description' => 'Users desc'],
+                    ['name' => 'Admin', 'description' => 'Admin desc'],
+                ],
+            ],
+        ]));
+
+        $generator = $this->createGenerator(TagTuiGenerator::class, TagTuiManager::class);
+
+        $outputReflection = new ReflectionProperty($generator, 'currentOutput');
+        $outputReflection->setValue($generator, $this->output);
+
+        $state = new TagTuiState();
+        $state->name = 'Users';
+        $state->loadedFrom = $yamlFile;
+
+        $reflection = new ReflectionMethod($generator, 'deleteComponent');
+        $reflection->setAccessible(true);
+        $reflection->invoke($generator, $state);
+
+        $yaml = Yaml::parseFile($yamlFile);
+        $names = array_map(static fn (array $t): string => $t['name'] ?? '', $yaml['documentation']['tags']);
+        $this->assertNotContains('Users', $names);
+        $this->assertContains('Admin', $names);
+    }
+
+    public function testDeleteComponentRemovesFromYamlResponse(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/responses/';
+        mkdir($dir, 0755, true);
+        $yamlFile = $dir . 'mixed.yaml';
+        file_put_contents($yamlFile, Yaml::dump([
+            'documentation' => ['components' => ['responses' => [
+                'NotFound' => ['description' => 'not found'],
+                'Created' => ['description' => 'created'],
+            ]]],
+        ]));
+
+        $generator = $this->createGenerator(ResponseTuiGenerator::class, ResponseTuiManager::class);
+        $outputReflection = new ReflectionProperty($generator, 'currentOutput');
+        $outputReflection->setValue($generator, $this->output);
+
+        $state = new ResponseTuiState();
+        $state->name = 'NotFound';
+        $state->loadedFrom = $yamlFile;
+
+        $reflection = new ReflectionMethod($generator, 'deleteComponent');
+        $reflection->setAccessible(true);
+        $reflection->invoke($generator, $state);
+
+        $yaml = Yaml::parseFile($yamlFile);
+        $this->assertArrayNotHasKey('NotFound', $yaml['documentation']['components']['responses']);
+        $this->assertArrayHasKey('Created', $yaml['documentation']['components']['responses']);
+    }
+
+    public function testDeleteComponentRemovesFromYamlHeader(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/headers/';
+        mkdir($dir, 0755, true);
+        $yamlFile = $dir . 'mixed.yaml';
+        file_put_contents($yamlFile, Yaml::dump([
+            'documentation' => ['components' => ['headers' => [
+                'X-Request-ID' => ['description' => 'request id'],
+                'X-Trace-ID' => ['description' => 'trace id'],
+            ]]],
+        ]));
+
+        $generator = $this->createGenerator(HeaderTuiGenerator::class, HeaderTuiManager::class);
+        $outputReflection = new ReflectionProperty($generator, 'currentOutput');
+        $outputReflection->setValue($generator, $this->output);
+
+        $state = new HeaderTuiState();
+        $state->name = 'X-Request-ID';
+        $state->loadedFrom = $yamlFile;
+
+        $reflection = new ReflectionMethod($generator, 'deleteComponent');
+        $reflection->setAccessible(true);
+        $reflection->invoke($generator, $state);
+
+        $yaml = Yaml::parseFile($yamlFile);
+        $this->assertArrayNotHasKey('X-Request-ID', $yaml['documentation']['components']['headers']);
+        $this->assertArrayHasKey('X-Trace-ID', $yaml['documentation']['components']['headers']);
+    }
+
+    public function testDeleteComponentRemovesFromYamlParameter(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/parameters/';
+        mkdir($dir, 0755, true);
+        $yamlFile = $dir . 'mixed.yaml';
+        file_put_contents($yamlFile, Yaml::dump([
+            'documentation' => ['components' => ['parameters' => [
+                'userId' => ['name' => 'userId', 'in' => 'path'],
+                'page' => ['name' => 'page', 'in' => 'query'],
+            ]]],
+        ]));
+
+        $generator = $this->createGenerator(ParameterTuiGenerator::class, ParameterTuiManager::class);
+        $outputReflection = new ReflectionProperty($generator, 'currentOutput');
+        $outputReflection->setValue($generator, $this->output);
+
+        $state = new ParameterTuiState();
+        $state->name = 'userId';
+        $state->loadedFrom = $yamlFile;
+
+        $reflection = new ReflectionMethod($generator, 'deleteComponent');
+        $reflection->setAccessible(true);
+        $reflection->invoke($generator, $state);
+
+        $yaml = Yaml::parseFile($yamlFile);
+        $this->assertArrayNotHasKey('userId', $yaml['documentation']['components']['parameters']);
+        $this->assertArrayHasKey('page', $yaml['documentation']['components']['parameters']);
+    }
+
+    public function testDeleteComponentRemovesFromYamlRequestBody(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/requestBodies/';
+        mkdir($dir, 0755, true);
+        $yamlFile = $dir . 'mixed.yaml';
+        file_put_contents($yamlFile, Yaml::dump([
+            'documentation' => ['components' => ['requestBodies' => [
+                'CreateUser' => ['description' => 'create user'],
+                'UpdateUser' => ['description' => 'update user'],
+            ]]],
+        ]));
+
+        $generator = $this->createGenerator(RequestBodyTuiGenerator::class, RequestBodyTuiManager::class);
+        $outputReflection = new ReflectionProperty($generator, 'currentOutput');
+        $outputReflection->setValue($generator, $this->output);
+
+        $state = new RequestBodyTuiState();
+        $state->name = 'CreateUser';
+        $state->loadedFrom = $yamlFile;
+
+        $reflection = new ReflectionMethod($generator, 'deleteComponent');
+        $reflection->setAccessible(true);
+        $reflection->invoke($generator, $state);
+
+        $yaml = Yaml::parseFile($yamlFile);
+        $this->assertArrayNotHasKey('CreateUser', $yaml['documentation']['components']['requestBodies']);
+        $this->assertArrayHasKey('UpdateUser', $yaml['documentation']['components']['requestBodies']);
+    }
+
+    public function testDeleteComponentRemovesFromYamlExample(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/examples/';
+        mkdir($dir, 0755, true);
+        $yamlFile = $dir . 'mixed.yaml';
+        file_put_contents($yamlFile, Yaml::dump([
+            'documentation' => ['components' => ['examples' => [
+                'SuccessfulLogin' => ['summary' => 'login'],
+                'FailedLogin' => ['summary' => 'failed'],
+            ]]],
+        ]));
+
+        $generator = $this->createGenerator(ExampleTuiGenerator::class, ExampleTuiManager::class);
+        $outputReflection = new ReflectionProperty($generator, 'currentOutput');
+        $outputReflection->setValue($generator, $this->output);
+
+        $state = new ExampleTuiState();
+        $state->name = 'SuccessfulLogin';
+        $state->loadedFrom = $yamlFile;
+
+        $reflection = new ReflectionMethod($generator, 'deleteComponent');
+        $reflection->setAccessible(true);
+        $reflection->invoke($generator, $state);
+
+        $yaml = Yaml::parseFile($yamlFile);
+        $this->assertArrayNotHasKey('SuccessfulLogin', $yaml['documentation']['components']['examples']);
+        $this->assertArrayHasKey('FailedLogin', $yaml['documentation']['components']['examples']);
+    }
+
+    public function testDeleteComponentRemovesFromYamlLink(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/links/';
+        mkdir($dir, 0755, true);
+        $yamlFile = $dir . 'mixed.yaml';
+        file_put_contents($yamlFile, Yaml::dump([
+            'documentation' => ['components' => ['links' => [
+                'GetUserOrders' => ['operationId' => 'getUserOrders'],
+                'GetUserPosts' => ['operationId' => 'getUserPosts'],
+            ]]],
+        ]));
+
+        $generator = $this->createGenerator(LinkTuiGenerator::class, LinkTuiManager::class);
+        $outputReflection = new ReflectionProperty($generator, 'currentOutput');
+        $outputReflection->setValue($generator, $this->output);
+
+        $state = new LinkTuiState();
+        $state->name = 'GetUserOrders';
+        $state->loadedFrom = $yamlFile;
+
+        $reflection = new ReflectionMethod($generator, 'deleteComponent');
+        $reflection->setAccessible(true);
+        $reflection->invoke($generator, $state);
+
+        $yaml = Yaml::parseFile($yamlFile);
+        $this->assertArrayNotHasKey('GetUserOrders', $yaml['documentation']['components']['links']);
+        $this->assertArrayHasKey('GetUserPosts', $yaml['documentation']['components']['links']);
+    }
+
+    public function testDeleteComponentRemovesFromYamlCallback(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/callbacks/';
+        mkdir($dir, 0755, true);
+        $yamlFile = $dir . 'mixed.yaml';
+        file_put_contents($yamlFile, Yaml::dump([
+            'documentation' => ['components' => ['callbacks' => [
+                'OnOrderCreated' => ['{$request.body#/url}' => ['post' => ['operationId' => 'handle1']]],
+                'OnPaymentReceived' => ['{$request.body#/url}' => ['post' => ['operationId' => 'handle2']]],
+            ]]],
+        ]));
+
+        $generator = $this->createGenerator(CallbackTuiGenerator::class, CallbackTuiManager::class);
+        $outputReflection = new ReflectionProperty($generator, 'currentOutput');
+        $outputReflection->setValue($generator, $this->output);
+
+        $state = new CallbackTuiState();
+        $state->name = 'OnOrderCreated';
+        $state->loadedFrom = $yamlFile;
+
+        $reflection = new ReflectionMethod($generator, 'deleteComponent');
+        $reflection->setAccessible(true);
+        $reflection->invoke($generator, $state);
+
+        $yaml = Yaml::parseFile($yamlFile);
+        $this->assertArrayNotHasKey('OnOrderCreated', $yaml['documentation']['components']['callbacks']);
+        $this->assertArrayHasKey('OnPaymentReceived', $yaml['documentation']['components']['callbacks']);
+    }
+
+    public function testDeleteComponentRemovesFromYamlPathItem(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/pathItems/';
+        mkdir($dir, 0755, true);
+        $yamlFile = $dir . 'mixed.yaml';
+        file_put_contents($yamlFile, Yaml::dump([
+            'documentation' => ['components' => ['pathItems' => [
+                'UserOperations' => ['summary' => 'user ops'],
+                'OrderOperations' => ['summary' => 'order ops'],
+            ]]],
+        ]));
+
+        $generator = $this->createGenerator(PathItemTuiGenerator::class, PathItemTuiManager::class);
+        $outputReflection = new ReflectionProperty($generator, 'currentOutput');
+        $outputReflection->setValue($generator, $this->output);
+
+        $state = new PathItemTuiState();
+        $state->name = 'UserOperations';
+        $state->loadedFrom = $yamlFile;
+
+        $reflection = new ReflectionMethod($generator, 'deleteComponent');
+        $reflection->setAccessible(true);
+        $reflection->invoke($generator, $state);
+
+        $yaml = Yaml::parseFile($yamlFile);
+        $this->assertArrayNotHasKey('UserOperations', $yaml['documentation']['components']['pathItems']);
+        $this->assertArrayHasKey('OrderOperations', $yaml['documentation']['components']['pathItems']);
+    }
+
+    public function testDeleteComponentRemovesFromYamlSecurityScheme(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/securitySchemes/';
+        mkdir($dir, 0755, true);
+        $yamlFile = $dir . 'mixed.yaml';
+        file_put_contents($yamlFile, Yaml::dump([
+            'documentation' => ['components' => ['securitySchemes' => [
+                'BearerAuth' => ['type' => 'http', 'scheme' => 'bearer'],
+                'ApiKeyAuth' => ['type' => 'apiKey'],
+            ]]],
+        ]));
+
+        $generator = $this->createGenerator(SecuritySchemeTuiGenerator::class, SecuritySchemeTuiManager::class);
+        $outputReflection = new ReflectionProperty($generator, 'currentOutput');
+        $outputReflection->setValue($generator, $this->output);
+
+        $state = new SecuritySchemeTuiState();
+        $state->name = 'BearerAuth';
+        $state->loadedFrom = $yamlFile;
+
+        $reflection = new ReflectionMethod($generator, 'deleteComponent');
+        $reflection->setAccessible(true);
+        $reflection->invoke($generator, $state);
+
+        $yaml = Yaml::parseFile($yamlFile);
+        $this->assertArrayNotHasKey('BearerAuth', $yaml['documentation']['components']['securitySchemes']);
+        $this->assertArrayHasKey('ApiKeyAuth', $yaml['documentation']['components']['securitySchemes']);
     }
 }

@@ -301,6 +301,237 @@ class RouteTuiManagerTest extends TestCase
         $this->assertSame('', $config['methodsConfig']['GET']['operationId']);
     }
 
+    public function testGetAvailableTagsReturnsArray(): void
+    {
+        $router = $this->createMock(RouterInterface::class);
+        $parameterBag = $this->createMock(ParameterBagInterface::class);
+        $parameterBag->method('get')->willReturnMap([
+            ['ehyiah_api_doc.source_path', '/Swagger'],
+        ]);
+
+        $kernel = $this->createMock(KernelInterface::class);
+        $kernel->method('getProjectDir')->willReturn($this->tmpDir);
+
+        $helper = $this->createMock(LoadApiDocConfigHelper::class);
+
+        $manager = new RouteTuiManager($router, $parameterBag, $kernel, $helper);
+        $tags = $manager->getAvailableTags();
+
+        $this->assertIsArray($tags);
+    }
+
+    public function testGetAvailableTagsFindsTags(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'tags.yaml', Yaml::dump([
+            'documentation' => [
+                'tags' => [
+                    ['name' => 'Users', 'description' => 'User endpoints'],
+                    ['name' => 'Admin', 'description' => 'Admin endpoints'],
+                ],
+            ],
+        ]));
+
+        $router = $this->createMock(RouterInterface::class);
+        $parameterBag = $this->createMock(ParameterBagInterface::class);
+        $parameterBag->method('get')->willReturnMap([
+            ['ehyiah_api_doc.source_path', '/Swagger'],
+        ]);
+
+        $kernel = $this->createMock(KernelInterface::class);
+        $kernel->method('getProjectDir')->willReturn($this->tmpDir);
+
+        $helper = $this->createMock(LoadApiDocConfigHelper::class);
+
+        $manager = new RouteTuiManager($router, $parameterBag, $kernel, $helper);
+        $tags = $manager->getAvailableTags();
+
+        $this->assertContains('Users', $tags);
+        $this->assertContains('Admin', $tags);
+    }
+
+    public function testGetAvailableTagsDeduplicates(): void
+    {
+        $dir = $this->tmpDir . '/Swagger/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . 'tags.yaml', Yaml::dump([
+            'documentation' => [
+                'tags' => [
+                    ['name' => 'Users', 'description' => 'First'],
+                    ['name' => 'Users', 'description' => 'Duplicate'],
+                ],
+            ],
+        ]));
+
+        $router = $this->createMock(RouterInterface::class);
+        $parameterBag = $this->createMock(ParameterBagInterface::class);
+        $parameterBag->method('get')->willReturnMap([
+            ['ehyiah_api_doc.source_path', '/Swagger'],
+        ]);
+
+        $kernel = $this->createMock(KernelInterface::class);
+        $kernel->method('getProjectDir')->willReturn($this->tmpDir);
+
+        $helper = $this->createMock(LoadApiDocConfigHelper::class);
+
+        $manager = new RouteTuiManager($router, $parameterBag, $kernel, $helper);
+        $tags = $manager->getAvailableTags();
+
+        $this->assertCount(1, $tags);
+        $this->assertSame('Users', $tags[0]);
+    }
+
+    public function testGetDefaultDumpLocationReturnsPath(): void
+    {
+        $router = $this->createMock(RouterInterface::class);
+        $parameterBag = $this->createMock(ParameterBagInterface::class);
+        $parameterBag->method('get')->willReturnMap([
+            ['ehyiah_api_doc.source_path', '/Swagger'],
+        ]);
+
+        $kernel = $this->createMock(KernelInterface::class);
+        $helper = $this->createMock(LoadApiDocConfigHelper::class);
+
+        $manager = new RouteTuiManager($router, $parameterBag, $kernel, $helper);
+        $location = $manager->getDefaultDumpLocation();
+
+        $this->assertIsString($location);
+        $this->assertStringStartsWith('/', $location);
+    }
+
+    public function testLoadRouteConfigExtractsTags(): void
+    {
+        $routeName = 'get_users';
+        $routePath = '/api/users';
+
+        $route = new Route($routePath);
+        $routeCollection = new RouteCollection();
+        $routeCollection->add($routeName, $route);
+
+        $router = $this->createMock(RouterInterface::class);
+        $router->method('getRouteCollection')->willReturn($routeCollection);
+
+        $dir = $this->tmpDir . '/Swagger/routes/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . $routeName . '.yaml', Yaml::dump([
+            'paths' => [
+                $routePath => [
+                    'get' => [
+                        'tags' => ['Users', 'Admin'],
+                        'summary' => 'Get users',
+                    ],
+                ],
+            ],
+        ]));
+
+        $parameterBag = $this->createMock(ParameterBagInterface::class);
+        $parameterBag->method('get')->willReturnMap([
+            ['ehyiah_api_doc.source_path', '/Swagger'],
+            ['ehyiah_api_doc.dump_path', '/Swagger/dump/'],
+        ]);
+
+        $kernel = $this->createMock(KernelInterface::class);
+        $kernel->method('getProjectDir')->willReturn($this->tmpDir);
+
+        $helper = new LoadApiDocConfigHelper($kernel, $parameterBag);
+        $manager = new RouteTuiManager($router, $parameterBag, $kernel, $helper);
+
+        $config = $manager->loadRouteConfig($routeName, 'routes');
+
+        $this->assertArrayHasKey('methodsConfig', $config);
+        $this->assertArrayHasKey('GET', $config['methodsConfig']);
+        $this->assertArrayHasKey('tags', $config['methodsConfig']['GET']);
+        $this->assertSame(['Users', 'Admin'], $config['methodsConfig']['GET']['tags']);
+    }
+
+    public function testLoadRouteConfigExtractsSecurity(): void
+    {
+        $routeName = 'get_users';
+        $routePath = '/api/users';
+
+        $route = new Route($routePath);
+        $routeCollection = new RouteCollection();
+        $routeCollection->add($routeName, $route);
+
+        $router = $this->createMock(RouterInterface::class);
+        $router->method('getRouteCollection')->willReturn($routeCollection);
+
+        $dir = $this->tmpDir . '/Swagger/routes/';
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . $routeName . '.yaml', Yaml::dump([
+            'paths' => [
+                $routePath => [
+                    'get' => [
+                        'security' => [
+                            ['Bearer' => []],
+                            ['ApiKey' => []],
+                        ],
+                        'summary' => 'Get users',
+                    ],
+                ],
+            ],
+        ]));
+
+        $parameterBag = $this->createMock(ParameterBagInterface::class);
+        $parameterBag->method('get')->willReturnMap([
+            ['ehyiah_api_doc.source_path', '/Swagger'],
+            ['ehyiah_api_doc.dump_path', '/Swagger/dump/'],
+        ]);
+
+        $kernel = $this->createMock(KernelInterface::class);
+        $kernel->method('getProjectDir')->willReturn($this->tmpDir);
+
+        $helper = new LoadApiDocConfigHelper($kernel, $parameterBag);
+        $manager = new RouteTuiManager($router, $parameterBag, $kernel, $helper);
+
+        $config = $manager->loadRouteConfig($routeName, 'routes');
+
+        $this->assertArrayHasKey('methodsConfig', $config);
+        $this->assertArrayHasKey('GET', $config['methodsConfig']);
+        $this->assertArrayHasKey('security', $config['methodsConfig']['GET']);
+        $this->assertContains('Bearer', $config['methodsConfig']['GET']['security']);
+        $this->assertContains('ApiKey', $config['methodsConfig']['GET']['security']);
+    }
+
+    public function testGetAvailableSchemasReturnsArray(): void
+    {
+        $router = $this->createMock(RouterInterface::class);
+        $parameterBag = $this->createMock(ParameterBagInterface::class);
+        $parameterBag->method('get')->willReturnMap([
+            ['ehyiah_api_doc.source_path', '/Swagger'],
+        ]);
+
+        $kernel = $this->createMock(KernelInterface::class);
+        $kernel->method('getProjectDir')->willReturn($this->tmpDir);
+
+        $helper = $this->createMock(LoadApiDocConfigHelper::class);
+
+        $manager = new RouteTuiManager($router, $parameterBag, $kernel, $helper);
+        $schemas = $manager->getAvailableSchemas();
+
+        $this->assertIsArray($schemas);
+    }
+
+    public function testGetAvailableExamplesReturnsArray(): void
+    {
+        $router = $this->createMock(RouterInterface::class);
+        $parameterBag = $this->createMock(ParameterBagInterface::class);
+        $parameterBag->method('get')->willReturnMap([
+            ['ehyiah_api_doc.source_path', '/Swagger'],
+        ]);
+
+        $kernel = $this->createMock(KernelInterface::class);
+        $kernel->method('getProjectDir')->willReturn($this->tmpDir);
+
+        $helper = $this->createMock(LoadApiDocConfigHelper::class);
+
+        $manager = new RouteTuiManager($router, $parameterBag, $kernel, $helper);
+        $examples = $manager->getAvailableExamples();
+
+        $this->assertIsArray($examples);
+    }
+
     private function removeDir(string $dir): void
     {
         if (!is_dir($dir)) {
