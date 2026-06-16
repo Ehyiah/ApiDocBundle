@@ -190,6 +190,12 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
                     $this->showComponentList($tui, $onBack);
                     break;
+                case 'action_delete':
+                    $this->deleteComponent($state);
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showComponentList($tui, $onBack);
+                    break;
                 case 'action_validate':
                     $state->name = $settingsWidget->getValue('name') ?? '';
                     $state->type = $settingsWidget->getValue('type') ?? 'http';
@@ -282,5 +288,22 @@ class SecuritySchemeTuiGenerator extends AbstractTuiComponentGenerator
         }
 
         $this->currentOutput->writeln(sprintf('<info>Security Scheme "%s" generated successfully in %s</info>', $state->name, $dumpLocation));
+    }
+
+    private function deleteComponent(SecuritySchemeTuiState $state): void
+    {
+        if (null === $state->loadedFrom || !file_exists($state->loadedFrom)) {
+            return;
+        }
+
+        $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
+        if (!isset($existingConfig['documentation']['components']['securitySchemes'])) {
+            return;
+        }
+
+        unset($existingConfig['documentation']['components']['securitySchemes'][$state->name]);
+
+        $this->writeYamlFile($existingConfig, $state->loadedFrom, $this->currentOutput);
+        $this->currentOutput->writeln(sprintf('<info>Security Scheme "%s" deleted from %s</info>', $state->name, $state->loadedFrom));
     }
 }

@@ -312,6 +312,9 @@ trait GenerateFileTrait
         } elseif ('pathItems' === $componentType) {
             $pathItem = $array['documentation']['components']['pathItems'][$componentName] ?? [];
             $code .= $this->buildPathItemCode($componentName, $pathItem, 2);
+        } elseif ('tags' === $componentType) {
+            $tag = $this->findTagByName($array, $componentName);
+            $code .= $this->buildTagCode($componentName, $tag, 2);
         }
 
         $code .= "    }\n";
@@ -712,6 +715,53 @@ trait GenerateFileTrait
         if (isset($pathItem['description'])) {
             $description = addslashes($pathItem['description']);
             $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * Find a tag by name in the documentation.tags array.
+     *
+     * @param array<mixed> $array
+     *
+     * @return array<mixed>
+     */
+    private function findTagByName(array $array, string $name): array
+    {
+        $tags = $array['documentation']['tags'] ?? [];
+        foreach ($tags as $tag) {
+            if (isset($tag['name']) && $tag['name'] === $name) {
+                return $tag;
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * @param array<mixed> $tag
+     */
+    protected function buildTagCode(string $name, array $tag, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addTag('{$name}')\n";
+
+        if (isset($tag['description'])) {
+            $description = addslashes($tag['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($tag['externalDocs']) && is_array($tag['externalDocs'])) {
+            $url = addslashes((string)($tag['externalDocs']['url'] ?? ''));
+            $desc = isset($tag['externalDocs']['description']) ? addslashes((string)$tag['externalDocs']['description']) : null;
+            if (null !== $desc) {
+                $code .= "{$pad}    ->externalDocs('{$url}', '{$desc}')\n";
+            } else {
+                $code .= "{$pad}    ->externalDocs('{$url}')\n";
+            }
         }
 
         $code .= "{$pad}->end();\n";

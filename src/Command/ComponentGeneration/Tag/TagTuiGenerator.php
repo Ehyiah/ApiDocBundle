@@ -152,6 +152,9 @@ class TagTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem('format_output', 'Output Format', $state->format_output, 'YAML or PHP', ['yaml', 'php']);
         $settingItems[] = new SettingItem('output', 'Output Directory', $state->outputDir, 'Target directory', [], $textInputCallback);
         $settingItems[] = new SettingItem('action_validate', 'Save', '✓ Confirm', 'Save and return to the list.', ['✓ Confirm']);
+        if (null !== $state->loadedFrom) {
+            $settingItems[] = new SettingItem('action_delete', 'Delete', '✗ Delete', 'Delete this tag.', ['✗ Delete']);
+        }
         $settingItems[] = new SettingItem('action_cancel', 'Cancel', '← Cancel', 'Return without saving.', ['← Cancel']);
 
         $settingsWidget = new SettingsListWidget($settingItems, 12);
@@ -176,6 +179,12 @@ class TagTuiGenerator extends AbstractTuiComponentGenerator
 
             switch ($event->getId()) {
                 case 'action_cancel':
+                    $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
+                    $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
+                    $this->showComponentList($tui, $onBack);
+                    break;
+                case 'action_delete':
+                    $this->deleteComponent($state);
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
                     $this->showComponentList($tui, $onBack);
@@ -277,5 +286,25 @@ class TagTuiGenerator extends AbstractTuiComponentGenerator
         }
 
         $this->currentOutput->writeln(sprintf('<info>Tag "%s" generated successfully in %s</info>', $state->name, $dumpLocation));
+    }
+
+    private function deleteComponent(TagTuiState $state): void
+    {
+        if (null === $state->loadedFrom || !file_exists($state->loadedFrom)) {
+            return;
+        }
+
+        $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
+        if (!isset($existingConfig['documentation']['tags']) || !is_array($existingConfig['documentation']['tags'])) {
+            return;
+        }
+
+        $existingConfig['documentation']['tags'] = array_values(array_filter(
+            $existingConfig['documentation']['tags'],
+            static fn (array $tag): bool => isset($tag['name']) && $tag['name'] !== $state->name,
+        ));
+
+        $this->writeYamlFile($existingConfig, $state->loadedFrom, $this->currentOutput);
+        $this->currentOutput->writeln(sprintf('<info>Tag "%s" deleted from %s</info>', $state->name, $state->loadedFrom));
     }
 }
