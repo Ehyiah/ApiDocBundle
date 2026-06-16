@@ -332,7 +332,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem('schema_3', 'Schema 3', '', 'Third schema (optional)', $schemaChoices);
 
         $defaultDumpLocation = $this->manager->getDefaultDumpLocation();
-        $settingItems[] = new SettingItem('format', 'Format', 'both', 'Output format', ['both', 'php', 'yaml']);
+        $settingItems[] = new SettingItem('format', 'Format', 'yaml', 'Output format', ['yaml', 'php', 'both']);
         $settingItems[] = new SettingItem('output', 'Output Directory', $defaultDumpLocation, 'Target directory', [], $textInputCallback);
 
         $settingItems[] = new SettingItem('action_generate', 'Generate', '✓ Confirm', 'Start generation', ['✓ Confirm']);
@@ -381,7 +381,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
                         break;
                     }
 
-                    $format = $settingsWidget->getValue('format') ?? 'both';
+                    $format = $settingsWidget->getValue('format') ?? 'yaml';
                     $outputDir = $settingsWidget->getValue('output') ?? $this->manager->getDefaultDumpLocation();
 
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
@@ -509,9 +509,9 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem(
             'format',
             'Output format',
-            'both',
+            'yaml',
             'Format in which to generate the component.',
-            ['both', 'php', 'yaml']
+            ['yaml', 'php', 'both']
         );
 
         // 3. Output directory (editable)
