@@ -779,7 +779,7 @@ trait GenerateFileTrait
         $pad = str_repeat('    ', $indent);
         $code = '';
 
-        $paths = $array['paths'] ?? [];
+        $paths = $array['documentation']['paths'] ?? $array['paths'] ?? [];
         foreach ($paths as $path => $methods) {
             if (!is_array($methods)) {
                 continue;

@@ -2,7 +2,3 @@ framework:
     router:
         utf8: true
         resource: '%kernel.project_dir%/config/routes.yaml'
-
-ehyiah_api_doc:
-    source_path: '/var/Swagger'
-    dump_path: '/var/Dump'

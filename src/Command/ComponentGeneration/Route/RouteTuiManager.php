@@ -204,7 +204,12 @@ class RouteTuiManager
                 }
             } else {
                 $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
-                if (isset($config['paths'])) {
+                $pathsConfig = $config['documentation']['paths'] ?? $config['paths'] ?? null;
+                if (null !== $pathsConfig) {
+                    if (isset($config['documentation']['paths'])) {
+                        $config = ['paths' => $config['documentation']['paths']];
+                    }
+
                     return ['methodsConfig' => $this->extractMethodsConfig($config, $path)];
                 }
             }
@@ -253,7 +258,7 @@ class RouteTuiManager
                     $methodsConfig[$currentMethod]['tags'][] = $m[1];
                 } elseif (preg_match("/->security\\('([^']+)'\\)/", $line, $m)) {
                     $methodsConfig[$currentMethod]['security'][] = $m[1];
-                } elseif (preg_match('/->response\\((\\d+)\\)/', $line, $m)) {
+                } elseif (preg_match('/->response\((\d+)\)/', $line, $m)) {
                     $statusCode = (int)$m[1];
                     $methodsConfig[$currentMethod]['responses'][$statusCode] = [
                         'schema' => null,

@@ -1164,6 +1164,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
         $array = $builder->build();
         unset($array['components']);
+        $array = ['documentation' => $array];
 
         $destination = ComponentType::Routes->value;
 
@@ -1174,7 +1175,8 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             // Merge with existing config to preserve manually-added fields (YAML only)
             if ('php' !== pathinfo($state->loadedFrom, PATHINFO_EXTENSION)) {
                 $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
-                if (isset($existingConfig['paths'])) {
+                $existingPaths = $existingConfig['documentation']['paths'] ?? $existingConfig['paths'] ?? null;
+                if (null !== $existingPaths) {
                     $array = array_replace_recursive($existingConfig, $array);
                 }
             }
