@@ -56,15 +56,18 @@ ehyiah_api_doc:
     # Select your preferred UI
     ui: swagger  # Options: swagger, redoc, stoplight, rapidoc, scalar
 
-    # Directory where YAML files are located (and where commands look for existing files)
+    # Directory where YAML/PHP files are located (and where commands look for existing files)
     source_path: 'src/Swagger'
 
-    # Directory to dump generated files
+    # Directory to dump a full generated file if you want a json/yaml single file output
+    # dump_path directory will be excluded from rendering to prevent duplication or overriding from source_path.
     dump_path: 'src/Swagger/dump'
 
     # Directories to scan for Entity generation
     scan_directories:
         - 'src/Entity'
+        - 'src/DTO'
+        - ... 
 ```
 
 ### Custom URL
