@@ -56,14 +56,15 @@ ehyiah_api_doc:
     # Select your preferred UI
     ui: swagger  # Options: swagger, redoc, stoplight, rapidoc, scalar
 
-    # Directory where YAML/PHP files are located (and where commands look for existing files)
+    # Directory where YAML/PHP files are created by default (and where commands look for existing yaml files when editing)
+    # PHP files can be placed anywhere after creation because they are loading by their interface and not by scanning directories
     source_path: 'src/Swagger'
 
     # Directory to dump a full generated file if you want a json/yaml single file output
     # dump_path directory will be excluded from rendering to prevent duplication or overriding from source_path.
     dump_path: 'src/Swagger/dump'
 
-    # Directories to scan for Entity generation
+    # Directories to scan for Entity/DTO/Forms schemas generation
     scan_directories:
         - 'src/Entity'
         - 'src/DTO'
