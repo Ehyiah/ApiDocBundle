@@ -98,7 +98,8 @@ You can switch the interface dynamically using the `ui` query parameter:
 ## Usage
 
 ### 1. YAML Configuration
-Place your OpenAPI YAML files in the directory defined by `source_path` (default: `src/Swagger`). The bundle will automatically parse and merge all `.yaml` and `.yml` files in this folder.
+Place your OpenAPI YAML files in the directory defined by `source_path` (default: `src/Swagger`). 
+The bundle will automatically parse and merge all `.yaml` and `.yml` files in this folder.
 
 **Example `src/Swagger/info.yaml`:**
 ```yaml
@@ -123,17 +124,25 @@ documentation:
 You can define your documentation programmatically using PHP classes. This offers strong typing and IDE autocompletion.
 
 1. Create a class that implements `Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface`.
-2. Implement the `configure` method.
-3. Your class is automatically autoloaded and parsed.
+2. Add the `#[ApiDocComponent]` attribute with a unique `id`.
+3. Implement the `configure` method.
+4. Your class is automatically autoloaded and parsed.
+
+The `#[ApiDocComponent]` attribute is **required**. It lets the TUI find and edit your component regardless of file location or class name.
+
+- **`id`** — A unique string that identifies this component. Use the same name as the OpenAPI component key (e.g., for a schema named `User`, use `id: 'User'`). For routes, use the route name (e.g., `id: 'api_users'`).
+- **`type`** — Optional. A hint for the TUI (e.g., `'schema'`, `'response'`, `'tag'`). Auto-detected in most cases.
 
 **Example `src/ApiDoc/UserDocConfig.php`:**
 ```php
 <?php
 namespace App\ApiDoc;
 
+use Ehyiah\ApiDocBundle\Attributes\ApiDocComponent;
 use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
 use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 
+#[ApiDocComponent(id: 'api_user_by_id')]
 class UserDocConfig implements ApiDocConfigInterface
 {
     public function configure(ApiDocBuilder $builder): void
@@ -154,8 +163,6 @@ class UserDocConfig implements ApiDocConfigInterface
     }
 }
 ```
-
-> 💡 **Tip:** While PHP config classes can be placed anywhere in `src/`, it is recommended to keep them in `src/Swagger` (or your `source_path`) if you want the **Generator Commands** to detect them and prevent duplicates.
 
 📚 **[Read full PHP Config Documentation](docs/PHP_CONFIG_CLASSES.md)**
 📚 **[Read the PHP Builder Reference](docs/BUILDER_REFERENCE.md)**
