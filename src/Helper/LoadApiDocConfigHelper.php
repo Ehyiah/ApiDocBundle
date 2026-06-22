@@ -193,58 +193,17 @@ final class LoadApiDocConfigHelper
 
     public function findPhpComponentFile(string $componentName, string $componentType): ?SplFileInfo
     {
-        $finder = new Finder();
-        $sourcePath = $this->parameterBag->get('ehyiah_api_doc.source_path');
-        if (!is_string($sourcePath)) {
-            throw new LogicException('Location must be a string');
-        }
-        $dumpPath = $this->parameterBag->get('ehyiah_api_doc.dump_path');
-        if (!is_string($dumpPath)) {
-            throw new LogicException('dumpLocation must be a string');
-        }
-
-        $finder->files()
-            ->in($this->kernel->getProjectDir() . $sourcePath)
-            ->exclude($dumpPath)
-            ->name('*.php')
-        ;
-
-        $methodName = match ($componentType) {
-            'schemas' => 'addSchema',
-            'requestBodies' => 'addRequestBody',
-            'parameters' => 'addParameter',
-            'headers' => 'addHeader',
-            'responses' => 'addResponse',
-            'securitySchemes' => 'addSecurityScheme',
-            'examples' => 'addExample',
-            'links' => 'addLink',
-            'callbacks' => 'addCallback',
-            'pathItems' => 'addPathItem',
-            'routes' => 'addRoute',
-            'tags' => 'addTag',
-            default => null,
-        };
-
-        if (null === $methodName) {
+        if (!$this->parameterBag->has('ehyiah_api_doc.component_files')) {
             return null;
         }
 
-        if ($finder->hasResults()) {
-            $attrPattern = '/#\[ApiDocConfig\s*\(\s*(?:component:\s*)?[\'"]' . preg_quote($componentName, '/') . '[\'"]/';
-            $methodPattern = '/->' . preg_quote($methodName, '/') . '\s*\(\s*[\'"]' . preg_quote($componentName, '/') . '[\'"]\s*\)/';
+        $componentFiles = $this->parameterBag->get('ehyiah_api_doc.component_files');
+        $path = $componentFiles[$componentType][$componentName] ?? null;
 
-            foreach ($finder->getIterator() as $file) {
-                $content = file_get_contents($file->getPathname());
-                if (false === $content) {
-                    continue;
-                }
-
-                if (preg_match($methodPattern, $content) || preg_match($attrPattern, $content)) {
-                    return $file;
-                }
-            }
+        if (null === $path || !is_string($path) || !file_exists($path)) {
+            return null;
         }
 
-        return null;
+        return new SplFileInfo($path);
     }
 }

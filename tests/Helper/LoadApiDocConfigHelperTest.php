@@ -25,7 +25,6 @@ final class LoadApiDocConfigHelperTest extends TestCase
         $this->filesystem = new Filesystem();
         $this->testDir = $this->kernel->getProjectDir() . '/var/Swagger/';
 
-        // Ensure test directories exist for all component types
         $componentDirs = [
             'schemas', 'requestBodies', 'parameters', 'headers',
             'responses', 'examples', 'securitySchemes', 'links',
@@ -35,10 +34,30 @@ final class LoadApiDocConfigHelperTest extends TestCase
             $this->filesystem->mkdir($this->testDir . $dir . '/');
         }
 
-        // Create the helper with the test kernel and parameter bag
+        $phpFilePaths = [
+            'schemas' => ['TestComponent' => $this->testDir . 'schemas/TestComponent.php'],
+            'requestBodies' => ['TestRequestBody' => $this->testDir . 'requestBodies/TestRequestBody.php'],
+            'parameters' => ['TestParameter' => $this->testDir . 'parameters/TestParameter.php'],
+            'headers' => ['TestHeader' => $this->testDir . 'headers/TestHeader.php'],
+            'responses' => ['TestResponse' => $this->testDir . 'responses/TestResponse.php'],
+            'examples' => ['TestExample' => $this->testDir . 'examples/TestExample.php'],
+            'securitySchemes' => ['TestSecurityScheme' => $this->testDir . 'securitySchemes/TestSecurityScheme.php'],
+            'links' => ['TestLink' => $this->testDir . 'links/TestLink.php'],
+            'callbacks' => ['TestCallback' => $this->testDir . 'callbacks/TestCallback.php'],
+            'pathItems' => ['TestPathItem' => $this->testDir . 'pathItems/TestPathItem.php'],
+        ];
+
+        // Create stub PHP files on disk so file_exists() checks pass
+        foreach ($phpFilePaths as $type => $entries) {
+            foreach ($entries as $path) {
+                $this->filesystem->dumpFile($path, "<?php\n");
+            }
+        }
+
         $parameterBag = new ParameterBag([
             'ehyiah_api_doc.source_path' => '/var/Swagger',
             'ehyiah_api_doc.dump_path' => '/var/Dump',
+            'ehyiah_api_doc.component_files' => $phpFilePaths,
         ]);
 
         $this->helper = new LoadApiDocConfigHelper($this->kernel, $parameterBag);
@@ -46,7 +65,6 @@ final class LoadApiDocConfigHelperTest extends TestCase
 
     protected function tearDown(): void
     {
-        // Clean up test files for all component types
         $testFiles = [
             $this->testDir . 'schemas/TestComponent.yaml',
             $this->testDir . 'schemas/TestComponent.php',
@@ -86,7 +104,6 @@ final class LoadApiDocConfigHelperTest extends TestCase
 
     public function testFindYamlComponentFileFindsExistingSchema(): void
     {
-        // Create a test YAML file
         $yamlContent = <<<'YAML'
 documentation:
     components:
@@ -116,29 +133,6 @@ YAML;
 
     public function testFindPhpComponentFileFindsExistingSchema(): void
     {
-        // Create a test PHP file
-        $phpContent = <<<'PHP'
-<?php
-
-use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
-
-return new class implements ApiDocConfigInterface {
-    public function configure(ApiDocBuilder $builder): void
-    {
-        $builder->addSchema('TestComponent')
-            ->type('object')
-            ->addProperty('id')
-                ->type('string')
-            ->end()
-        ->end();
-    }
-};
-PHP;
-
-        $filePath = $this->testDir . 'schemas/TestComponent.php';
-        $this->filesystem->dumpFile($filePath, $phpContent);
-
         $result = $this->helper->findPhpComponentFile('TestComponent', 'schemas');
 
         $this->assertNotNull($result);
@@ -147,27 +141,6 @@ PHP;
 
     public function testFindPhpComponentFileFindsExistingRequestBody(): void
     {
-        // Create a test PHP file
-        $phpContent = <<<'PHP'
-<?php
-
-use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
-
-return new class implements ApiDocConfigInterface {
-    public function configure(ApiDocBuilder $builder): void
-    {
-        $builder->addRequestBody('TestRequestBody')
-            ->description('Test request body')
-            ->required()
-        ->end();
-    }
-};
-PHP;
-
-        $filePath = $this->testDir . 'requestBodies/TestRequestBody.php';
-        $this->filesystem->dumpFile($filePath, $phpContent);
-
         $result = $this->helper->findPhpComponentFile('TestRequestBody', 'requestBodies');
 
         $this->assertNotNull($result);
@@ -176,7 +149,6 @@ PHP;
 
     public function testFindYamlComponentFileFindsExistingRequestBody(): void
     {
-        // Create a test YAML file
         $yamlContent = <<<'YAML'
 documentation:
     components:
@@ -201,26 +173,6 @@ YAML;
 
     public function testFindPhpComponentFileFindsExistingParameter(): void
     {
-        $phpContent = <<<'PHP'
-<?php
-
-use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
-
-return new class implements ApiDocConfigInterface {
-    public function configure(ApiDocBuilder $builder): void
-    {
-        $builder->addParameter('TestParameter')
-            ->name('page')
-            ->in('query')
-        ->end();
-    }
-};
-PHP;
-
-        $filePath = $this->testDir . 'parameters/TestParameter.php';
-        $this->filesystem->dumpFile($filePath, $phpContent);
-
         $result = $this->helper->findPhpComponentFile('TestParameter', 'parameters');
 
         $this->assertNotNull($result);
@@ -251,26 +203,6 @@ YAML;
 
     public function testFindPhpComponentFileFindsExistingHeader(): void
     {
-        $phpContent = <<<'PHP'
-<?php
-
-use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
-
-return new class implements ApiDocConfigInterface {
-    public function configure(ApiDocBuilder $builder): void
-    {
-        $builder->addHeader('TestHeader')
-            ->description('Test header')
-            ->typeString()
-        ->end();
-    }
-};
-PHP;
-
-        $filePath = $this->testDir . 'headers/TestHeader.php';
-        $this->filesystem->dumpFile($filePath, $phpContent);
-
         $result = $this->helper->findPhpComponentFile('TestHeader', 'headers');
 
         $this->assertNotNull($result);
@@ -300,25 +232,6 @@ YAML;
 
     public function testFindPhpComponentFileFindsExistingResponse(): void
     {
-        $phpContent = <<<'PHP'
-<?php
-
-use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
-
-return new class implements ApiDocConfigInterface {
-    public function configure(ApiDocBuilder $builder): void
-    {
-        $builder->addResponse('TestResponse')
-            ->description('Not found')
-        ->end();
-    }
-};
-PHP;
-
-        $filePath = $this->testDir . 'responses/TestResponse.php';
-        $this->filesystem->dumpFile($filePath, $phpContent);
-
         $result = $this->helper->findPhpComponentFile('TestResponse', 'responses');
 
         $this->assertNotNull($result);
@@ -350,26 +263,6 @@ YAML;
 
     public function testFindPhpComponentFileFindsExistingExample(): void
     {
-        $phpContent = <<<'PHP'
-<?php
-
-use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
-
-return new class implements ApiDocConfigInterface {
-    public function configure(ApiDocBuilder $builder): void
-    {
-        $builder->addExample('TestExample')
-            ->summary('Test')
-            ->value(['key' => 'value'])
-        ->end();
-    }
-};
-PHP;
-
-        $filePath = $this->testDir . 'examples/TestExample.php';
-        $this->filesystem->dumpFile($filePath, $phpContent);
-
         $result = $this->helper->findPhpComponentFile('TestExample', 'examples');
 
         $this->assertNotNull($result);
@@ -399,25 +292,6 @@ YAML;
 
     public function testFindPhpComponentFileFindsExistingSecurityScheme(): void
     {
-        $phpContent = <<<'PHP'
-<?php
-
-use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
-
-return new class implements ApiDocConfigInterface {
-    public function configure(ApiDocBuilder $builder): void
-    {
-        $builder->addSecurityScheme('TestSecurityScheme')
-            ->bearer('JWT')
-        ->end();
-    }
-};
-PHP;
-
-        $filePath = $this->testDir . 'securitySchemes/TestSecurityScheme.php';
-        $this->filesystem->dumpFile($filePath, $phpContent);
-
         $result = $this->helper->findPhpComponentFile('TestSecurityScheme', 'securitySchemes');
 
         $this->assertNotNull($result);
@@ -446,26 +320,6 @@ YAML;
 
     public function testFindPhpComponentFileFindsExistingLink(): void
     {
-        $phpContent = <<<'PHP'
-<?php
-
-use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
-
-return new class implements ApiDocConfigInterface {
-    public function configure(ApiDocBuilder $builder): void
-    {
-        $builder->addLink('TestLink')
-            ->operationId('getUser')
-            ->description('Get user')
-        ->end();
-    }
-};
-PHP;
-
-        $filePath = $this->testDir . 'links/TestLink.php';
-        $this->filesystem->dumpFile($filePath, $phpContent);
-
         $result = $this->helper->findPhpComponentFile('TestLink', 'links');
 
         $this->assertNotNull($result);
@@ -494,25 +348,6 @@ YAML;
 
     public function testFindPhpComponentFileFindsExistingCallback(): void
     {
-        $phpContent = <<<'PHP'
-<?php
-
-use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
-
-return new class implements ApiDocConfigInterface {
-    public function configure(ApiDocBuilder $builder): void
-    {
-        $builder->addCallback('TestCallback')
-            ->pathItem('{$request.body#/url}', ['post' => ['operationId' => 'handle']])
-        ->end();
-    }
-};
-PHP;
-
-        $filePath = $this->testDir . 'callbacks/TestCallback.php';
-        $this->filesystem->dumpFile($filePath, $phpContent);
-
         $result = $this->helper->findPhpComponentFile('TestCallback', 'callbacks');
 
         $this->assertNotNull($result);
@@ -542,26 +377,6 @@ YAML;
 
     public function testFindPhpComponentFileFindsExistingPathItem(): void
     {
-        $phpContent = <<<'PHP'
-<?php
-
-use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
-use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
-
-return new class implements ApiDocConfigInterface {
-    public function configure(ApiDocBuilder $builder): void
-    {
-        $builder->addPathItem('TestPathItem')
-            ->summary('Test')
-            ->get(['operationId' => 'get'])
-        ->end();
-    }
-};
-PHP;
-
-        $filePath = $this->testDir . 'pathItems/TestPathItem.php';
-        $this->filesystem->dumpFile($filePath, $phpContent);
-
         $result = $this->helper->findPhpComponentFile('TestPathItem', 'pathItems');
 
         $this->assertNotNull($result);

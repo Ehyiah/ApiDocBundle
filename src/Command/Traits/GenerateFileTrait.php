@@ -287,12 +287,8 @@ trait GenerateFileTrait
         $code .= "use Ehyiah\\ApiDocBundle\\Builder\\ApiDocBuilder;\n";
         $code .= "use Ehyiah\\ApiDocBundle\\Interfaces\\ApiDocConfigInterface;\n\n";
 
-        if (null !== $namespace) {
-            $code .= "#[ApiDocConfig(component: '{$componentName}', type: '{$componentType}')]\n";
-            $code .= "class {$className} implements ApiDocConfigInterface {\n";
-        } else {
-            $code .= "return new class implements ApiDocConfigInterface {\n";
-        }
+        $code .= "#[ApiDocConfig(component: '{$componentName}', type: '{$componentType}')]\n";
+        $code .= "class {$className} implements ApiDocConfigInterface {\n";
 
         $code .= "    public function configure(ApiDocBuilder \$builder): void\n";
         $code .= "    {\n";
@@ -335,12 +331,7 @@ trait GenerateFileTrait
         }
 
         $code .= "    }\n";
-
-        if (null !== $namespace) {
-            $code .= "}\n";
-        } else {
-            $code .= "};\n";
-        }
+        $code .= "}\n";
 
         return $code;
     }
@@ -358,7 +349,21 @@ trait GenerateFileTrait
      */
     protected function resolveNamespaceFromFile(string $filePath): ?string
     {
-        return \Ehyiah\ApiDocBundle\EhyiahApiDocBundle::resolveNamespace(dirname($filePath));
+        $namespace = \Ehyiah\ApiDocBundle\EhyiahApiDocBundle::resolveNamespace(dirname($filePath));
+
+        if (null !== $namespace) {
+            return $namespace;
+        }
+
+        $sourcePath = $this->getParameterBag()->get('ehyiah_api_doc.source_path');
+
+        if (!is_string($sourcePath)) {
+            return null;
+        }
+
+        $projectDir = $this->getKernel()->getProjectDir();
+
+        return \Ehyiah\ApiDocBundle\EhyiahApiDocBundle::resolveNamespace($projectDir . '/' . ltrim($sourcePath, '/'));
     }
 
     /**
@@ -402,7 +407,7 @@ trait GenerateFileTrait
                 continue;
             }
 
-            if (preg_match('/->end\\(\\)/', $line)) {
+            if (preg_match('/->end\(\)/', $line)) {
                 $currentProperty = null;
                 continue;
             }
@@ -425,12 +430,12 @@ trait GenerateFileTrait
                 continue;
             }
 
-            if (preg_match('/->nullable\\(\\)/', $line) && null !== $currentProperty) {
+            if (preg_match('/->nullable\(\)/', $line) && null !== $currentProperty) {
                 $result['properties'][$currentProperty]['nullable'] = true;
                 continue;
             }
 
-            if (preg_match('/->required\\(\\)/', $line) && null !== $currentProperty) {
+            if (preg_match('/->required\(\)/', $line) && null !== $currentProperty) {
                 $result['properties'][$currentProperty]['required'] = true;
                 if (!in_array($currentProperty, $result['required'], true)) {
                     $result['required'][] = $currentProperty;
@@ -443,11 +448,11 @@ trait GenerateFileTrait
                     $result['properties'][$currentProperty]['example'] = $m[1];
                     continue;
                 }
-                if (preg_match('/->example\\((\\d+(?:\\.\\d+)?)\\)/', $line, $m)) {
+                if (preg_match('/->example\((\d+(?:\.\d+)?)\)/', $line, $m)) {
                     $result['properties'][$currentProperty]['example'] = str_contains($m[1], '.') ? (float)$m[1] : (int)$m[1];
                     continue;
                 }
-                if (preg_match('/->example\\((true|false)\\)/', $line, $m)) {
+                if (preg_match('/->example\((true|false)\)/', $line, $m)) {
                     $result['properties'][$currentProperty]['example'] = 'true' === $m[1];
                     continue;
                 }
@@ -457,17 +462,17 @@ trait GenerateFileTrait
                     continue;
                 }
 
-                if (preg_match('/->deprecated\\(\\)/', $line)) {
+                if (preg_match('/->deprecated\(\)/', $line)) {
                     $result['properties'][$currentProperty]['deprecated'] = true;
                     continue;
                 }
 
-                if (preg_match('/->readOnly\\(\\)/', $line)) {
+                if (preg_match('/->readOnly\(\)/', $line)) {
                     $result['properties'][$currentProperty]['readOnly'] = true;
                     continue;
                 }
 
-                if (preg_match('/->writeOnly\\(\\)/', $line)) {
+                if (preg_match('/->writeOnly\(\)/', $line)) {
                     $result['properties'][$currentProperty]['writeOnly'] = true;
                     continue;
                 }
@@ -487,22 +492,22 @@ trait GenerateFileTrait
                     continue;
                 }
 
-                if (preg_match('/->minimum\\((\\d+(?:\\.\\d+)?)\\)/', $line, $m)) {
+                if (preg_match('/->minimum\((\d+(?:\.\d+)?)\)/', $line, $m)) {
                     $result['properties'][$currentProperty]['minimum'] = str_contains($m[1], '.') ? (float)$m[1] : (int)$m[1];
                     continue;
                 }
 
-                if (preg_match('/->maximum\\((\\d+(?:\\.\\d+)?)\\)/', $line, $m)) {
+                if (preg_match('/->maximum\((\d+(?:\.\d+)?)\)/', $line, $m)) {
                     $result['properties'][$currentProperty]['maximum'] = str_contains($m[1], '.') ? (float)$m[1] : (int)$m[1];
                     continue;
                 }
 
-                if (preg_match('/->minLength\\((\\d+)\\)/', $line, $m)) {
+                if (preg_match('/->minLength\((\d+)\)/', $line, $m)) {
                     $result['properties'][$currentProperty]['minLength'] = (int)$m[1];
                     continue;
                 }
 
-                if (preg_match('/->maxLength\\((\\d+)\\)/', $line, $m)) {
+                if (preg_match('/->maxLength\((\d+)\)/', $line, $m)) {
                     $result['properties'][$currentProperty]['maxLength'] = (int)$m[1];
                     continue;
                 }
@@ -512,7 +517,7 @@ trait GenerateFileTrait
                     continue;
                 }
 
-                if (preg_match('/->uniqueItems\\(\\)/', $line)) {
+                if (preg_match('/->uniqueItems\(\)/', $line)) {
                     $result['properties'][$currentProperty]['uniqueItems'] = true;
                     continue;
                 }
@@ -1185,7 +1190,7 @@ trait GenerateFileTrait
         foreach (explode("\n", $content) as $line) {
             $line = trim($line);
 
-            if (preg_match('/->' . preg_quote($builderMethod, '/') . '\\(/', $line)) {
+            if (preg_match('/->' . preg_quote($builderMethod, '/') . '\(/', $line)) {
                 $inBlock = true;
                 continue;
             }
@@ -1194,7 +1199,7 @@ trait GenerateFileTrait
                 continue;
             }
 
-            if (preg_match('/->end\\(\\)/', $line)) {
+            if (preg_match('/->end\(\)/', $line)) {
                 break;
             }
 
@@ -1205,7 +1210,7 @@ trait GenerateFileTrait
             }
 
             // ->schema(['key' => 'value', ...])
-            if (preg_match('/->schema\\s*\\(\\s*\\[(.+)\\]\\s*\\)/s', $line, $m)) {
+            if (preg_match('/->schema\s*\(\s*\[(.+)\]\s*\)/s', $line, $m)) {
                 $arr = [];
                 if (preg_match_all("/'([^']+)'\\s*=>\\s*'([^']*)'/", $m[1], $pairs)) {
                     foreach ($pairs[1] as $i => $k) {
@@ -1223,25 +1228,25 @@ trait GenerateFileTrait
             }
 
             // ->method() → boolean true
-            if (preg_match('/->(\\w+)\\(\\)/', $line, $m)) {
+            if (preg_match('/->(\w+)\(\)/', $line, $m)) {
                 $result[$m[1]] = true;
                 continue;
             }
 
             // ->method(true) or ->method(false)
-            if (preg_match('/->(\\w+)\\s*\\(\\s*(true|false)\\s*\\)/', $line, $m)) {
+            if (preg_match('/->(\w+)\s*\(\s*(true|false)\s*\)/', $line, $m)) {
                 $result[$m[1]] = 'true' === $m[2];
                 continue;
             }
 
             // ->method(number)
-            if (preg_match('/->(\\w+)\\s*\\((\\d+(?:\\.\\d+)?)\\)/', $line, $m)) {
+            if (preg_match('/->(\w+)\s*\((\d+(?:\.\d+)?)\)/', $line, $m)) {
                 $result[$m[1]] = str_contains($m[2], '.') ? (float)$m[2] : (int)$m[2];
                 continue;
             }
 
             // ->method(['val1', 'val2'])
-            if (preg_match('/->enum\\s*\\(\\s*\\[(.+)\\]\\s*\\)/s', $line, $m)) {
+            if (preg_match('/->enum\s*\(\s*\[(.+)\]\s*\)/s', $line, $m)) {
                 $values = [];
                 if (preg_match_all("/'([^']*)'/", $m[1], $items)) {
                     $values = $items[1];
