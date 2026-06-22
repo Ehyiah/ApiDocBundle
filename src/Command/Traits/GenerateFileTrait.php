@@ -531,7 +531,7 @@ trait GenerateFileTrait
         }
 
         if (isset($schema['xml'])) {
-            $xml = addslashes(json_encode($schema['xml']));
+            $xml = addslashes(json_encode($schema['xml']) ?: '');
             $code .= "{$pad}    ->xml('{$xml}')\n";
         }
 
