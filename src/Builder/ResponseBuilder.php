@@ -24,7 +24,6 @@ class ResponseBuilder
     private array $headerBuilders = [];
 
     /**
-     * @param RouteBuilder|ApiDocBuilder $parentBuilder
      * @param int|null $statusCode The HTTP status code (when used inline in a route)
      * @param string|null $responseName The component name (when used as a reusable component)
      */
@@ -110,8 +109,6 @@ class ResponseBuilder
 
     /**
      * Finish building this response and return to the parent builder.
-     *
-     * @return RouteBuilder|ApiDocBuilder
      */
     public function end(): RouteBuilder|ApiDocBuilder
     {

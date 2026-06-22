@@ -19,7 +19,6 @@ class RequestBodyBuilder
     private array $contentBuilders = [];
 
     /**
-     * @param RouteBuilder|ApiDocBuilder $parentBuilder
      * @param string|null $componentName The component name when used as a reusable component
      */
     public function __construct(RouteBuilder|ApiDocBuilder $parentBuilder, ?string $componentName = null)
@@ -84,8 +83,6 @@ class RequestBodyBuilder
 
     /**
      * Finish building this request body and return to the parent builder.
-     *
-     * @return RouteBuilder|ApiDocBuilder
      */
     public function end(): RouteBuilder|ApiDocBuilder
     {

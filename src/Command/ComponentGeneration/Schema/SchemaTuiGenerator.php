@@ -455,10 +455,10 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
                 $dumpLocation = $phpComponentFile->getPathname();
             } else {
                 $dumpDirectory = $this->kernel->getProjectDir() . $outputDirClean . \Symfony\Component\String\u($destination)->ensureEnd('/');
-                $dumpLocation = $dumpDirectory . $schemaName . '.php';
+                $dumpLocation = $dumpDirectory . self::componentNameToClassName($schemaName) . '.php';
             }
 
-            $phpCode = $this->generatePhpBuilderCode($array, $schemaName, $destination);
+            $phpCode = $this->generatePhpBuilderCode($array, $schemaName, $destination, $this->resolveNamespaceFromFile($dumpLocation));
 
             if ($this->checkExistingPhpFile($dumpLocation, $input, $output, $phpCode, interactive: false)) {
                 $this->writePhpFile($phpCode, $dumpLocation, $output);
@@ -475,14 +475,28 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         }
         $properties = $this->manager->getClassProperties($selectedClass);
 
+        // Load existing PHP config if available to pre-populate include/exclude state
+        $reflectionClass = new ReflectionClass($selectedClass);
+        $shortClassName = $reflectionClass->getShortName();
+        $destination = ComponentType::Schemas->value;
+        $existingProperties = [];
+        $phpComponentFile = $this->apiDocConfigHelper->findPhpComponentFile($shortClassName, $destination);
+        if (null !== $phpComponentFile) {
+            $existingConfig = $this->parseSchemaPhpFile($phpComponentFile->getPathname());
+            $existingProperties = $existingConfig['properties'];
+        }
+        $yamlComponentFile = $this->apiDocConfigHelper->findYamlComponentFile($shortClassName, $destination);
+        $defaultFormat = null !== $phpComponentFile && null !== $yamlComponentFile ? 'both' : (null !== $phpComponentFile ? 'php' : 'yaml');
+
         $settingItems = [];
 
         // 1. Class property list (Include/Exclude buttons)
         foreach ($properties as $property) {
+            $defaultState = isset($existingProperties[$property]) ? 'include' : 'exclude';
             $settingItems[] = new SettingItem(
                 'prop_' . $property,
                 'Property: ' . $property,
-                'include',
+                $defaultState,
                 'Include or exclude property "' . $property . '" from the generated schema.',
                 ['include', 'exclude']
             );
@@ -509,7 +523,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem(
             'format',
             'Output format',
-            'yaml',
+            $defaultFormat,
             'Format in which to generate the component.',
             ['yaml', 'php', 'both']
         );
@@ -720,11 +734,53 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
             }
         }
 
+        $destination = ComponentType::Schemas->value;
+
+        // Merge with existing PHP file to preserve manual modifications
+        $phpComponentFile = $this->apiDocConfigHelper->findPhpComponentFile($shortClassName, $destination);
+        $existingSchemaConfig = ['description' => '', 'type' => '', 'properties' => [], 'required' => []];
+        if (null !== $phpComponentFile) {
+            $existingSchemaConfig = $this->parseSchemaPhpFile($phpComponentFile->getPathname());
+
+            foreach ($existingSchemaConfig['properties'] as $propName => $propConfig) {
+                // Skip properties the user explicitly excluded via dashboard
+                if (in_array($propName, $propertiesToSkip, true)) {
+                    continue;
+                }
+
+                if (!isset($propertiesArray[$propName])) {
+                    // Manual property (not from entity) -> preserve fully
+                    $propertiesArray[$propName] = $propConfig;
+                    if (!empty($propConfig['required'])) {
+                        SchemaHelper::addRequirement($requiredProperties, $propName);
+                    }
+                } else {
+                    // Property in both entity and PHP: merge manual overrides
+                    foreach (['description', 'example', 'format', 'nullable', 'deprecated', 'readOnly', 'writeOnly', '$ref', 'enum', 'items', 'default', 'title', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'minLength', 'maxLength', 'pattern', 'minItems', 'maxItems', 'uniqueItems', 'multipleOf'] as $field) {
+                        if (array_key_exists($field, $propConfig)) {
+                            $propertiesArray[$propName][$field] = $propConfig[$field];
+                        }
+                    }
+                    // Required: the PHP file state wins for properties it defines
+                    if (!empty($propConfig['required'])) {
+                        if (!in_array($propName, $requiredProperties, true)) {
+                            SchemaHelper::addRequirement($requiredProperties, $propName);
+                        }
+                    } else {
+                        $requiredProperties = array_values(array_filter($requiredProperties, static fn (string $r): bool => $r !== $propName));
+                    }
+                }
+            }
+        }
+
         // Complete the structure
         $array['documentation']['components']['schemas'][$shortClassName]['required'] = $requiredProperties;
         $array['documentation']['components']['schemas'][$shortClassName]['properties'] = $propertiesArray;
 
-        $destination = ComponentType::Schemas->value;
+        // Apply schema-level overrides from existing PHP file
+        if (!empty($existingSchemaConfig['description'])) {
+            $array['documentation']['components']['schemas'][$shortClassName]['description'] = $existingSchemaConfig['description'];
+        }
 
         if ('yaml' === $format || 'both' === $format) {
             $outputDirClean = (string)\Symfony\Component\String\u($outputDir)->ensureStart('/')->ensureEnd('/');
@@ -754,9 +810,9 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
             }
 
             if ($this->checkExistingYamlFile($dumpLocation, $input, $output, $array, interactive: false)) {
-                $phpComponentFile = $this->apiDocConfigHelper->findPhpComponentFile($shortClassName, $destination);
-                if (null !== $phpComponentFile) {
-                    if ($this->warnAboutOtherFormat($phpComponentFile->getPathname(), 'yaml', $input, $output, interactive: false)) {
+                $yamlPhpComponentFile = $this->apiDocConfigHelper->findPhpComponentFile($shortClassName, $destination);
+                if (null !== $yamlPhpComponentFile) {
+                    if ($this->warnAboutOtherFormat($yamlPhpComponentFile->getPathname(), 'yaml', $input, $output, interactive: false)) {
                         $this->writeYamlFile($array, $dumpLocation, $output);
                     }
                 } else {
@@ -768,7 +824,6 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         if ('php' === $format || 'both' === $format) {
             $outputDirClean = (string)\Symfony\Component\String\u($outputDir)->ensureStart('/')->ensureEnd('/');
             $dumpLocation = null;
-            $phpComponentFile = $this->apiDocConfigHelper->findPhpComponentFile($shortClassName, $destination);
 
             if (null !== $phpComponentFile) {
                 $dumpLocation = $phpComponentFile->getPathname();
@@ -777,7 +832,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
                 $dumpLocation = $dumpDirectory . $shortClassName . '.php';
             }
 
-            $phpCode = $this->generatePhpBuilderCode($array, $shortClassName, $destination);
+            $phpCode = $this->generatePhpBuilderCode($array, $shortClassName, $destination, $this->resolveNamespaceFromFile($dumpLocation));
 
             if ($this->checkExistingPhpFile($dumpLocation, $input, $output, $phpCode, interactive: false)) {
                 $yamlComponentFile = $this->apiDocConfigHelper->findYamlComponentFile($shortClassName, $destination);

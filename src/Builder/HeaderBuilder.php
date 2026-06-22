@@ -21,7 +21,6 @@ class HeaderBuilder
     private array $exampleBuilders = [];
 
     /**
-     * @param ResponseBuilder|ApiDocBuilder $parentBuilder
      * @param string $name The header name (also used as component name when used as a reusable component)
      */
     public function __construct(ResponseBuilder|ApiDocBuilder $parentBuilder, string $name)
@@ -312,8 +311,6 @@ class HeaderBuilder
 
     /**
      * Finish building this header and return to the parent builder.
-     *
-     * @return ResponseBuilder|ApiDocBuilder
      */
     public function end(): ResponseBuilder|ApiDocBuilder
     {

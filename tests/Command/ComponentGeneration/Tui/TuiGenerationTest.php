@@ -262,7 +262,7 @@ class TuiGenerationTest extends TestCase
         $generator = $this->createGenerator(ParameterTuiGenerator::class, ParameterTuiManager::class);
         $this->invokeGenerate($generator, $state);
 
-        $file = $this->tmpDir . '/Swagger/parameters/page.php';
+        $file = $this->tmpDir . '/Swagger/parameters/Page.php';
         $this->assertFileExists($file);
 
         $content = file_get_contents($file);
@@ -1225,7 +1225,7 @@ class TuiGenerationTest extends TestCase
         $generator = $this->createGenerator(RouteTuiGenerator::class, RouteTuiManager::class);
         $reflection = new ReflectionMethod($generator, 'generatePhpBuilderCode');
         $reflection->setAccessible(true);
-        $phpCode = $reflection->invoke($generator, $array, 'get_users', 'routes');
+        $phpCode = $reflection->invoke($generator, $array, 'get_users', 'routes', 'App\Swagger\routes');
 
         $this->assertStringContainsString('$builder->addRoute()', $phpCode);
         $this->assertStringContainsString("->path('/api/users')", $phpCode);
@@ -1233,7 +1233,9 @@ class TuiGenerationTest extends TestCase
         $this->assertStringContainsString("->operationId('getUsers')", $phpCode);
         $this->assertStringContainsString("->tag('Users')", $phpCode);
         $this->assertStringContainsString('->end();', $phpCode);
-        $this->assertStringContainsString('return new class implements ApiDocConfigInterface', $phpCode);
+        $this->assertStringContainsString('namespace App\Swagger\routes;', $phpCode);
+        $this->assertStringContainsString("#[ApiDocConfig(component: 'get_users', type: 'routes')]", $phpCode);
+        $this->assertStringContainsString('class GetUsers implements ApiDocConfigInterface', $phpCode);
     }
 
     public function testRoutePhpGenerationWithResponses(): void

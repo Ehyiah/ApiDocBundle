@@ -117,7 +117,8 @@ class CallbackTuiGenerator extends AbstractTuiComponentGenerator
                 }
                 $state->loadedFrom = $this->manager->findComponentFile($value);
                 if (null !== $state->loadedFrom) {
-                    $state->format_output = str_ends_with($state->loadedFrom, '.php') ? 'php' : 'yaml';
+                    $destination = ComponentType::Callbacks->value;
+                    $state->format_output = $this->detectComponentFormat($state->name, $destination);
                 }
             }
             $this->showForm($tui, $state, $onBack);
@@ -161,7 +162,7 @@ class CallbackTuiGenerator extends AbstractTuiComponentGenerator
         $settingItems[] = new SettingItem('requestBodyRef', 'Request Body Ref', $state->requestBodyRef, 'Schema $ref (e.g. #/components/schemas/Order)', [], $textInputCallback);
         $settingItems[] = new SettingItem('responseDesc', 'Response Description', $state->responseDescription, 'Response description', [], $textInputCallback);
 
-        $settingItems[] = new SettingItem('format_output', 'Output Format', $state->format_output, 'YAML or PHP', ['yaml', 'php']);
+        $settingItems[] = new SettingItem('format_output', 'Output Format', $state->format_output, 'YAML, PHP or both', ['yaml', 'php', 'both']);
         $settingItems[] = new SettingItem('output', 'Output Directory', $state->outputDir, 'Target directory', [], $textInputCallback);
         $settingItems[] = new SettingItem('action_validate', 'Save', '✓ Confirm', 'Save and return to the list.', ['✓ Confirm']);
         if (null !== $state->loadedFrom) {
@@ -282,7 +283,7 @@ class CallbackTuiGenerator extends AbstractTuiComponentGenerator
 
         $destination = ComponentType::Callbacks->value;
 
-        if (null !== $state->loadedFrom && file_exists($state->loadedFrom)) {
+        if (null !== $state->loadedFrom && file_exists($state->loadedFrom) && !str_ends_with($state->loadedFrom, '.php')) {
             $dumpLocation = dirname($state->loadedFrom) . '/' . $state->name . '.yaml';
             // Merge with existing config to preserve manually-added fields
             $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
@@ -301,11 +302,18 @@ class CallbackTuiGenerator extends AbstractTuiComponentGenerator
             $dumpLocation = $dumpDirectory . $state->name . '.yaml';
         }
 
-        if ('yaml' === $state->format_output) {
+        if ('yaml' === $state->format_output || 'both' === $state->format_output) {
             $this->writeYamlFile($array, $dumpLocation, $this->currentOutput);
-        } else {
-            $dumpLocation = str_replace('.yaml', '.php', $dumpLocation);
-            $phpCode = $this->generatePhpBuilderCode($array, $state->name, $destination);
+        }
+        if ('php' === $state->format_output || 'both' === $state->format_output) {
+            $array = $this->mergeWithExistingPhp($array, $state->name, $destination, 'addCallback');
+            $phpComponentFile = $this->apiDocConfigHelper->findPhpComponentFile($state->name, $destination);
+            if (null !== $phpComponentFile) {
+                $dumpLocation = $phpComponentFile->getPathname();
+            } else {
+                $dumpLocation = dirname($dumpLocation) . '/' . self::componentNameToClassName($state->name) . '.php';
+            }
+            $phpCode = $this->generatePhpBuilderCode($array, $state->name, $destination, $this->resolveNamespaceFromFile($dumpLocation));
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }
 
@@ -315,6 +323,13 @@ class CallbackTuiGenerator extends AbstractTuiComponentGenerator
     private function deleteComponent(CallbackTuiState $state): void
     {
         if (null === $state->loadedFrom || !file_exists($state->loadedFrom)) {
+            return;
+        }
+
+        if (str_ends_with($state->loadedFrom, '.php')) {
+            unlink($state->loadedFrom);
+            $this->currentOutput->writeln(sprintf('<info>Callback "%s" deleted from %s</info>', $state->name, $state->loadedFrom));
+
             return;
         }
 

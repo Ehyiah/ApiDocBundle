@@ -220,6 +220,8 @@ final class LoadApiDocConfigHelper
             'links' => 'addLink',
             'callbacks' => 'addCallback',
             'pathItems' => 'addPathItem',
+            'routes' => 'addRoute',
+            'tags' => 'addTag',
             default => null,
         };
 
@@ -228,13 +230,16 @@ final class LoadApiDocConfigHelper
         }
 
         if ($finder->hasResults()) {
+            $attrPattern = '/#\[ApiDocConfig\s*\(\s*(?:component:\s*)?[\'"]' . preg_quote($componentName, '/') . '[\'"]/';
+            $methodPattern = '/->' . preg_quote($methodName, '/') . '\s*\(\s*[\'"]' . preg_quote($componentName, '/') . '[\'"]\s*\)/';
+
             foreach ($finder->getIterator() as $file) {
                 $content = file_get_contents($file->getPathname());
                 if (false === $content) {
                     continue;
                 }
 
-                if (preg_match('/->' . preg_quote($methodName, '/') . '\s*\(\s*[\'"]' . preg_quote($componentName, '/') . '[\'"]\s*\)/', $content)) {
+                if (preg_match($methodPattern, $content) || preg_match($attrPattern, $content)) {
                     return $file;
                 }
             }

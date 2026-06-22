@@ -1,0 +1,9 @@
+{
+    "name": "ehyiah/apidoc-bundle-testapp",
+    "description": "Test application for EhyiahApiDocBundle",
+    "autoload": {
+        "psr-4": {
+            "Ehyiah\\ApiDocBundle\\Tests\\App\\": ""
+        }
+    }
+}

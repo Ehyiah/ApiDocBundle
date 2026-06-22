@@ -101,8 +101,6 @@ class ExampleBuilder
 
     /**
      * Finish building this example and return to the parent builder.
-     *
-     * @return ContentBuilder|ParameterBuilder|HeaderBuilder|ApiDocBuilder
      */
     public function end(): ContentBuilder|ParameterBuilder|HeaderBuilder|ApiDocBuilder
     {

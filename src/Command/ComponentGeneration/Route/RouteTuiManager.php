@@ -159,14 +159,23 @@ class RouteTuiManager
             return null;
         }
 
+        // YAML files use the route name as filename
         $finder = new \Symfony\Component\Finder\Finder();
-        $finder->files()->in($directory)->name([$routeName . '.yaml', $routeName . '.yml', $routeName . '.php']);
+        $finder->files()->in($directory)->name([$routeName . '.yaml', $routeName . '.yml']);
         foreach ($finder as $file) {
-            if ('php' === $file->getExtension()) {
-                return $file->getRealPath();
-            }
             $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
             if (isset($config['paths'])) {
+                return $file->getRealPath();
+            }
+        }
+
+        // PHP files are located by the ApiDocConfig attribute content
+        $finder = new \Symfony\Component\Finder\Finder();
+        $finder->files()->in($directory)->name('*.php');
+        $pattern = '/#\[ApiDocConfig\s*\(\s*(?:component:\s*)?[\'"]' . preg_quote($routeName, '/') . '[\'"]/';
+        foreach ($finder as $file) {
+            $content = file_get_contents($file->getRealPath());
+            if (false !== $content && preg_match($pattern, $content)) {
                 return $file->getRealPath();
             }
         }
@@ -194,22 +203,30 @@ class RouteTuiManager
             return ['methodsConfig' => []];
         }
 
+        // YAML files use the route name as filename
         $finder = new \Symfony\Component\Finder\Finder();
-        $finder->files()->in($directory)->name([$routeName . '.yaml', $routeName . '.yml', $routeName . '.php']);
+        $finder->files()->in($directory)->name([$routeName . '.yaml', $routeName . '.yml']);
         foreach ($finder as $file) {
-            if ('php' === $file->getExtension()) {
+            $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
+            $pathsConfig = $config['documentation']['paths'] ?? $config['paths'] ?? null;
+            if (null !== $pathsConfig) {
+                if (isset($config['documentation']['paths'])) {
+                    $config = ['paths' => $config['documentation']['paths']];
+                }
+
+                return ['methodsConfig' => $this->extractMethodsConfig($config, $path)];
+            }
+        }
+
+        // PHP files are located by the ApiDocConfig attribute content
+        $finder = new \Symfony\Component\Finder\Finder();
+        $finder->files()->in($directory)->name('*.php');
+        $pattern = '/#\[ApiDocConfig\s*\(\s*(?:component:\s*)?[\'"]' . preg_quote($routeName, '/') . '[\'"]/';
+        foreach ($finder as $file) {
+            $content = file_get_contents($file->getRealPath());
+            if (false !== $content && preg_match($pattern, $content)) {
                 $config = $this->parseRoutePhpFile($file->getRealPath(), $path);
                 if (null !== $config) {
-                    return ['methodsConfig' => $this->extractMethodsConfig($config, $path)];
-                }
-            } else {
-                $config = \Symfony\Component\Yaml\Yaml::parseFile($file->getRealPath());
-                $pathsConfig = $config['documentation']['paths'] ?? $config['paths'] ?? null;
-                if (null !== $pathsConfig) {
-                    if (isset($config['documentation']['paths'])) {
-                        $config = ['paths' => $config['documentation']['paths']];
-                    }
-
                     return ['methodsConfig' => $this->extractMethodsConfig($config, $path)];
                 }
             }

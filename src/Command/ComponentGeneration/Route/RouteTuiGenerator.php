@@ -1193,7 +1193,13 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         if ('yaml' === $state->format) {
             $this->writeYamlFile($array, $dumpLocation, $this->currentOutput);
         } else {
-            $phpCode = $this->generatePhpBuilderCode($array, $state->routeName, $destination);
+            $phpComponentFile = $this->apiDocConfigHelper->findPhpComponentFile($state->routeName, $destination);
+            if (null !== $phpComponentFile) {
+                $dumpLocation = $phpComponentFile->getPathname();
+            } else {
+                $dumpLocation = dirname($dumpLocation) . '/' . self::componentNameToClassName($state->routeName) . '.php';
+            }
+            $phpCode = $this->generatePhpBuilderCode($array, $state->routeName, $destination, $this->resolveNamespaceFromFile($dumpLocation));
             $this->writePhpFile($phpCode, $dumpLocation, $this->currentOutput);
         }
 

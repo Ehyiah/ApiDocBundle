@@ -273,12 +273,27 @@ trait GenerateFileTrait
     /**
      * @param array<mixed> $array
      */
-    public function generatePhpBuilderCode(array $array, string $componentName, string $componentType): string
+    public function generatePhpBuilderCode(array $array, string $componentName, string $componentType, ?string $namespace = null): string
     {
+        $className = self::componentNameToClassName($componentName);
+
         $code = "<?php\n\n";
+
+        if (null !== $namespace) {
+            $code .= "namespace {$namespace};\n\n";
+        }
+
+        $code .= "use Ehyiah\\ApiDocBundle\\Attributes\\ApiDocConfig;\n";
         $code .= "use Ehyiah\\ApiDocBundle\\Builder\\ApiDocBuilder;\n";
         $code .= "use Ehyiah\\ApiDocBundle\\Interfaces\\ApiDocConfigInterface;\n\n";
-        $code .= "return new class implements ApiDocConfigInterface {\n";
+
+        if (null !== $namespace) {
+            $code .= "#[ApiDocConfig(component: '{$componentName}', type: '{$componentType}')]\n";
+            $code .= "class {$className} implements ApiDocConfigInterface {\n";
+        } else {
+            $code .= "return new class implements ApiDocConfigInterface {\n";
+        }
+
         $code .= "    public function configure(ApiDocBuilder \$builder): void\n";
         $code .= "    {\n";
 
@@ -320,9 +335,191 @@ trait GenerateFileTrait
         }
 
         $code .= "    }\n";
-        $code .= "};\n";
+
+        if (null !== $namespace) {
+            $code .= "}\n";
+        } else {
+            $code .= "};\n";
+        }
 
         return $code;
+    }
+
+    /**
+     * Convert a component name (snake_case, PascalCase, or kebab-case) to a valid PHP class name.
+     */
+    protected static function componentNameToClassName(string $name): string
+    {
+        return str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $name)));
+    }
+
+    /**
+     * Resolve the PHP namespace for the directory containing the given file path.
+     */
+    protected function resolveNamespaceFromFile(string $filePath): ?string
+    {
+        return \Ehyiah\ApiDocBundle\EhyiahApiDocBundle::resolveNamespace(dirname($filePath));
+    }
+
+    /**
+     * Parse an existing schema PHP file to extract its current configuration.
+     *
+     * @return array{description: string, type: string, properties: array<string, array<mixed>>, required: string[]}
+     */
+    protected function parseSchemaPhpFile(string $filePath): array
+    {
+        $content = @file_get_contents($filePath);
+        if (false === $content) {
+            return ['description' => '', 'type' => '', 'properties' => [], 'required' => []];
+        }
+
+        $result = [
+            'description' => '',
+            'type' => '',
+            'properties' => [],
+            'required' => [],
+        ];
+
+        $inSchema = false;
+        $currentProperty = null;
+        $lines = explode("\n", $content);
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if (preg_match("/->addSchema\\('([^']+)'\\)/", $line, $m)) {
+                $inSchema = true;
+                continue;
+            }
+
+            if (!$inSchema) {
+                continue;
+            }
+
+            if (preg_match("/->addProperty\\('([^']+)'\\)/", $line, $m)) {
+                $currentProperty = $m[1];
+                $result['properties'][$currentProperty] = [];
+                continue;
+            }
+
+            if (preg_match('/->end\\(\\)/', $line)) {
+                $currentProperty = null;
+                continue;
+            }
+
+            if (preg_match("/->description\\('([^']*)'\\)/", $line, $m)) {
+                if (null !== $currentProperty) {
+                    $result['properties'][$currentProperty]['description'] = $m[1];
+                } else {
+                    $result['description'] = $m[1];
+                }
+                continue;
+            }
+
+            if (preg_match("/->type\\('([^']+)'\\)/", $line, $m)) {
+                if (null !== $currentProperty) {
+                    $result['properties'][$currentProperty]['type'] = $m[1];
+                } else {
+                    $result['type'] = $m[1];
+                }
+                continue;
+            }
+
+            if (preg_match('/->nullable\\(\\)/', $line) && null !== $currentProperty) {
+                $result['properties'][$currentProperty]['nullable'] = true;
+                continue;
+            }
+
+            if (preg_match('/->required\\(\\)/', $line) && null !== $currentProperty) {
+                $result['properties'][$currentProperty]['required'] = true;
+                if (!in_array($currentProperty, $result['required'], true)) {
+                    $result['required'][] = $currentProperty;
+                }
+                continue;
+            }
+
+            if (null !== $currentProperty) {
+                if (preg_match("/->example\\('([^']*)'\\)/", $line, $m)) {
+                    $result['properties'][$currentProperty]['example'] = $m[1];
+                    continue;
+                }
+                if (preg_match('/->example\\((\\d+(?:\\.\\d+)?)\\)/', $line, $m)) {
+                    $result['properties'][$currentProperty]['example'] = str_contains($m[1], '.') ? (float)$m[1] : (int)$m[1];
+                    continue;
+                }
+                if (preg_match('/->example\\((true|false)\\)/', $line, $m)) {
+                    $result['properties'][$currentProperty]['example'] = 'true' === $m[1];
+                    continue;
+                }
+
+                if (preg_match("/->format\\('([^']+)'\\)/", $line, $m)) {
+                    $result['properties'][$currentProperty]['format'] = $m[1];
+                    continue;
+                }
+
+                if (preg_match('/->deprecated\\(\\)/', $line)) {
+                    $result['properties'][$currentProperty]['deprecated'] = true;
+                    continue;
+                }
+
+                if (preg_match('/->readOnly\\(\\)/', $line)) {
+                    $result['properties'][$currentProperty]['readOnly'] = true;
+                    continue;
+                }
+
+                if (preg_match('/->writeOnly\\(\\)/', $line)) {
+                    $result['properties'][$currentProperty]['writeOnly'] = true;
+                    continue;
+                }
+
+                if (preg_match("/->ref\\('([^']+)'\\)/", $line, $m)) {
+                    $result['properties'][$currentProperty]['$ref'] = $m[1];
+                    continue;
+                }
+
+                if (preg_match("/->defaultValue\\('([^']*)'\\)/", $line, $m)) {
+                    $result['properties'][$currentProperty]['default'] = $m[1];
+                    continue;
+                }
+
+                if (preg_match("/->title\\('([^']+)'\\)/", $line, $m)) {
+                    $result['properties'][$currentProperty]['title'] = $m[1];
+                    continue;
+                }
+
+                if (preg_match('/->minimum\\((\\d+(?:\\.\\d+)?)\\)/', $line, $m)) {
+                    $result['properties'][$currentProperty]['minimum'] = str_contains($m[1], '.') ? (float)$m[1] : (int)$m[1];
+                    continue;
+                }
+
+                if (preg_match('/->maximum\\((\\d+(?:\\.\\d+)?)\\)/', $line, $m)) {
+                    $result['properties'][$currentProperty]['maximum'] = str_contains($m[1], '.') ? (float)$m[1] : (int)$m[1];
+                    continue;
+                }
+
+                if (preg_match('/->minLength\\((\\d+)\\)/', $line, $m)) {
+                    $result['properties'][$currentProperty]['minLength'] = (int)$m[1];
+                    continue;
+                }
+
+                if (preg_match('/->maxLength\\((\\d+)\\)/', $line, $m)) {
+                    $result['properties'][$currentProperty]['maxLength'] = (int)$m[1];
+                    continue;
+                }
+
+                if (preg_match("/->pattern\\('([^']+)'\\)/", $line, $m)) {
+                    $result['properties'][$currentProperty]['pattern'] = $m[1];
+                    continue;
+                }
+
+                if (preg_match('/->uniqueItems\\(\\)/', $line)) {
+                    $result['properties'][$currentProperty]['uniqueItems'] = true;
+                    continue;
+                }
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -340,6 +537,21 @@ trait GenerateFileTrait
         if (isset($schema['description'])) {
             $description = addslashes($schema['description']);
             $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($schema['xml'])) {
+            $xml = addslashes(json_encode($schema['xml']));
+            $code .= "{$pad}    ->xml('{$xml}')\n";
+        }
+
+        if (isset($schema['externalDocs'])) {
+            $url = addslashes((string)($schema['externalDocs']['url'] ?? ''));
+            $desc = isset($schema['externalDocs']['description']) ? addslashes((string)$schema['externalDocs']['description']) : null;
+            if (null !== $desc) {
+                $code .= "{$pad}    ->externalDocs('{$url}', '{$desc}')\n";
+            } else {
+                $code .= "{$pad}    ->externalDocs('{$url}')\n";
+            }
         }
 
         if (isset($schema['properties']) && is_array($schema['properties'])) {
@@ -379,6 +591,14 @@ trait GenerateFileTrait
                 $code .= "{$pad}    ->description('{$description}')\n";
             }
 
+            if (isset($propDef['example'])) {
+                if (is_string($propDef['example'])) {
+                    $code .= "{$pad}    ->example('" . addslashes($propDef['example']) . "')\n";
+                } else {
+                    $code .= "{$pad}    ->example(" . var_export($propDef['example'], true) . ")\n";
+                }
+            }
+
             if (isset($propDef['enum'])) {
                 $enumValues = array_map(static function ($v) {
                     return is_string($v) ? "'" . addslashes($v) . "'" : $v;
@@ -396,6 +616,75 @@ trait GenerateFileTrait
 
             if (isset($propDef['nullable']) && $propDef['nullable']) {
                 $code .= "{$pad}    ->nullable()\n";
+            }
+
+            if (isset($propDef['deprecated']) && $propDef['deprecated']) {
+                $code .= "{$pad}    ->deprecated()\n";
+            }
+
+            if (isset($propDef['readOnly']) && $propDef['readOnly']) {
+                $code .= "{$pad}    ->readOnly()\n";
+            }
+
+            if (isset($propDef['writeOnly']) && $propDef['writeOnly']) {
+                $code .= "{$pad}    ->writeOnly()\n";
+            }
+
+            if (array_key_exists('default', $propDef)) {
+                $default = $propDef['default'];
+                if (is_string($default)) {
+                    $code .= "{$pad}    ->defaultValue('" . addslashes($default) . "')\n";
+                } else {
+                    $code .= "{$pad}    ->defaultValue(" . var_export($default, true) . ")\n";
+                }
+            }
+
+            if (isset($propDef['title'])) {
+                $code .= "{$pad}    ->title('" . addslashes($propDef['title']) . "')\n";
+            }
+
+            if (isset($propDef['minimum'])) {
+                $code .= "{$pad}    ->minimum(" . var_export($propDef['minimum'], true) . ")\n";
+            }
+
+            if (isset($propDef['maximum'])) {
+                $code .= "{$pad}    ->maximum(" . var_export($propDef['maximum'], true) . ")\n";
+            }
+
+            if (isset($propDef['exclusiveMinimum'])) {
+                $code .= "{$pad}    ->exclusiveMinimum(" . var_export($propDef['exclusiveMinimum'], true) . ")\n";
+            }
+
+            if (isset($propDef['exclusiveMaximum'])) {
+                $code .= "{$pad}    ->exclusiveMaximum(" . var_export($propDef['exclusiveMaximum'], true) . ")\n";
+            }
+
+            if (isset($propDef['minLength'])) {
+                $code .= "{$pad}    ->minLength(" . var_export($propDef['minLength'], true) . ")\n";
+            }
+
+            if (isset($propDef['maxLength'])) {
+                $code .= "{$pad}    ->maxLength(" . var_export($propDef['maxLength'], true) . ")\n";
+            }
+
+            if (isset($propDef['pattern'])) {
+                $code .= "{$pad}    ->pattern('" . addslashes($propDef['pattern']) . "')\n";
+            }
+
+            if (isset($propDef['minItems'])) {
+                $code .= "{$pad}    ->minItems(" . (int)$propDef['minItems'] . ")\n";
+            }
+
+            if (isset($propDef['maxItems'])) {
+                $code .= "{$pad}    ->maxItems(" . (int)$propDef['maxItems'] . ")\n";
+            }
+
+            if (isset($propDef['uniqueItems']) && $propDef['uniqueItems']) {
+                $code .= "{$pad}    ->uniqueItems()\n";
+            }
+
+            if (isset($propDef['multipleOf'])) {
+                $code .= "{$pad}    ->multipleOf(" . var_export($propDef['multipleOf'], true) . ")\n";
             }
         }
 
@@ -865,5 +1154,150 @@ trait GenerateFileTrait
         }
 
         return $path . $filename . '.' . $extension;
+    }
+
+    /**
+     * Detect the default output format based on existing files.
+     */
+    protected function detectComponentFormat(string $componentName, string $componentType): string
+    {
+        $hasPhp = null !== $this->getApiDocConfigHelper()->findPhpComponentFile($componentName, $componentType);
+        $hasYaml = null !== $this->getApiDocConfigHelper()->findYamlComponentFile($componentName, $componentType);
+
+        return $hasPhp && $hasYaml ? 'both' : ($hasPhp ? 'php' : 'yaml');
+    }
+
+    /**
+     * Parse a non-schema PHP component file and extract builder method calls into an array.
+     *
+     * @return array<string, mixed>
+     */
+    protected function parseNonSchemaPhpFile(string $filePath, string $builderMethod): array
+    {
+        $content = @file_get_contents($filePath);
+        if (false === $content) {
+            return [];
+        }
+
+        $result = [];
+        $inBlock = false;
+
+        foreach (explode("\n", $content) as $line) {
+            $line = trim($line);
+
+            if (preg_match('/->' . preg_quote($builderMethod, '/') . '\\(/', $line)) {
+                $inBlock = true;
+                continue;
+            }
+
+            if (!$inBlock) {
+                continue;
+            }
+
+            if (preg_match('/->end\\(\\)/', $line)) {
+                break;
+            }
+
+            // ->ref('value')
+            if (preg_match("/->ref\\s*\\(\\s*'([^']*)'\\s*\\)/", $line, $m)) {
+                $result['$ref'] = $m[1];
+                continue;
+            }
+
+            // ->schema(['key' => 'value', ...])
+            if (preg_match('/->schema\\s*\\(\\s*\\[(.+)\\]\\s*\\)/s', $line, $m)) {
+                $arr = [];
+                if (preg_match_all("/'([^']+)'\\s*=>\\s*'([^']*)'/", $m[1], $pairs)) {
+                    foreach ($pairs[1] as $i => $k) {
+                        $arr[$k] = $pairs[2][$i];
+                    }
+                }
+                $result['schema'] = $arr;
+                continue;
+            }
+
+            // ->method('value')
+            if (preg_match("/->(\\w+)\\s*\\(\\s*'([^']*)'\\s*\\)/", $line, $m)) {
+                $result[$m[1]] = $m[2];
+                continue;
+            }
+
+            // ->method() → boolean true
+            if (preg_match('/->(\\w+)\\(\\)/', $line, $m)) {
+                $result[$m[1]] = true;
+                continue;
+            }
+
+            // ->method(true) or ->method(false)
+            if (preg_match('/->(\\w+)\\s*\\(\\s*(true|false)\\s*\\)/', $line, $m)) {
+                $result[$m[1]] = 'true' === $m[2];
+                continue;
+            }
+
+            // ->method(number)
+            if (preg_match('/->(\\w+)\\s*\\((\\d+(?:\\.\\d+)?)\\)/', $line, $m)) {
+                $result[$m[1]] = str_contains($m[2], '.') ? (float)$m[2] : (int)$m[2];
+                continue;
+            }
+
+            // ->method(['val1', 'val2'])
+            if (preg_match('/->enum\\s*\\(\\s*\\[(.+)\\]\\s*\\)/s', $line, $m)) {
+                $values = [];
+                if (preg_match_all("/'([^']*)'/", $m[1], $items)) {
+                    $values = $items[1];
+                }
+                $result['enum'] = $values;
+                continue;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Merge an array with existing PHP component config.
+     *
+     * @param array<string, mixed> $array
+     *
+     * @return array<string, mixed>
+     */
+    protected function mergeWithExistingPhp(array $array, string $componentName, string $componentType, string $builderMethod): array
+    {
+        $phpFile = $this->getApiDocConfigHelper()->findPhpComponentFile($componentName, $componentType);
+        if (null === $phpFile) {
+            return $array;
+        }
+
+        $existing = $this->parseNonSchemaPhpFile($phpFile->getPathname(), $builderMethod);
+        if (empty($existing)) {
+            return $array;
+        }
+
+        // Merge existing config into the new array, keeping new values for overlapping keys
+        $componentKey = match ($componentType) {
+            'parameters' => 'parameters',
+            'headers' => 'headers',
+            'responses' => 'responses',
+            'examples' => 'examples',
+            'requestBodies' => 'requestBodies',
+            'tags' => 'tags',
+            'securitySchemes' => 'securitySchemes',
+            'links' => 'links',
+            'callbacks' => 'callbacks',
+            'pathItems' => 'pathItems',
+            'schemas' => 'schemas',
+            default => null,
+        };
+
+        if (null === $componentKey || !isset($array['documentation']['components'][$componentKey][$componentName])) {
+            return $array;
+        }
+
+        $array['documentation']['components'][$componentKey][$componentName] = array_merge(
+            $existing,
+            $array['documentation']['components'][$componentKey][$componentName],
+        );
+
+        return $array;
     }
 }

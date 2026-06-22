@@ -163,6 +163,16 @@ class PropertyBuilder
     }
 
     /**
+     * Mark this property as required in the parent schema.
+     */
+    public function required(): self
+    {
+        $this->schemaBuilder->required([$this->propertyName]);
+
+        return $this;
+    }
+
+    /**
      * Mark property as nullable.
      *
      * @param bool $nullable Whether the property is nullable
