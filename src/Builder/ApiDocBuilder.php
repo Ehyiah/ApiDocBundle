@@ -40,6 +40,21 @@ class ApiDocBuilder
     /** @var array<string, array<string, mixed>> */
     private array $pathItems = [];
 
+    /** @var array<string, array<string, mixed>> */
+    private array $requestBodies = [];
+
+    /** @var array<string, array<string, mixed>> */
+    private array $parameters = [];
+
+    /** @var array<string, array<string, mixed>> */
+    private array $headers = [];
+
+    /** @var array<string, array<string, mixed>> */
+    private array $responses = [];
+
+    /** @var array<string, array<string, mixed>> */
+    private array $examples = [];
+
     /**
      * Start building a new route/path definition.
      */
@@ -114,6 +129,56 @@ class ApiDocBuilder
     public function addPathItem(string $name): PathItemBuilder
     {
         return new PathItemBuilder($this, $name);
+    }
+
+    /**
+     * Start building a reusable request body component.
+     *
+     * @param string $name The request body component name
+     */
+    public function addRequestBody(string $name): RequestBodyBuilder
+    {
+        return new RequestBodyBuilder($this, $name);
+    }
+
+    /**
+     * Start building a reusable parameter component.
+     *
+     * @param string $name The parameter component name
+     */
+    public function addParameter(string $name): ParameterBuilder
+    {
+        return new ParameterBuilder($this, $name);
+    }
+
+    /**
+     * Start building a reusable header component.
+     *
+     * @param string $name The header component name
+     */
+    public function addHeader(string $name): HeaderBuilder
+    {
+        return new HeaderBuilder($this, $name);
+    }
+
+    /**
+     * Start building a reusable response component.
+     *
+     * @param string $name The response component name
+     */
+    public function addResponse(string $name): ResponseBuilder
+    {
+        return new ResponseBuilder($this, null, $name);
+    }
+
+    /**
+     * Start building a reusable example component.
+     *
+     * @param string $name The example component name
+     */
+    public function addExample(string $name): ExampleBuilder
+    {
+        return new ExampleBuilder($this, $name);
     }
 
     /**
@@ -311,6 +376,71 @@ class ApiDocBuilder
     }
 
     /**
+     * Internal method to register a request body definition.
+     *
+     * @param string $name The request body name
+     * @param array<string, mixed> $definition The request body definition
+     *
+     * @internal
+     */
+    public function registerRequestBody(string $name, array $definition): void
+    {
+        $this->requestBodies[$name] = $definition;
+    }
+
+    /**
+     * Internal method to register a parameter definition.
+     *
+     * @param string $name The parameter name
+     * @param array<string, mixed> $definition The parameter definition
+     *
+     * @internal
+     */
+    public function registerParameter(string $name, array $definition): void
+    {
+        $this->parameters[$name] = $definition;
+    }
+
+    /**
+     * Internal method to register a header definition.
+     *
+     * @param string $name The header name
+     * @param array<string, mixed> $definition The header definition
+     *
+     * @internal
+     */
+    public function registerHeader(string $name, array $definition): void
+    {
+        $this->headers[$name] = $definition;
+    }
+
+    /**
+     * Internal method to register a response definition.
+     *
+     * @param string $name The response name
+     * @param array<string, mixed> $definition The response definition
+     *
+     * @internal
+     */
+    public function registerResponse(string $name, array $definition): void
+    {
+        $this->responses[$name] = $definition;
+    }
+
+    /**
+     * Internal method to register an example definition.
+     *
+     * @param string $name The example name
+     * @param array<string, mixed> $definition The example definition
+     *
+     * @internal
+     */
+    public function registerExample(string $name, array $definition): void
+    {
+        $this->examples[$name] = $definition;
+    }
+
+    /**
      * Get all paths (routes) as an array.
      *
      * @return array<string, mixed>
@@ -370,12 +500,17 @@ class ApiDocBuilder
             $spec['paths'] = $this->paths;
         }
 
-        // Add components (schemas, securitySchemes, links, callbacks, pathItems)
+        // Add components
         $hasComponents = !empty($this->schemas)
             || !empty($this->securitySchemes)
             || !empty($this->links)
             || !empty($this->callbacks)
-            || !empty($this->pathItems);
+            || !empty($this->pathItems)
+            || !empty($this->requestBodies)
+            || !empty($this->parameters)
+            || !empty($this->headers)
+            || !empty($this->responses)
+            || !empty($this->examples);
 
         if ($hasComponents) {
             if (!empty($this->schemas)) {
@@ -392,6 +527,21 @@ class ApiDocBuilder
             }
             if (!empty($this->pathItems)) {
                 $spec['components']['pathItems'] = $this->pathItems;
+            }
+            if (!empty($this->requestBodies)) {
+                $spec['components']['requestBodies'] = $this->requestBodies;
+            }
+            if (!empty($this->parameters)) {
+                $spec['components']['parameters'] = $this->parameters;
+            }
+            if (!empty($this->headers)) {
+                $spec['components']['headers'] = $this->headers;
+            }
+            if (!empty($this->responses)) {
+                $spec['components']['responses'] = $this->responses;
+            }
+            if (!empty($this->examples)) {
+                $spec['components']['examples'] = $this->examples;
             }
         }
 

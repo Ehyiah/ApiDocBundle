@@ -7,7 +7,10 @@ namespace Ehyiah\ApiDocBundle\Builder;
  */
 class RequestBodyBuilder
 {
-    private RouteBuilder $routeBuilder;
+    /** @var RouteBuilder|ApiDocBuilder */
+    private $parentBuilder;
+
+    private ?string $componentName = null;
 
     /** @var array<string, mixed> */
     private array $definition = [];
@@ -15,9 +18,14 @@ class RequestBodyBuilder
     /** @var array<ContentBuilder> */
     private array $contentBuilders = [];
 
-    public function __construct(RouteBuilder $routeBuilder)
+    /**
+     * @param RouteBuilder|ApiDocBuilder $parentBuilder
+     * @param string|null $componentName The component name when used as a reusable component
+     */
+    public function __construct(RouteBuilder|ApiDocBuilder $parentBuilder, ?string $componentName = null)
     {
-        $this->routeBuilder = $routeBuilder;
+        $this->parentBuilder = $parentBuilder;
+        $this->componentName = $componentName;
     }
 
     /**
@@ -49,7 +57,9 @@ class RequestBodyBuilder
      */
     public function jsonContent(): ContentBuilder
     {
-        $apiDocBuilder = $this->routeBuilder->getApiDocBuilder();
+        $apiDocBuilder = $this->parentBuilder instanceof ApiDocBuilder
+            ? $this->parentBuilder
+            : $this->parentBuilder->getApiDocBuilder();
         $builder = new ContentBuilder($this, 'application/json', $apiDocBuilder);
         $this->contentBuilders[] = $builder;
 
@@ -63,7 +73,9 @@ class RequestBodyBuilder
      */
     public function content(string $mediaType): ContentBuilder
     {
-        $apiDocBuilder = $this->routeBuilder->getApiDocBuilder();
+        $apiDocBuilder = $this->parentBuilder instanceof ApiDocBuilder
+            ? $this->parentBuilder
+            : $this->parentBuilder->getApiDocBuilder();
         $builder = new ContentBuilder($this, $mediaType, $apiDocBuilder);
         $this->contentBuilders[] = $builder;
 
@@ -71,11 +83,17 @@ class RequestBodyBuilder
     }
 
     /**
-     * Finish building this request body and return to the route builder.
+     * Finish building this request body and return to the parent builder.
+     *
+     * @return RouteBuilder|ApiDocBuilder
      */
-    public function end(): RouteBuilder
+    public function end(): RouteBuilder|ApiDocBuilder
     {
-        return $this->routeBuilder;
+        if ($this->parentBuilder instanceof ApiDocBuilder && null !== $this->componentName) {
+            $this->parentBuilder->registerRequestBody($this->componentName, $this->buildArray());
+        }
+
+        return $this->parentBuilder;
     }
 
     /**

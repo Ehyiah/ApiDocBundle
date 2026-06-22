@@ -7,7 +7,10 @@ namespace Ehyiah\ApiDocBundle\Builder;
  */
 class ParameterBuilder
 {
-    private RouteBuilder $routeBuilder;
+    /** @var RouteBuilder|ApiDocBuilder */
+    private $parentBuilder;
+
+    private ?string $componentName = null;
 
     /** @var array<string, mixed> */
     private array $definition = [];
@@ -15,9 +18,14 @@ class ParameterBuilder
     /** @var ExampleBuilder[] */
     private array $exampleBuilders = [];
 
-    public function __construct(RouteBuilder $routeBuilder)
+    /**
+     * @param RouteBuilder|ApiDocBuilder $parentBuilder
+     * @param string|null $componentName The component name when used as a reusable component
+     */
+    public function __construct(RouteBuilder|ApiDocBuilder $parentBuilder, ?string $componentName = null)
     {
-        $this->routeBuilder = $routeBuilder;
+        $this->parentBuilder = $parentBuilder;
+        $this->componentName = $componentName;
     }
 
     /**
@@ -205,11 +213,17 @@ class ParameterBuilder
     }
 
     /**
-     * Finish building this parameter and return to the route builder.
+     * Finish building this parameter and return to the parent builder.
+     *
+     * @return RouteBuilder|ApiDocBuilder
      */
-    public function end(): RouteBuilder
+    public function end(): RouteBuilder|ApiDocBuilder
     {
-        return $this->routeBuilder;
+        if ($this->parentBuilder instanceof ApiDocBuilder && null !== $this->componentName) {
+            $this->parentBuilder->registerParameter($this->componentName, $this->buildArray());
+        }
+
+        return $this->parentBuilder;
     }
 
     /**

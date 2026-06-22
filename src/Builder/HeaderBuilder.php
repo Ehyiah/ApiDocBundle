@@ -9,7 +9,8 @@ namespace Ehyiah\ApiDocBundle\Builder;
  */
 class HeaderBuilder
 {
-    private ResponseBuilder $responseBuilder;
+    /** @var ResponseBuilder|ApiDocBuilder */
+    private $parentBuilder;
 
     private string $name;
 
@@ -19,9 +20,13 @@ class HeaderBuilder
     /** @var ExampleBuilder[] */
     private array $exampleBuilders = [];
 
-    public function __construct(ResponseBuilder $responseBuilder, string $name)
+    /**
+     * @param ResponseBuilder|ApiDocBuilder $parentBuilder
+     * @param string $name The header name (also used as component name when used as a reusable component)
+     */
+    public function __construct(ResponseBuilder|ApiDocBuilder $parentBuilder, string $name)
     {
-        $this->responseBuilder = $responseBuilder;
+        $this->parentBuilder = $parentBuilder;
         $this->name = $name;
     }
 
@@ -306,11 +311,17 @@ class HeaderBuilder
     }
 
     /**
-     * Finish building this header and return to the response builder.
+     * Finish building this header and return to the parent builder.
+     *
+     * @return ResponseBuilder|ApiDocBuilder
      */
-    public function end(): ResponseBuilder
+    public function end(): ResponseBuilder|ApiDocBuilder
     {
-        return $this->responseBuilder;
+        if ($this->parentBuilder instanceof ApiDocBuilder) {
+            $this->parentBuilder->registerHeader($this->name, $this->buildArray());
+        }
+
+        return $this->parentBuilder;
     }
 
     /**

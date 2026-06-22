@@ -7,8 +7,12 @@ namespace Ehyiah\ApiDocBundle\Builder;
  */
 class ResponseBuilder
 {
-    private RouteBuilder $routeBuilder;
-    private int $statusCode;
+    /** @var RouteBuilder|ApiDocBuilder */
+    private $parentBuilder;
+
+    private ?int $statusCode = null;
+
+    private ?string $responseName = null;
 
     /** @var array<string, mixed> */
     private array $definition = [];
@@ -19,10 +23,16 @@ class ResponseBuilder
     /** @var array<HeaderBuilder> */
     private array $headerBuilders = [];
 
-    public function __construct(RouteBuilder $routeBuilder, int $statusCode)
+    /**
+     * @param RouteBuilder|ApiDocBuilder $parentBuilder
+     * @param int|null $statusCode The HTTP status code (when used inline in a route)
+     * @param string|null $responseName The component name (when used as a reusable component)
+     */
+    public function __construct(RouteBuilder|ApiDocBuilder $parentBuilder, ?int $statusCode = null, ?string $responseName = null)
     {
-        $this->routeBuilder = $routeBuilder;
+        $this->parentBuilder = $parentBuilder;
         $this->statusCode = $statusCode;
+        $this->responseName = $responseName;
     }
 
     /**
@@ -42,7 +52,9 @@ class ResponseBuilder
      */
     public function jsonContent(): ContentBuilder
     {
-        $apiDocBuilder = $this->routeBuilder->getApiDocBuilder();
+        $apiDocBuilder = $this->parentBuilder instanceof ApiDocBuilder
+            ? $this->parentBuilder
+            : $this->parentBuilder->getApiDocBuilder();
         $builder = new ContentBuilder($this, 'application/json', $apiDocBuilder);
         $this->contentBuilders[] = $builder;
 
@@ -56,7 +68,9 @@ class ResponseBuilder
      */
     public function content(string $mediaType): ContentBuilder
     {
-        $apiDocBuilder = $this->routeBuilder->getApiDocBuilder();
+        $apiDocBuilder = $this->parentBuilder instanceof ApiDocBuilder
+            ? $this->parentBuilder
+            : $this->parentBuilder->getApiDocBuilder();
         $builder = new ContentBuilder($this, $mediaType, $apiDocBuilder);
         $this->contentBuilders[] = $builder;
 
@@ -95,11 +109,17 @@ class ResponseBuilder
     }
 
     /**
-     * Finish building this response and return to the route builder.
+     * Finish building this response and return to the parent builder.
+     *
+     * @return RouteBuilder|ApiDocBuilder
      */
-    public function end(): RouteBuilder
+    public function end(): RouteBuilder|ApiDocBuilder
     {
-        return $this->routeBuilder;
+        if ($this->parentBuilder instanceof ApiDocBuilder && null !== $this->responseName) {
+            $this->parentBuilder->registerResponse($this->responseName, $this->buildArray());
+        }
+
+        return $this->parentBuilder;
     }
 
     /**
