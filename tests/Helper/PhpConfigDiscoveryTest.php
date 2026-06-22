@@ -2,7 +2,7 @@
 
 namespace Ehyiah\ApiDocBundle\Tests\Helper;
 
-use Ehyiah\ApiDocBundle\EhyiahApiDocBundle;
+use Ehyiah\ApiDocBundle\Helper\PhpNamespaceResolver;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 
@@ -16,11 +16,10 @@ final class PhpConfigDiscoveryTest extends TestCase
 {
     private function callResolveNamespace(string $path): ?string
     {
-        $bundle = new EhyiahApiDocBundle();
-        $method = new ReflectionMethod(EhyiahApiDocBundle::class, 'resolveNamespace');
+        $method = new ReflectionMethod(PhpNamespaceResolver::class, 'resolveNamespace');
         $method->setAccessible(true);
 
-        return $method->invoke($bundle, $path);
+        return $method->invoke(null, $path);
     }
 
     public function testResolveNamesaceForTestsAppSwagger(): void

@@ -2,9 +2,9 @@
 
 namespace Ehyiah\ApiDocBundle;
 
-use Composer\Autoload\ClassLoader;
 use Ehyiah\ApiDocBundle\Attributes\AsTuiGenerator;
 use Ehyiah\ApiDocBundle\DependencyInjection\Compiler\ApiDocConfigPass;
+use Ehyiah\ApiDocBundle\Helper\PhpNamespaceResolver;
 use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 use ReflectionClass;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
@@ -49,7 +49,7 @@ class EhyiahApiDocBundle extends AbstractBundle
             return;
         }
 
-        $namespace = self::resolveNamespace($absolutePath);
+        $namespace = PhpNamespaceResolver::resolveNamespace($absolutePath);
 
         if (null === $namespace) {
             return;
@@ -60,46 +60,6 @@ class EhyiahApiDocBundle extends AbstractBundle
             ->autowire()
             ->autoconfigure()
         ;
-    }
-
-    /**
-     * Resolve the fully-qualified namespace for a given absolute path
-     * by matching it against Composer's PSR-4 autoloading prefixes.
-     *
-     * For example, if '/var/www/project/src/Swagger' is under the PSR-4 prefix
-     * 'App\\' => 'src/', the resolved namespace is 'App\\Swagger'.
-     */
-    public static function resolveNamespace(string $absolutePath): ?string
-    {
-        foreach (spl_autoload_functions() as $autoloadFunction) {
-            if (!is_array($autoloadFunction) || !$autoloadFunction[0] instanceof ClassLoader) {
-                continue;
-            }
-
-            foreach ($autoloadFunction[0]->getPrefixesPsr4() as $prefix => $paths) {
-                foreach ($paths as $path) {
-                    $resolvedPath = realpath($path);
-
-                    if (false === $resolvedPath) {
-                        continue;
-                    }
-
-                    if (!str_starts_with($absolutePath, $resolvedPath)) {
-                        continue;
-                    }
-
-                    $relativePath = substr($absolutePath, strlen($resolvedPath) + 1);
-
-                    if ('' === $relativePath) {
-                        return rtrim($prefix, '\\');
-                    }
-
-                    return rtrim($prefix, '\\') . '\\' . str_replace('/', '\\', $relativePath);
-                }
-            }
-        }
-
-        return null;
     }
 
     private function setParameterIfNotExists(ContainerBuilder $builder, ContainerConfigurator $container, string $name, mixed $value): void
