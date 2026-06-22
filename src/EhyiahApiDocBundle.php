@@ -4,7 +4,6 @@ namespace Ehyiah\ApiDocBundle;
 
 use Ehyiah\ApiDocBundle\Attributes\AsTuiGenerator;
 use Ehyiah\ApiDocBundle\DependencyInjection\Compiler\ApiDocConfigPass;
-use Ehyiah\ApiDocBundle\Helper\PhpNamespaceResolver;
 use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 use ReflectionClass;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
@@ -28,38 +27,6 @@ class EhyiahApiDocBundle extends AbstractBundle
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.dump_path', $config['dump_path']);
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.ui', $config['ui']);
         $this->setParameterIfNotExists($builder, $container, 'ehyiah_api_doc.scan_directories', $config['scan_directories']);
-
-        $this->registerSourcePathServices($config, $builder, $container);
-    }
-
-    /**
-     * Register the source_path directory as a service resource for autoconfiguration.
-     *
-     * This allows PHP config classes in the source_path to be automatically
-     * discovered as services tagged with 'ehyiah_api_doc.config_provider'.
-     */
-    private function registerSourcePathServices(array $config, ContainerBuilder $builder, ContainerConfigurator $container): void
-    {
-        $sourcePath = $config['source_path'];
-        $projectDir = $builder->getParameter('kernel.project_dir');
-
-        $absolutePath = realpath($projectDir . '/' . ltrim($sourcePath, '/'));
-
-        if (false === $absolutePath || !is_dir($absolutePath)) {
-            return;
-        }
-
-        $namespace = PhpNamespaceResolver::resolveNamespace($absolutePath);
-
-        if (null === $namespace) {
-            return;
-        }
-
-        $container->services()
-            ->load($namespace . '\\', $absolutePath)
-            ->autowire()
-            ->autoconfigure()
-        ;
     }
 
     private function setParameterIfNotExists(ContainerBuilder $builder, ContainerConfigurator $container, string $name, mixed $value): void

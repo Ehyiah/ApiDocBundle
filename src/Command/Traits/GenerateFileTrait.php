@@ -349,21 +349,7 @@ trait GenerateFileTrait
      */
     protected function resolveNamespaceFromFile(string $filePath): ?string
     {
-        $namespace = \Ehyiah\ApiDocBundle\Helper\PhpNamespaceResolver::resolveNamespace(dirname($filePath));
-
-        if (null !== $namespace) {
-            return $namespace;
-        }
-
-        $sourcePath = $this->getParameterBag()->get('ehyiah_api_doc.source_path');
-
-        if (!is_string($sourcePath)) {
-            return null;
-        }
-
-        $projectDir = $this->getKernel()->getProjectDir();
-
-        return \Ehyiah\ApiDocBundle\Helper\PhpNamespaceResolver::resolveNamespace($projectDir . '/' . ltrim($sourcePath, '/'));
+        return \Ehyiah\ApiDocBundle\Helper\PhpNamespaceResolver::resolveNamespace(dirname($filePath));
     }
 
     /**
