@@ -124,25 +124,25 @@ documentation:
 You can define your documentation programmatically using PHP classes. This offers strong typing and IDE autocompletion.
 
 1. Create a class that implements `Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface`.
-2. Add the `#[ApiDocComponent]` attribute with a unique `id`.
+2. Add the `#[ApiDocConfig]` attribute with a unique `component` name.
 3. Implement the `configure` method.
 4. Your class is automatically autoloaded and parsed.
 
-The `#[ApiDocComponent]` attribute is **required**. It lets the TUI find and edit your component regardless of file location or class name.
+The `#[ApiDocConfig]` attribute lets the DI registry find your component regardless of file location or class name.
 
-- **`id`** — A unique string that identifies this component. Use the same name as the OpenAPI component key (e.g., for a schema named `User`, use `id: 'User'`). For routes, use the route name (e.g., `id: 'api_users'`).
-- **`type`** — Optional. A hint for the TUI (e.g., `'schema'`, `'response'`, `'tag'`). Auto-detected in most cases.
+- **`component`** — A unique string that identifies this component. Use the same name as the OpenAPI component key (e.g., for a schema named `User`, use `component: 'User'`). For routes, use the route name (e.g., `component: 'api_users'`).
+- **`type`** — The component type (e.g., `'schemas'`, `'responses'`, `'routes'`).
 
 **Example `src/ApiDoc/UserDocConfig.php`:**
 ```php
 <?php
 namespace App\ApiDoc;
 
-use Ehyiah\ApiDocBundle\Attributes\ApiDocComponent;
+use Ehyiah\ApiDocBundle\Attributes\ApiDocConfig;
 use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
 use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 
-#[ApiDocComponent(id: 'api_user_by_id')]
+#[ApiDocConfig(component: 'api_user_by_id', type: 'routes')]
 class UserDocConfig implements ApiDocConfigInterface
 {
     public function configure(ApiDocBuilder $builder): void

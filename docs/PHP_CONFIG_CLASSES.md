@@ -52,37 +52,16 @@ class UserApiDocConfig implements ApiDocConfigInterface
 }
 ```
 
-### 2. Register the Configuration Class
+### 2. Auto-Discovery
 
-**Option A: Auto-registration (Recommended)**
+No configuration is needed. The bundle's `build()` method automatically tags all classes implementing `ApiDocConfigInterface`:
 
-Add to your `config/services.yaml`:
-
-```yaml
-services:
-    _instanceof:
-        Ehyiah\ApiDocBundle\Config\ApiDocConfigInterface:
-            tags: ['ehyiah_api_doc.config_provider']
+```php
+$container->registerForAutoconfiguration(ApiDocConfigInterface::class)
+    ->addTag('ehyiah_api_doc.config_provider');
 ```
 
-All classes implementing `ApiDocConfigInterface` will be automatically discovered.
-
-**Option B: Manual registration**
-
-```yaml
-services:
-    App\ApiDoc\UserApiDocConfig:
-        tags: ['ehyiah_api_doc.config_provider']
-```
-
-### 3. Enable PHP Config (Optional)
-
-In your `config/packages/ehyiah_api_doc.yaml`:
-
-```yaml
-ehyiah_api_doc:
-    enable_php_config: true  # true by default
-```
+Combined with Symfony's default PSR-4 service autodiscovery (your app's `config/services.yaml`), any class implementing `ApiDocConfigInterface` under your `src/` directory is automatically discovered and loaded.
 
 That's it! Your PHP-defined documentation will be merged with any existing YAML documentation.
 
@@ -197,7 +176,7 @@ Generates reference          → '#/components/schemas/Product'
 ->end()
 ```
 
-See [docs/examples/ProductWithClassRefConfig.php](examples/ProductWithClassRefConfig.php) for a complete example.
+See [docs/examples/ProductWithCustomRefsConfig.php](examples/ProductWithCustomRefsConfig.php) for a complete example.
 
 ### Schemas
 
@@ -277,7 +256,7 @@ $builder->addSchema('User')
 
 ## Complete Example
 
-See `src/Config/ExampleApiDocConfig.php` for a complete working example.
+See [docs/examples/ProductApiDocConfig.php](examples/ProductApiDocConfig.php) for a complete working example.
 
 ## Hybrid Mode
 
@@ -300,7 +279,6 @@ They will be automatically merged into a single OpenAPI specification.
 **Q: My config class is not being loaded**
 - Check that it implements `ApiDocConfigInterface`
 - Verify it's tagged with `ehyiah_api_doc.config_provider`
-- Ensure `enable_php_config` is `true` in bundle configuration
 - Clear cache: `php bin/console cache:clear`
 
 **Q: Documentation is duplicated**

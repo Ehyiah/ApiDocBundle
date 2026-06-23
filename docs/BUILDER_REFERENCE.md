@@ -5,11 +5,14 @@
 ## Table of Contents
 
 - [ApiDocBuilder](#apidocbuilder)
+- [CallbackBuilder](#callbackbuilder)
 - [ContentBuilder](#contentbuilder)
 - [ExampleBuilder](#examplebuilder)
 - [HeaderBuilder](#headerbuilder)
 - [InfoBuilder](#infobuilder)
+- [LinkBuilder](#linkbuilder)
 - [ParameterBuilder](#parameterbuilder)
+- [PathItemBuilder](#pathitembuilder)
 - [PropertyBuilder](#propertybuilder)
 - [RequestBodyBuilder](#requestbodybuilder)
 - [ResponseBuilder](#responsebuilder)
@@ -70,6 +73,94 @@ Start building a new tag definition.
 - `$name` (`string`)
 
 **Returns:** `Ehyiah\ApiDocBundle\Builder\TagBuilder`
+
+---
+
+### `->addLink()`
+
+Start building a new link component.
+**Parameters:**
+
+- `$name` (`string`)
+
+**Returns:** `Ehyiah\ApiDocBundle\Builder\LinkBuilder`
+
+---
+
+### `->addCallback()`
+
+Start building a new callback component.
+**Parameters:**
+
+- `$name` (`string`)
+
+**Returns:** `Ehyiah\ApiDocBundle\Builder\CallbackBuilder`
+
+---
+
+### `->addPathItem()`
+
+Start building a new path item component.
+**Parameters:**
+
+- `$name` (`string`)
+
+**Returns:** `Ehyiah\ApiDocBundle\Builder\PathItemBuilder`
+
+---
+
+### `->addRequestBody()`
+
+Start building a reusable request body component.
+**Parameters:**
+
+- `$name` (`string`)
+
+**Returns:** `Ehyiah\ApiDocBundle\Builder\RequestBodyBuilder`
+
+---
+
+### `->addParameter()`
+
+Start building a reusable parameter component.
+**Parameters:**
+
+- `$name` (`string`)
+
+**Returns:** `Ehyiah\ApiDocBundle\Builder\ParameterBuilder`
+
+---
+
+### `->addHeader()`
+
+Start building a reusable header component.
+**Parameters:**
+
+- `$name` (`string`)
+
+**Returns:** `Ehyiah\ApiDocBundle\Builder\HeaderBuilder`
+
+---
+
+### `->addResponse()`
+
+Start building a reusable response component.
+**Parameters:**
+
+- `$name` (`string`)
+
+**Returns:** `Ehyiah\ApiDocBundle\Builder\ResponseBuilder`
+
+---
+
+### `->addExample()`
+
+Start building a reusable example component.
+**Parameters:**
+
+- `$name` (`string`)
+
+**Returns:** `Ehyiah\ApiDocBundle\Builder\ExampleBuilder`
 
 ---
 
@@ -166,6 +257,102 @@ Internal method to register a security scheme definition.
 
 ---
 
+### `->registerLink()`
+
+Internal method to register a link definition.
+**Parameters:**
+
+- `$name` (`string`)
+- `$definition` (`array`)
+
+**Returns:** `void`
+
+---
+
+### `->registerCallback()`
+
+Internal method to register a callback definition.
+**Parameters:**
+
+- `$name` (`string`)
+- `$definition` (`array`)
+
+**Returns:** `void`
+
+---
+
+### `->registerPathItem()`
+
+Internal method to register a path item definition.
+**Parameters:**
+
+- `$name` (`string`)
+- `$definition` (`array`)
+
+**Returns:** `void`
+
+---
+
+### `->registerRequestBody()`
+
+Internal method to register a request body definition.
+**Parameters:**
+
+- `$name` (`string`)
+- `$definition` (`array`)
+
+**Returns:** `void`
+
+---
+
+### `->registerParameter()`
+
+Internal method to register a parameter definition.
+**Parameters:**
+
+- `$name` (`string`)
+- `$definition` (`array`)
+
+**Returns:** `void`
+
+---
+
+### `->registerHeader()`
+
+Internal method to register a header definition.
+**Parameters:**
+
+- `$name` (`string`)
+- `$definition` (`array`)
+
+**Returns:** `void`
+
+---
+
+### `->registerResponse()`
+
+Internal method to register a response definition.
+**Parameters:**
+
+- `$name` (`string`)
+- `$definition` (`array`)
+
+**Returns:** `void`
+
+---
+
+### `->registerExample()`
+
+Internal method to register an example definition.
+**Parameters:**
+
+- `$name` (`string`)
+- `$definition` (`array`)
+
+**Returns:** `void`
+
+---
+
 ### `->getPaths()`
 
 Get all paths (routes) as an array.
@@ -182,6 +369,14 @@ Get all schemas as an array.
 
 ---
 
+### `->clearSchemas()`
+
+
+
+**Returns:** `void`
+
+---
+
 ### `->build()`
 
 Build the complete OpenAPI specification array.
@@ -195,6 +390,46 @@ Build the complete OpenAPI specification array.
 This method exists to satisfy static analysis for fluent chains where the builder type might be ambiguous (e.g. SchemaBuilder::end() returning parent).
 
 **Returns:** `void`
+
+---
+
+## CallbackBuilder
+
+Fluent builder for defining OpenAPI Callback objects. A map of out-of-band callbacks related to the parent operation. Each entry is an expression that evaluates to a Path Item Object.
+
+### `->pathItem()`
+
+Add a path item under an expression.
+**Parameters:**
+
+- `$expression` (`string`)
+- `$pathItem` (`array`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->end()`
+
+Finish building this callback and return to the parent builder.
+
+**Returns:** `mixed`
+
+---
+
+### `->getName()`
+
+Get the callback name.
+
+**Returns:** `string`
+
+---
+
+### `->buildArray()`
+
+Build the callback definition as an array.
+
+**Returns:** `array`
 
 ---
 
@@ -262,6 +497,18 @@ Add a named example for this content. Use this method to add multiple examples w
 - `$name` (`string`)
 
 **Returns:** `Ehyiah\ApiDocBundle\Builder\ExampleBuilder`
+
+---
+
+### `->encoding()`
+
+Set encoding for a property. Defines encoding for a specific property within a multipart request body.
+**Parameters:**
+
+- `$property` (`string`)
+- `$encoding` (`array`)
+
+**Returns:** `Builder instance`
 
 ---
 
@@ -337,11 +584,22 @@ Set a URL that points to the literal example. The value field and externalValue 
 
 ---
 
+### `->ref()`
+
+Set a reference to an existing example component.
+**Parameters:**
+
+- `$ref` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
 ### `->end()`
 
 Finish building this example and return to the parent builder.
 
-**Returns:** `mixed`
+**Returns:** `Ehyiah\ApiDocBundle\Builder\ContentBuilder|Ehyiah\ApiDocBundle\Builder\ParameterBuilder|Ehyiah\ApiDocBundle\Builder\HeaderBuilder|Ehyiah\ApiDocBundle\Builder\ApiDocBuilder`
 
 ---
 
@@ -549,11 +807,44 @@ Set pattern (regex) for string headers.
 
 ---
 
+### `->style()`
+
+Set the serialization style.
+**Parameters:**
+
+- `$style` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->explode()`
+
+Set explode behavior.
+**Parameters:**
+
+- `$explode` (`bool`) (optional, default: `true`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->allowReserved()`
+
+Allow reserved characters in parameter value.
+**Parameters:**
+
+- `$allowReserved` (`bool`) (optional, default: `true`)
+
+**Returns:** `Builder instance`
+
+---
+
 ### `->end()`
 
-Finish building this header and return to the response builder.
+Finish building this header and return to the parent builder.
 
-**Returns:** `Ehyiah\ApiDocBundle\Builder\ResponseBuilder`
+**Returns:** `Ehyiah\ApiDocBundle\Builder\ResponseBuilder|Ehyiah\ApiDocBundle\Builder\ApiDocBuilder`
 
 ---
 
@@ -700,6 +991,102 @@ Build the configuration as an array.
 
 ---
 
+## LinkBuilder
+
+Fluent builder for defining OpenAPI Link objects. Links allow outgoing requests to other operations for request/response pairs.
+
+### `->operationRef()`
+
+Set the reference to an existing Operation Object.
+**Parameters:**
+
+- `$operationRef` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->operationId()`
+
+Set the operationId of an existing operation.
+**Parameters:**
+
+- `$operationId` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->parameter()`
+
+Add a parameter to pass to the operation.
+**Parameters:**
+
+- `$name` (`string`)
+- `$value` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->requestBody()`
+
+Set the request body to pass to the operation.
+**Parameters:**
+
+- `$value` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->description()`
+
+Set a description of the link.
+**Parameters:**
+
+- `$description` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->server()`
+
+Set a server object to be used by the target operation.
+**Parameters:**
+
+- `$url` (`string`)
+- `$description` (`string`) (optional, default: `NULL`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->end()`
+
+Finish building this link and return to the parent builder.
+
+**Returns:** `mixed`
+
+---
+
+### `->getName()`
+
+Get the link name.
+
+**Returns:** `string`
+
+---
+
+### `->buildArray()`
+
+Build the link definition as an array.
+
+**Returns:** `array`
+
+---
+
 ## ParameterBuilder
 
 Fluent builder for defining route parameters.
@@ -792,17 +1179,252 @@ Add a named example for this parameter. Use this method to add multiple examples
 
 ---
 
+### `->deprecated()`
+
+Mark the parameter as deprecated.
+**Parameters:**
+
+- `$deprecated` (`bool`) (optional, default: `true`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->allowEmptyValue()`
+
+Allow empty value for the parameter.
+**Parameters:**
+
+- `$allowEmptyValue` (`bool`) (optional, default: `true`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->style()`
+
+Set the serialization style. Common styles by location: - query, header, cookie: 'form', 'spaceDelimited', 'pipeDelimited', 'deepObject' - path: 'simple', 'label', 'matrix'
+**Parameters:**
+
+- `$style` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->explode()`
+
+Set explode behavior. When true, parameter values of type array or object generate separate parameters. When false, array and object values are serialized using the style serialization.
+**Parameters:**
+
+- `$explode` (`bool`) (optional, default: `true`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->allowReserved()`
+
+Allow reserved characters in parameter value. Applies to query parameters. When true, allows RFC3986 reserved characters in the parameter value.
+**Parameters:**
+
+- `$allowReserved` (`bool`) (optional, default: `true`)
+
+**Returns:** `Builder instance`
+
+---
+
 ### `->end()`
 
-Finish building this parameter and return to the route builder.
+Finish building this parameter and return to the parent builder.
 
-**Returns:** `Ehyiah\ApiDocBundle\Builder\RouteBuilder`
+**Returns:** `Ehyiah\ApiDocBundle\Builder\RouteBuilder|Ehyiah\ApiDocBundle\Builder\ApiDocBuilder`
 
 ---
 
 ### `->buildArray()`
 
 Build the parameter definition as an array.
+
+**Returns:** `array`
+
+---
+
+## PathItemBuilder
+
+Fluent builder for defining OpenAPI Path Item objects. A Path Item Object describes the operations available on a single path.
+
+### `->summary()`
+
+Set a summary of the path item.
+**Parameters:**
+
+- `$summary` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->description()`
+
+Set a description of the path item.
+**Parameters:**
+
+- `$description` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->ref()`
+
+Set a $ref reference to an external definition.
+**Parameters:**
+
+- `$ref` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->parameter()`
+
+Add a parameter to this path item.
+**Parameters:**
+
+- `$parameter` (`array`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->server()`
+
+Add a server to this path item.
+**Parameters:**
+
+- `$url` (`string`)
+- `$description` (`string`) (optional, default: `NULL`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->get()`
+
+Add a GET operation to this path item.
+**Parameters:**
+
+- `$operation` (`array`) (optional, default: `array (
+)`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->put()`
+
+Add a PUT operation to this path item.
+**Parameters:**
+
+- `$operation` (`array`) (optional, default: `array (
+)`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->post()`
+
+Add a POST operation to this path item.
+**Parameters:**
+
+- `$operation` (`array`) (optional, default: `array (
+)`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->delete()`
+
+Add a DELETE operation to this path item.
+**Parameters:**
+
+- `$operation` (`array`) (optional, default: `array (
+)`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->options()`
+
+Add an OPTIONS operation to this path item.
+**Parameters:**
+
+- `$operation` (`array`) (optional, default: `array (
+)`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->head()`
+
+Add a HEAD operation to this path item.
+**Parameters:**
+
+- `$operation` (`array`) (optional, default: `array (
+)`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->patch()`
+
+Add a PATCH operation to this path item.
+**Parameters:**
+
+- `$operation` (`array`) (optional, default: `array (
+)`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->trace()`
+
+Add a TRACE operation to this path item.
+**Parameters:**
+
+- `$operation` (`array`) (optional, default: `array (
+)`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->end()`
+
+Finish building this path item and return to the main builder.
+
+**Returns:** `Ehyiah\ApiDocBundle\Builder\ApiDocBuilder`
+
+---
+
+### `->getName()`
+
+Get the path item name.
+
+**Returns:** `string`
+
+---
+
+### `->buildArray()`
+
+Build the path item definition as an array.
 
 **Returns:** `array`
 
@@ -906,6 +1528,14 @@ Set the format for this property. Common formats by type: - string: 'date', 'dat
 **Parameters:**
 
 - `$format` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->required()`
+
+Mark this property as required in the parent schema.
 
 **Returns:** `Builder instance`
 
@@ -1142,6 +1772,29 @@ Set title for this property.
 
 ---
 
+### `->externalDocs()`
+
+Set external documentation for this property.
+**Parameters:**
+
+- `$url` (`string`)
+- `$description` (`string`) (optional, default: `NULL`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->additionalProperties()`
+
+Set additional properties constraint for object type.
+**Parameters:**
+
+- `$additionalProperties` (`mixed`) (optional, default: `false`)
+
+**Returns:** `Builder instance`
+
+---
+
 ### `->custom()`
 
 Add a custom property to the definition. Use this for any OpenAPI property not covered by the builder methods.
@@ -1225,9 +1878,9 @@ Start building content for a specific media type.
 
 ### `->end()`
 
-Finish building this request body and return to the route builder.
+Finish building this request body and return to the parent builder.
 
-**Returns:** `Ehyiah\ApiDocBundle\Builder\RouteBuilder`
+**Returns:** `Ehyiah\ApiDocBundle\Builder\RouteBuilder|Ehyiah\ApiDocBundle\Builder\ApiDocBuilder`
 
 ---
 
@@ -1298,9 +1951,21 @@ Add a response header using an array definition.
 
 ### `->end()`
 
-Finish building this response and return to the route builder.
+Finish building this response and return to the parent builder.
 
-**Returns:** `Ehyiah\ApiDocBundle\Builder\RouteBuilder`
+**Returns:** `Ehyiah\ApiDocBundle\Builder\RouteBuilder|Ehyiah\ApiDocBundle\Builder\ApiDocBuilder`
+
+---
+
+### `->link()`
+
+Add a link to another operation. Links allow outgoing requests to other operations for request/response pairs.
+**Parameters:**
+
+- `$name` (`string`)
+- `$link` (`array`)
+
+**Returns:** `Builder instance`
 
 ---
 
@@ -1406,6 +2071,55 @@ Add a security requirement to this route.
 ### `->noSecurity()`
 
 Mark this route as not requiring any authentication. Useful to override global security for public endpoints.
+
+**Returns:** `Builder instance`
+
+---
+
+### `->deprecated()`
+
+Mark this operation as deprecated.
+**Parameters:**
+
+- `$deprecated` (`bool`) (optional, default: `true`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->externalDocs()`
+
+Set external documentation for this operation.
+**Parameters:**
+
+- `$url` (`string`)
+- `$description` (`string`) (optional, default: `NULL`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->callback()`
+
+Add a callback for this operation.
+**Parameters:**
+
+- `$name` (`string`)
+- `$callback` (`array`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->server()`
+
+Add an alternative server for this operation.
+**Parameters:**
+
+- `$url` (`string`)
+- `$description` (`string`) (optional, default: `NULL`)
+- `$variables` (`array`) (optional, default: `array (
+)`)
 
 **Returns:** `Builder instance`
 
@@ -1674,6 +2388,128 @@ Mark field as write-only.
 **Parameters:**
 
 - `$writeOnly` (`bool`) (optional, default: `true`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->deprecated()`
+
+Mark schema as deprecated.
+**Parameters:**
+
+- `$deprecated` (`bool`) (optional, default: `true`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->title()`
+
+Set the schema title.
+**Parameters:**
+
+- `$title` (`string`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->externalDocs()`
+
+Set external documentation for this schema.
+**Parameters:**
+
+- `$url` (`string`)
+- `$description` (`string`) (optional, default: `NULL`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->constValue()`
+
+Set a constant value for this schema.
+**Parameters:**
+
+- `$value` (`mixed`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->allOf()`
+
+Set allOf composition (AND).
+**Parameters:**
+
+- `$schemas` (`array`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->anyOf()`
+
+Set anyOf composition (OR).
+**Parameters:**
+
+- `$schemas` (`array`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->oneOf()`
+
+Set oneOf composition (XOR).
+**Parameters:**
+
+- `$schemas` (`array`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->not()`
+
+Set not composition (NOT).
+**Parameters:**
+
+- `$schema` (`array`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->additionalProperties()`
+
+Set additional properties constraint.
+**Parameters:**
+
+- `$additionalProperties` (`mixed`) (optional, default: `false`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->minProperties()`
+
+Set minimum number of properties for object type.
+**Parameters:**
+
+- `$minProperties` (`int`)
+
+**Returns:** `Builder instance`
+
+---
+
+### `->maxProperties()`
+
+Set maximum number of properties for object type.
+**Parameters:**
+
+- `$maxProperties` (`int`)
 
 **Returns:** `Builder instance`
 
