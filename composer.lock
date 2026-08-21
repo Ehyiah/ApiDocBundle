@@ -2699,16 +2699,16 @@
         },
         {
             "name": "symfony/tui",
-            "version": "v8.1.0",
+            "version": "v8.1.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/tui.git",
-                "reference": "962a6ec7b07691ee4027305269a5883f449b973c"
+                "reference": "415460523c893f526d799db2e57f3d535ff3e395"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/tui/zipball/962a6ec7b07691ee4027305269a5883f449b973c",
-                "reference": "962a6ec7b07691ee4027305269a5883f449b973c",
+                "url": "https://api.github.com/repos/symfony/tui/zipball/415460523c893f526d799db2e57f3d535ff3e395",
+                "reference": "415460523c893f526d799db2e57f3d535ff3e395",
                 "shasum": ""
             },
             "require": {
@@ -2753,7 +2753,7 @@
                 "tui"
             ],
             "support": {
-                "source": "https://github.com/symfony/tui/tree/v8.1.0"
+                "source": "https://github.com/symfony/tui/tree/v8.1.4"
             },
             "funding": [
                 {
@@ -2773,7 +2773,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-05-29T05:06:50+00:00"
+            "time": "2026-08-07T03:42:45+00:00"
         },
         {
             "name": "symfony/type-info",
