@@ -11,7 +11,7 @@ Define your documentation using **YAML files**, **PHP classes**, or a mix of bot
 
 - **Multiple UIs supported**: Swagger UI, Redoc, Stoplight Elements, RapiDoc, and Scalar.
 - **Flexible Configuration**: Use YAML files, PHP classes, or both.
-- **Generator Commands**: CLI tools to quickly generate Schemas, Request Bodies, and Routes.
+- **Interactive TUI**: Generate and edit all OpenAPI components via a beautiful terminal interface.
 - **Hybrid Support**: Seamlessly merge YAML and PHP definitions.
 - **Attributes Support**: Link your Controllers to their documentation for easy IDE navigation.
 
@@ -56,15 +56,19 @@ ehyiah_api_doc:
     # Select your preferred UI
     ui: swagger  # Options: swagger, redoc, stoplight, rapidoc, scalar
 
-    # Directory where YAML files are located (and where commands look for existing files)
+    # Directory where YAML/PHP files are created by default (and where commands look for existing yaml files when editing)
+    # PHP files can be placed anywhere after creation because they are loading by their interface and not by scanning directories
     source_path: 'src/Swagger'
 
-    # Directory to dump generated files
+    # Directory to dump a full generated file if you want a json/yaml single file output
+    # dump_path directory will be excluded from rendering to prevent duplication or overriding from source_path.
     dump_path: 'src/Swagger/dump'
 
-    # Directories to scan for Entity generation
+    # Directories to scan for Entity/DTO/Forms schemas generation
     scan_directories:
         - 'src/Entity'
+        - 'src/DTO'
+        - ... 
 ```
 
 ### Custom URL
@@ -94,7 +98,8 @@ You can switch the interface dynamically using the `ui` query parameter:
 ## Usage
 
 ### 1. YAML Configuration
-Place your OpenAPI YAML files in the directory defined by `source_path` (default: `src/Swagger`). The bundle will automatically parse and merge all `.yaml` and `.yml` files in this folder.
+Place your OpenAPI YAML files in the directory defined by `source_path` (default: `src/Swagger`). 
+The bundle will automatically parse and merge all `.yaml` and `.yml` files in this folder.
 
 **Example `src/Swagger/info.yaml`:**
 ```yaml
@@ -119,17 +124,25 @@ documentation:
 You can define your documentation programmatically using PHP classes. This offers strong typing and IDE autocompletion.
 
 1. Create a class that implements `Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface`.
-2. Implement the `configure` method.
-3. Your class is automatically autoloaded and parsed.
+2. Add the `#[ApiDocConfig]` attribute with a unique `component` name.
+3. Implement the `configure` method.
+4. Your class is automatically autoloaded and parsed.
+
+The `#[ApiDocConfig]` attribute lets the DI registry find your component regardless of file location or class name.
+
+- **`component`** — A unique string that identifies this component. Use the same name as the OpenAPI component key (e.g., for a schema named `User`, use `component: 'User'`). For routes, use the route name (e.g., `component: 'api_users'`).
+- **`type`** — The component type (e.g., `'schemas'`, `'responses'`, `'routes'`).
 
 **Example `src/ApiDoc/UserDocConfig.php`:**
 ```php
 <?php
 namespace App\ApiDoc;
 
+use Ehyiah\ApiDocBundle\Attributes\ApiDocConfig;
 use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
 use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 
+#[ApiDocConfig(component: 'api_user_by_id', type: 'routes')]
 class UserDocConfig implements ApiDocConfigInterface
 {
     public function configure(ApiDocBuilder $builder): void
@@ -150,8 +163,6 @@ class UserDocConfig implements ApiDocConfigInterface
     }
 }
 ```
-
-> 💡 **Tip:** While PHP config classes can be placed anywhere in `src/`, it is recommended to keep them in `src/Swagger` (or your `source_path`) if you want the **Generator Commands** to detect them and prevent duplicates.
 
 📚 **[Read full PHP Config Documentation](docs/PHP_CONFIG_CLASSES.md)**
 📚 **[Read the PHP Builder Reference](docs/BUILDER_REFERENCE.md)**
@@ -174,40 +185,37 @@ class UserController
 
 ## Component Generation
 
-This bundle provides CLI commands to help you kickstart your documentation by generating reusable OpenAPI components.
+This bundle provides an interactive terminal UI (TUI) to generate and edit all OpenAPI components.
 
-| Command                             | Description                                         | Example                                                           |
-|:------------------------------------|:----------------------------------------------------|:------------------------------------------------------------------|
-| `apidocbundle:component:schema`     | Generates a **Schema** from a PHP Class.            | `...:schema "App\Entity\User"`                                    |
-| `apidocbundle:component:body`       | Generates a **Request Body** from a PHP Class.      | `...:body "App\DTO\UserDTO"`                                      |
-| `apidocbundle:component:parameter`  | Generates a reusable **Parameter**.                 | `...:parameter "userId" --in=path`                                |
-| `apidocbundle:component:header`     | Generates a reusable **Header**.                    | `...:header "X-Request-ID"`                                       |
-| `apidocbundle:component:response`   | Generates a reusable **Response**.                  | `...:response "NotFound" -s 404`                                  |
-| `apidocbundle:component:example`    | Generates a reusable **Example**.                   | `...:example "UserExample" --value='{"id":1}'`                     |
-| `apidocbundle:component:security`   | Generates a reusable **Security Scheme**.           | `...:security "ApiKeyAuth" --type=apiKey`                         |
-| `apidocbundle:route:generate`       | Interactively generates a **Route** path.           | `...:route:generate /my/path`                                     |
+### Interactive TUI
 
-### Command Options
+Run the interactive terminal UI to generate and edit all component types:
 
-| Option              | Used in    | Shortcut | Description                                                                      |
-|:--------------------|------------|:---------|:---------------------------------------------------------------------------------|
-| `--format`          | All        | `-f`     | Output format: `yaml` (default), `php`, or `both`.                               |
-| `--output`          | All        | `-o`     | Custom output directory (relative to project root).                              |
-| `--description`     | All        | `-d`     | Description for the generated component.                                         |
-| `--tag`             | Route      | `-t`     | (Route only) Tags to associate with the route.                                   |
-| `--response-schema` | Route      | `-rs`    | (Route only) Reference schema for the response.                                  |
-| `--request-body`    | Route      | `-rb`    | (Route only) Reference schema for the request body.                              |
-| `--in`              | Parameter  |          | (Parameter only) Location of the parameter: `query`, `header`, `path`, `cookie`. |
-| `--type`            | Parameter  |          | (Parameter only) Schema type of the parameter: `string`, `integer`, etc.         |
-| `--required`        | Parameter  |          | (Parameter only) Mark the parameter as required.                                 |
+```bash
+bin/console apidocbundle:component:tui
+```
 
-📚 **[Read the Full Guide on References](docs/REFERENCES.md)**
+The TUI supports:
 
+| Component | Description |
+|:----------|:------------|
+| **Schema** | Generate schemas from PHP classes |
+| **Route** | Generate route documentation with per-method configuration |
+| **Parameter** | Generate reusable request parameters |
+| **Header** | Generate HTTP response headers |
+| **Response** | Generate response definitions |
+| **Request Body** | Generate request body definitions |
+| **Security Scheme** | Generate authentication schemes (HTTP, API Key, OAuth2, OpenID Connect) |
+| **Example** | Generate data examples |
 
-### Duplicate Detection
-The commands are smart! They check if a component with the same name already exists:
-- **Same Format**: Warns you and shows a diff before overwriting.
-- **Cross Format**: Warns you if you try to generate a YAML component when a PHP version already exists (and vice-versa).
+Features:
+- Edit existing components in place (YAML and PHP files)
+- Automatic file detection in any subdirectory of `source_path`
+- Format choice: YAML or PHP output
+- Visual indicators for configured methods (routes)
+- Delete components directly from the TUI
+
+> 💡 **Tip:** The TUI automatically detects existing components and updates them in place, even if they're in a non-standard subdirectory.
 
 ---
 

@@ -16,5 +16,5 @@ services:
         autowire: true
         autoconfigure: true
 
-    Ehyiah\ApiDocBundle\Tests\App\Swagger\ExampleApiDocConfig: ~
-    Ehyiah\ApiDocBundle\Tests\App\Swagger\FullOpenApiSpecConfig: ~
+    Ehyiah\ApiDocBundle\Tests\App\Swagger\:
+        resource: '../Swagger/'

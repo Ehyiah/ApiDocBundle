@@ -193,41 +193,17 @@ final class LoadApiDocConfigHelper
 
     public function findPhpComponentFile(string $componentName, string $componentType): ?SplFileInfo
     {
-        $finder = new Finder();
-        $sourcePath = $this->parameterBag->get('ehyiah_api_doc.source_path');
-        if (!is_string($sourcePath)) {
-            throw new LogicException('Location must be a string');
-        }
-        $dumpPath = $this->parameterBag->get('ehyiah_api_doc.dump_path');
-        if (!is_string($dumpPath)) {
-            throw new LogicException('dumpLocation must be a string');
+        if (!$this->parameterBag->has('ehyiah_api_doc.component_files')) {
+            return null;
         }
 
-        $finder->files()
-            ->in($this->kernel->getProjectDir() . $sourcePath)
-            ->exclude($dumpPath)
-            ->name('*.php')
-        ;
+        $componentFiles = $this->parameterBag->get('ehyiah_api_doc.component_files');
+        $path = $componentFiles[$componentType][$componentName] ?? null;
 
-        if ($finder->hasResults()) {
-            foreach ($finder->getIterator() as $file) {
-                $content = file_get_contents($file->getPathname());
-                if (false === $content) {
-                    continue;
-                }
-
-                // Check for schema component: ->addSchema('ComponentName')
-                if ('schemas' === $componentType && preg_match('/->addSchema\s*\(\s*[\'"]' . preg_quote($componentName, '/') . '[\'"]\s*\)/', $content)) {
-                    return $file;
-                }
-
-                // Check for requestBody component: ->addRequestBody('ComponentName')
-                if ('requestBodies' === $componentType && preg_match('/->addRequestBody\s*\(\s*[\'"]' . preg_quote($componentName, '/') . '[\'"]\s*\)/', $content)) {
-                    return $file;
-                }
-            }
+        if (null === $path || !is_string($path) || !file_exists($path)) {
+            return null;
         }
 
-        return null;
+        return new SplFileInfo($path);
     }
 }

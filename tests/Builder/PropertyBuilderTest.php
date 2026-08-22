@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Ehyiah\ApiDocBundle\Tests\Builder;
 
 use Ehyiah\ApiDocBundle\Builder\PropertyBuilder;
@@ -412,5 +410,78 @@ final class PropertyBuilderTest extends TestCase
         $propertyBuilder = new PropertyBuilder($schemaBuilder, 'testProperty');
 
         $this->assertSame('testProperty', $propertyBuilder->getPropertyName());
+    }
+
+    public function testExternalDocs(): void
+    {
+        $schemaBuilder = new SchemaBuilder();
+        $propertyBuilder = new PropertyBuilder($schemaBuilder, 'url');
+
+        $result = $propertyBuilder
+            ->type('string')
+            ->externalDocs('https://example.com/docs', 'External documentation')
+            ->buildArray()
+        ;
+
+        $this->assertSame([
+            'type' => 'string',
+            'externalDocs' => [
+                'url' => 'https://example.com/docs',
+                'description' => 'External documentation',
+            ],
+        ], $result);
+    }
+
+    public function testExternalDocsWithoutDescription(): void
+    {
+        $schemaBuilder = new SchemaBuilder();
+        $propertyBuilder = new PropertyBuilder($schemaBuilder, 'url');
+
+        $result = $propertyBuilder
+            ->type('string')
+            ->externalDocs('https://example.com/docs')
+            ->buildArray()
+        ;
+
+        $this->assertSame([
+            'type' => 'string',
+            'externalDocs' => [
+                'url' => 'https://example.com/docs',
+            ],
+        ], $result);
+    }
+
+    public function testAdditionalPropertiesFalse(): void
+    {
+        $schemaBuilder = new SchemaBuilder();
+        $propertyBuilder = new PropertyBuilder($schemaBuilder, 'config');
+
+        $result = $propertyBuilder
+            ->type('object')
+            ->additionalProperties(false)
+            ->buildArray()
+        ;
+
+        $this->assertSame([
+            'type' => 'object',
+            'additionalProperties' => false,
+        ], $result);
+    }
+
+    public function testAdditionalPropertiesSchema(): void
+    {
+        $schemaBuilder = new SchemaBuilder();
+        $propertyBuilder = new PropertyBuilder($schemaBuilder, 'config');
+
+        $result = $propertyBuilder
+            ->type('object')
+            ->additionalProperties(['type' => 'string'])
+            ->buildArray()
+        ;
+
+        $this->assertSame([
+            'type' => 'object',
+            'additionalProperties' => ['type' => 'string'],
+        ], $result);
     }
 }

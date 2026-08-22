@@ -72,6 +72,7 @@ trait GenerateFileTrait
         InputInterface $input,
         OutputInterface $output,
         ?array $newContentArray = null,
+        bool $interactive = true,
     ): bool {
         $fileSystem = new Filesystem();
 
@@ -92,6 +93,12 @@ trait GenerateFileTrait
                 } else {
                     $output->writeln('<comment>No differences found.</comment>');
                 }
+            }
+
+            if (!$interactive) {
+                $output->writeln('<info>Overwriting file (non-interactive mode).</info>');
+
+                return true;
             }
 
             /** @var QuestionHelper $helper */
@@ -121,6 +128,7 @@ trait GenerateFileTrait
         InputInterface $input,
         OutputInterface $output,
         ?string $newContent = null,
+        bool $interactive = true,
     ): bool {
         $fileSystem = new Filesystem();
 
@@ -140,6 +148,12 @@ trait GenerateFileTrait
                 } else {
                     $output->writeln('<comment>No differences found.</comment>');
                 }
+            }
+
+            if (!$interactive) {
+                $output->writeln('<info>Overwriting file (non-interactive mode).</info>');
+
+                return true;
             }
 
             /** @var QuestionHelper $helper */
@@ -187,12 +201,20 @@ trait GenerateFileTrait
         string $currentFormat,
         InputInterface $input,
         OutputInterface $output,
+        bool $interactive = true,
     ): bool {
         $fileSystem = new Filesystem();
 
         if ($fileSystem->exists($filePath)) {
             $otherFormat = 'yaml' === $currentFormat ? 'PHP' : 'YAML';
             $output->writeln('<warning>A ' . $otherFormat . ' file also exists: ' . $filePath . '</warning>');
+
+            if (!$interactive) {
+                $output->writeln('<info>Continuing anyway (non-interactive mode).</info>');
+
+                return true;
+            }
+
             /** @var QuestionHelper $helper */
             $helper = $this->getHelper('question');
             $question = new ConfirmationQuestion(
@@ -249,6 +271,867 @@ trait GenerateFileTrait
     }
 
     /**
+     * @param array<mixed> $array
+     */
+    public function generatePhpBuilderCode(array $array, string $componentName, string $componentType, ?string $namespace = null): string
+    {
+        $className = self::componentNameToClassName($componentName);
+
+        $code = "<?php\n\n";
+
+        if (null !== $namespace) {
+            $code .= "namespace {$namespace};\n\n";
+        }
+
+        $code .= "use Ehyiah\\ApiDocBundle\\Attributes\\ApiDocConfig;\n";
+        $code .= "use Ehyiah\\ApiDocBundle\\Builder\\ApiDocBuilder;\n";
+        $code .= "use Ehyiah\\ApiDocBundle\\Interfaces\\ApiDocConfigInterface;\n\n";
+
+        $code .= "#[ApiDocConfig(component: '{$componentName}', type: '{$componentType}')]\n";
+        $code .= "class {$className} implements ApiDocConfigInterface {\n";
+
+        $code .= "    public function configure(ApiDocBuilder \$builder): void\n";
+        $code .= "    {\n";
+
+        if ('schemas' === $componentType) {
+            $schema = $array['documentation']['components']['schemas'][$componentName] ?? [];
+            $code .= $this->buildSchemaCode($componentName, $schema, 2);
+        } elseif ('requestBodies' === $componentType) {
+            $requestBody = $array['documentation']['components']['requestBodies'][$componentName] ?? [];
+            $code .= $this->buildRequestBodyCode($componentName, $requestBody, 2);
+        } elseif ('parameters' === $componentType) {
+            $parameter = $array['documentation']['components']['parameters'][$componentName] ?? [];
+            $code .= $this->buildParameterCode($componentName, $parameter, 2);
+        } elseif ('headers' === $componentType) {
+            $header = $array['documentation']['components']['headers'][$componentName] ?? [];
+            $code .= $this->buildHeaderCode($componentName, $header, 2);
+        } elseif ('responses' === $componentType) {
+            $response = $array['documentation']['components']['responses'][$componentName] ?? [];
+            $code .= $this->buildResponseCode($componentName, $response, 2);
+        } elseif ('securitySchemes' === $componentType) {
+            $securityScheme = $array['documentation']['components']['securitySchemes'][$componentName] ?? [];
+            $code .= $this->buildSecuritySchemeCode($componentName, $securityScheme, 2);
+        } elseif ('examples' === $componentType) {
+            $example = $array['documentation']['components']['examples'][$componentName] ?? [];
+            $code .= $this->buildExampleCode($componentName, $example, 2);
+        } elseif ('links' === $componentType) {
+            $link = $array['documentation']['components']['links'][$componentName] ?? [];
+            $code .= $this->buildLinkCode($componentName, $link, 2);
+        } elseif ('callbacks' === $componentType) {
+            $callback = $array['documentation']['components']['callbacks'][$componentName] ?? [];
+            $code .= $this->buildCallbackCode($componentName, $callback, 2);
+        } elseif ('pathItems' === $componentType) {
+            $pathItem = $array['documentation']['components']['pathItems'][$componentName] ?? [];
+            $code .= $this->buildPathItemCode($componentName, $pathItem, 2);
+        } elseif ('tags' === $componentType) {
+            $tag = $this->findTagByName($array, $componentName);
+            $code .= $this->buildTagCode($componentName, $tag, 2);
+        } elseif ('routes' === $componentType) {
+            $code .= $this->buildRouteCode($array, $componentName, 2);
+        }
+
+        $code .= "    }\n";
+        $code .= "}\n";
+
+        return $code;
+    }
+
+    /**
+     * Convert a component name (snake_case, PascalCase, or kebab-case) to a valid PHP class name.
+     */
+    protected static function componentNameToClassName(string $name): string
+    {
+        return str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $name)));
+    }
+
+    /**
+     * Resolve the PHP namespace for the directory containing the given file path.
+     */
+    protected function resolveNamespaceFromFile(string $filePath): ?string
+    {
+        return \Ehyiah\ApiDocBundle\Helper\PhpNamespaceResolver::resolveNamespace(dirname($filePath));
+    }
+
+    /**
+     * Parse an existing schema PHP file to extract its current configuration.
+     *
+     * @return array{description: string, type: string, properties: array<string, array<mixed>>, required: string[]}
+     */
+    protected function parseSchemaPhpFile(string $filePath): array
+    {
+        $content = @file_get_contents($filePath);
+        if (false === $content) {
+            return ['description' => '', 'type' => '', 'properties' => [], 'required' => []];
+        }
+
+        $result = [
+            'description' => '',
+            'type' => '',
+            'properties' => [],
+            'required' => [],
+        ];
+
+        $inSchema = false;
+        $currentProperty = null;
+        $lines = explode("\n", $content);
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if (preg_match("/->addSchema\\('([^']+)'\\)/", $line, $m)) {
+                $inSchema = true;
+                continue;
+            }
+
+            if (!$inSchema) {
+                continue;
+            }
+
+            if (preg_match("/->addProperty\\('([^']+)'\\)/", $line, $m)) {
+                $currentProperty = $m[1];
+                $result['properties'][$currentProperty] = [];
+                continue;
+            }
+
+            if (preg_match('/->end\(\)/', $line)) {
+                $currentProperty = null;
+                continue;
+            }
+
+            if (preg_match("/->description\\('([^']*)'\\)/", $line, $m)) {
+                if (null !== $currentProperty) {
+                    $result['properties'][$currentProperty]['description'] = $m[1];
+                } else {
+                    $result['description'] = $m[1];
+                }
+                continue;
+            }
+
+            if (preg_match("/->type\\('([^']+)'\\)/", $line, $m)) {
+                if (null !== $currentProperty) {
+                    $result['properties'][$currentProperty]['type'] = $m[1];
+                } else {
+                    $result['type'] = $m[1];
+                }
+                continue;
+            }
+
+            if (preg_match('/->nullable\(\)/', $line) && null !== $currentProperty) {
+                $result['properties'][$currentProperty]['nullable'] = true;
+                continue;
+            }
+
+            if (preg_match('/->required\(\)/', $line) && null !== $currentProperty) {
+                $result['properties'][$currentProperty]['required'] = true;
+                if (!in_array($currentProperty, $result['required'], true)) {
+                    $result['required'][] = $currentProperty;
+                }
+                continue;
+            }
+
+            if (null !== $currentProperty) {
+                if (preg_match("/->example\\('([^']*)'\\)/", $line, $m)) {
+                    $result['properties'][$currentProperty]['example'] = $m[1];
+                    continue;
+                }
+                if (preg_match('/->example\((\d+(?:\.\d+)?)\)/', $line, $m)) {
+                    $result['properties'][$currentProperty]['example'] = str_contains($m[1], '.') ? (float)$m[1] : (int)$m[1];
+                    continue;
+                }
+                if (preg_match('/->example\((true|false)\)/', $line, $m)) {
+                    $result['properties'][$currentProperty]['example'] = 'true' === $m[1];
+                    continue;
+                }
+
+                if (preg_match("/->format\\('([^']+)'\\)/", $line, $m)) {
+                    $result['properties'][$currentProperty]['format'] = $m[1];
+                    continue;
+                }
+
+                if (preg_match('/->deprecated\(\)/', $line)) {
+                    $result['properties'][$currentProperty]['deprecated'] = true;
+                    continue;
+                }
+
+                if (preg_match('/->readOnly\(\)/', $line)) {
+                    $result['properties'][$currentProperty]['readOnly'] = true;
+                    continue;
+                }
+
+                if (preg_match('/->writeOnly\(\)/', $line)) {
+                    $result['properties'][$currentProperty]['writeOnly'] = true;
+                    continue;
+                }
+
+                if (preg_match("/->ref\\('([^']+)'\\)/", $line, $m)) {
+                    $result['properties'][$currentProperty]['$ref'] = $m[1];
+                    continue;
+                }
+
+                if (preg_match("/->defaultValue\\('([^']*)'\\)/", $line, $m)) {
+                    $result['properties'][$currentProperty]['default'] = $m[1];
+                    continue;
+                }
+
+                if (preg_match("/->title\\('([^']+)'\\)/", $line, $m)) {
+                    $result['properties'][$currentProperty]['title'] = $m[1];
+                    continue;
+                }
+
+                if (preg_match('/->minimum\((\d+(?:\.\d+)?)\)/', $line, $m)) {
+                    $result['properties'][$currentProperty]['minimum'] = str_contains($m[1], '.') ? (float)$m[1] : (int)$m[1];
+                    continue;
+                }
+
+                if (preg_match('/->maximum\((\d+(?:\.\d+)?)\)/', $line, $m)) {
+                    $result['properties'][$currentProperty]['maximum'] = str_contains($m[1], '.') ? (float)$m[1] : (int)$m[1];
+                    continue;
+                }
+
+                if (preg_match('/->minLength\((\d+)\)/', $line, $m)) {
+                    $result['properties'][$currentProperty]['minLength'] = (int)$m[1];
+                    continue;
+                }
+
+                if (preg_match('/->maxLength\((\d+)\)/', $line, $m)) {
+                    $result['properties'][$currentProperty]['maxLength'] = (int)$m[1];
+                    continue;
+                }
+
+                if (preg_match("/->pattern\\('([^']+)'\\)/", $line, $m)) {
+                    $result['properties'][$currentProperty]['pattern'] = $m[1];
+                    continue;
+                }
+
+                if (preg_match('/->uniqueItems\(\)/', $line)) {
+                    $result['properties'][$currentProperty]['uniqueItems'] = true;
+                    continue;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<mixed> $schema
+     */
+    protected function buildSchemaCode(string $name, array $schema, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addSchema('{$name}')\n";
+
+        if (isset($schema['type'])) {
+            $code .= "{$pad}    ->type('{$schema['type']}')\n";
+        }
+
+        if (isset($schema['description'])) {
+            $description = addslashes($schema['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($schema['xml'])) {
+            $xml = addslashes(json_encode($schema['xml']) ?: '');
+            $code .= "{$pad}    ->xml('{$xml}')\n";
+        }
+
+        if (isset($schema['externalDocs'])) {
+            $url = addslashes((string)($schema['externalDocs']['url'] ?? ''));
+            $desc = isset($schema['externalDocs']['description']) ? addslashes((string)$schema['externalDocs']['description']) : null;
+            if (null !== $desc) {
+                $code .= "{$pad}    ->externalDocs('{$url}', '{$desc}')\n";
+            } else {
+                $code .= "{$pad}    ->externalDocs('{$url}')\n";
+            }
+        }
+
+        if (isset($schema['properties']) && is_array($schema['properties'])) {
+            foreach ($schema['properties'] as $propName => $propDef) {
+                $code .= $this->buildPropertyCode($propName, $propDef, $schema['required'] ?? [], $indent + 1);
+            }
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $propDef
+     * @param array<string> $requiredFields
+     */
+    protected function buildPropertyCode(string $name, array $propDef, array $requiredFields, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}->addProperty('{$name}')\n";
+
+        if (isset($propDef['$ref'])) {
+            $ref = $propDef['$ref'];
+            $code .= "{$pad}    ->ref('{$ref}')\n";
+        } else {
+            if (isset($propDef['type'])) {
+                $code .= "{$pad}    ->type('{$propDef['type']}')\n";
+            }
+
+            if (isset($propDef['format'])) {
+                $code .= "{$pad}    ->format('{$propDef['format']}')\n";
+            }
+
+            if (isset($propDef['description']) && '' !== $propDef['description']) {
+                $description = addslashes($propDef['description']);
+                $code .= "{$pad}    ->description('{$description}')\n";
+            }
+
+            if (isset($propDef['example'])) {
+                if (is_string($propDef['example'])) {
+                    $code .= "{$pad}    ->example('" . addslashes($propDef['example']) . "')\n";
+                } else {
+                    $code .= "{$pad}    ->example(" . var_export($propDef['example'], true) . ")\n";
+                }
+            }
+
+            if (isset($propDef['enum'])) {
+                $enumValues = array_map(static function ($v) {
+                    return is_string($v) ? "'" . addslashes($v) . "'" : $v;
+                }, $propDef['enum']);
+                $code .= "{$pad}    ->enum([" . implode(', ', $enumValues) . "])\n";
+            }
+
+            if (isset($propDef['items'])) {
+                if (isset($propDef['items']['$ref'])) {
+                    $code .= "{$pad}    ->items(['\$ref' => '{$propDef['items']['$ref']}'])\n";
+                } elseif (isset($propDef['items']['type'])) {
+                    $code .= "{$pad}    ->items(['type' => '{$propDef['items']['type']}'])\n";
+                }
+            }
+
+            if (isset($propDef['nullable']) && $propDef['nullable']) {
+                $code .= "{$pad}    ->nullable()\n";
+            }
+
+            if (isset($propDef['deprecated']) && $propDef['deprecated']) {
+                $code .= "{$pad}    ->deprecated()\n";
+            }
+
+            if (isset($propDef['readOnly']) && $propDef['readOnly']) {
+                $code .= "{$pad}    ->readOnly()\n";
+            }
+
+            if (isset($propDef['writeOnly']) && $propDef['writeOnly']) {
+                $code .= "{$pad}    ->writeOnly()\n";
+            }
+
+            if (array_key_exists('default', $propDef)) {
+                $default = $propDef['default'];
+                if (is_string($default)) {
+                    $code .= "{$pad}    ->defaultValue('" . addslashes($default) . "')\n";
+                } else {
+                    $code .= "{$pad}    ->defaultValue(" . var_export($default, true) . ")\n";
+                }
+            }
+
+            if (isset($propDef['title'])) {
+                $code .= "{$pad}    ->title('" . addslashes($propDef['title']) . "')\n";
+            }
+
+            if (isset($propDef['minimum'])) {
+                $code .= "{$pad}    ->minimum(" . var_export($propDef['minimum'], true) . ")\n";
+            }
+
+            if (isset($propDef['maximum'])) {
+                $code .= "{$pad}    ->maximum(" . var_export($propDef['maximum'], true) . ")\n";
+            }
+
+            if (isset($propDef['exclusiveMinimum'])) {
+                $code .= "{$pad}    ->exclusiveMinimum(" . var_export($propDef['exclusiveMinimum'], true) . ")\n";
+            }
+
+            if (isset($propDef['exclusiveMaximum'])) {
+                $code .= "{$pad}    ->exclusiveMaximum(" . var_export($propDef['exclusiveMaximum'], true) . ")\n";
+            }
+
+            if (isset($propDef['minLength'])) {
+                $code .= "{$pad}    ->minLength(" . var_export($propDef['minLength'], true) . ")\n";
+            }
+
+            if (isset($propDef['maxLength'])) {
+                $code .= "{$pad}    ->maxLength(" . var_export($propDef['maxLength'], true) . ")\n";
+            }
+
+            if (isset($propDef['pattern'])) {
+                $code .= "{$pad}    ->pattern('" . addslashes($propDef['pattern']) . "')\n";
+            }
+
+            if (isset($propDef['minItems'])) {
+                $code .= "{$pad}    ->minItems(" . (int)$propDef['minItems'] . ")\n";
+            }
+
+            if (isset($propDef['maxItems'])) {
+                $code .= "{$pad}    ->maxItems(" . (int)$propDef['maxItems'] . ")\n";
+            }
+
+            if (isset($propDef['uniqueItems']) && $propDef['uniqueItems']) {
+                $code .= "{$pad}    ->uniqueItems()\n";
+            }
+
+            if (isset($propDef['multipleOf'])) {
+                $code .= "{$pad}    ->multipleOf(" . var_export($propDef['multipleOf'], true) . ")\n";
+            }
+        }
+
+        if (in_array($name, $requiredFields, true)) {
+            $code .= "{$pad}    ->required()\n";
+        }
+
+        $code .= "{$pad}->end()\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $requestBody
+     */
+    protected function buildRequestBodyCode(string $name, array $requestBody, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addRequestBody('{$name}')\n";
+
+        if (isset($requestBody['description'])) {
+            $description = addslashes($requestBody['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($requestBody['required']) && $requestBody['required']) {
+            $code .= "{$pad}    ->required()\n";
+        }
+
+        if (isset($requestBody['content'])) {
+            foreach ($requestBody['content'] as $mediaType => $content) {
+                if ('application/json' === $mediaType) {
+                    $code .= "{$pad}    ->jsonContent()\n";
+                } else {
+                    $code .= "{$pad}    ->content('{$mediaType}')\n";
+                }
+
+                if (isset($content['schema'])) {
+                    if (isset($content['schema']['$ref'])) {
+                        $code .= "{$pad}        ->ref('{$content['schema']['$ref']}')\n";
+                    } elseif (isset($content['schema']['properties'])) {
+                        $code .= "{$pad}        ->schema()\n";
+                        $code .= "{$pad}            ->type('object')\n";
+                        foreach ($content['schema']['properties'] as $propName => $propDef) {
+                            $code .= $this->buildPropertyCode($propName, $propDef, $content['schema']['required'] ?? [], $indent + 3);
+                        }
+                        $code .= "{$pad}        ->end()\n";
+                    }
+                }
+
+                $code .= "{$pad}    ->end()\n";
+            }
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $parameter
+     */
+    protected function buildParameterCode(string $name, array $parameter, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addParameter('{$name}')\n";
+
+        if (isset($parameter['in'])) {
+            $code .= "{$pad}    ->in('{$parameter['in']}')\n";
+        }
+
+        if (isset($parameter['description'])) {
+            $description = addslashes($parameter['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($parameter['required']) && $parameter['required']) {
+            $code .= "{$pad}    ->required()\n";
+        }
+
+        if (isset($parameter['deprecated']) && $parameter['deprecated']) {
+            $code .= "{$pad}    ->deprecated()\n";
+        }
+
+        if (isset($parameter['allowEmptyValue']) && $parameter['allowEmptyValue']) {
+            $code .= "{$pad}    ->allowEmptyValue()\n";
+        }
+
+        if (isset($parameter['style'])) {
+            $code .= "{$pad}    ->style('{$parameter['style']}')\n";
+        }
+
+        if (isset($parameter['explode'])) {
+            $code .= "{$pad}    ->explode(" . ($parameter['explode'] ? 'true' : 'false') . ")\n";
+        }
+
+        if (isset($parameter['allowReserved']) && $parameter['allowReserved']) {
+            $code .= "{$pad}    ->allowReserved()\n";
+        }
+
+        if (isset($parameter['schema'])) {
+            $code .= "{$pad}    ->schema(['type' => '{$parameter['schema']['type']}'])\n";
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $header
+     */
+    protected function buildHeaderCode(string $name, array $header, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addHeader('{$name}')\n";
+
+        if (isset($header['description'])) {
+            $description = addslashes($header['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($header['required']) && $header['required']) {
+            $code .= "{$pad}    ->required()\n";
+        }
+
+        if (isset($header['deprecated']) && $header['deprecated']) {
+            $code .= "{$pad}    ->deprecated()\n";
+        }
+
+        if (isset($header['schema'])) {
+            $code .= "{$pad}    ->schema(['type' => '{$header['schema']['type']}'])\n";
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $response
+     */
+    protected function buildResponseCode(string $name, array $response, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addResponse('{$name}')\n";
+
+        if (isset($response['description'])) {
+            $description = addslashes($response['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($response['statusCode'])) {
+            $code .= "{$pad}    ->statusCode({$response['statusCode']})\n";
+        }
+
+        if (isset($response['content']['application/json']['schema']['$ref'])) {
+            $ref = $response['content']['application/json']['schema']['$ref'];
+            $code .= "{$pad}    ->jsonContent()\n";
+            $code .= "{$pad}        ->ref('{$ref}')\n";
+            $code .= "{$pad}    ->end()\n";
+        }
+
+        if (isset($response['links']) && is_array($response['links'])) {
+            foreach ($response['links'] as $linkName => $linkDef) {
+                $linkJson = addslashes(json_encode($linkDef, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+                $code .= "{$pad}    ->link('{$linkName}', json_decode('{$linkJson}', true))\n";
+            }
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $securityScheme
+     */
+    protected function buildSecuritySchemeCode(string $name, array $securityScheme, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addSecurityScheme('{$name}')\n";
+
+        if (isset($securityScheme['type'])) {
+            $code .= "{$pad}    ->type('{$securityScheme['type']}')\n";
+        }
+
+        if (isset($securityScheme['in'])) {
+            $code .= "{$pad}    ->in('{$securityScheme['in']}')\n";
+        }
+
+        if (isset($securityScheme['name'])) {
+            $code .= "{$pad}    ->nameInHeader('{$securityScheme['name']}')\n";
+        }
+
+        if (isset($securityScheme['scheme'])) {
+            $code .= "{$pad}    ->scheme('{$securityScheme['scheme']}')\n";
+        }
+
+        if (isset($securityScheme['bearerFormat'])) {
+            $code .= "{$pad}    ->bearerFormat('{$securityScheme['bearerFormat']}')\n";
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $example
+     */
+    protected function buildExampleCode(string $name, array $example, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addExample('{$name}')\n";
+
+        if (isset($example['summary'])) {
+            $description = addslashes($example['summary']);
+            $code .= "{$pad}    ->summary('{$description}')\n";
+        }
+
+        if (isset($example['value'])) {
+            $value = var_export($example['value'], true);
+            $code .= "{$pad}    ->value({$value})\n";
+        }
+
+        if (isset($example['externalValue'])) {
+            $code .= "{$pad}    ->externalValue('{$example['externalValue']}')\n";
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $link
+     */
+    protected function buildLinkCode(string $name, array $link, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addLink('{$name}')\n";
+
+        if (isset($link['operationRef'])) {
+            $code .= "{$pad}    ->operationRef('{$link['operationRef']}')\n";
+        }
+
+        if (isset($link['operationId'])) {
+            $code .= "{$pad}    ->operationId('{$link['operationId']}')\n";
+        }
+
+        if (isset($link['parameters']) && is_array($link['parameters'])) {
+            foreach ($link['parameters'] as $paramName => $paramValue) {
+                $code .= "{$pad}    ->parameter('{$paramName}', '{$paramValue}')\n";
+            }
+        }
+
+        if (isset($link['requestBody']) && is_string($link['requestBody'])) {
+            $code .= "{$pad}    ->requestBody('{$link['requestBody']}')\n";
+        }
+
+        if (isset($link['description'])) {
+            $description = addslashes($link['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($link['server']['url'])) {
+            $serverDescription = $link['server']['description'] ?? null;
+            if (null !== $serverDescription) {
+                $serverDescription = addslashes($serverDescription);
+                $code .= "{$pad}    ->server('{$link['server']['url']}', '{$serverDescription}')\n";
+            } else {
+                $code .= "{$pad}    ->server('{$link['server']['url']}')\n";
+            }
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $callback
+     */
+    protected function buildCallbackCode(string $name, array $callback, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addCallback('{$name}')\n";
+
+        foreach ($callback as $expression => $pathItem) {
+            if (is_array($pathItem)) {
+                $pathItemJson = addslashes(json_encode($pathItem, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+                $code .= "{$pad}    ->pathItem('{$expression}', json_decode('{$pathItemJson}', true))\n";
+            }
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $pathItem
+     */
+    protected function buildPathItemCode(string $name, array $pathItem, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addPathItem('{$name}')\n";
+
+        if (isset($pathItem['$ref'])) {
+            $code .= "{$pad}    ->ref('{$pathItem['$ref']}')\n";
+        }
+
+        if (isset($pathItem['summary'])) {
+            $summary = addslashes($pathItem['summary']);
+            $code .= "{$pad}    ->summary('{$summary}')\n";
+        }
+
+        if (isset($pathItem['description'])) {
+            $description = addslashes($pathItem['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * Find a tag by name in the documentation.tags array.
+     *
+     * @param array<mixed> $array
+     *
+     * @return array<mixed>
+     */
+    private function findTagByName(array $array, string $name): array
+    {
+        $tags = $array['documentation']['tags'] ?? [];
+        foreach ($tags as $tag) {
+            if (isset($tag['name']) && $tag['name'] === $name) {
+                return $tag;
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * @param array<mixed> $tag
+     */
+    protected function buildTagCode(string $name, array $tag, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = "{$pad}\$builder->addTag('{$name}')\n";
+
+        if (isset($tag['description'])) {
+            $description = addslashes($tag['description']);
+            $code .= "{$pad}    ->description('{$description}')\n";
+        }
+
+        if (isset($tag['externalDocs']) && is_array($tag['externalDocs'])) {
+            $url = addslashes((string)($tag['externalDocs']['url'] ?? ''));
+            $desc = isset($tag['externalDocs']['description']) ? addslashes((string)$tag['externalDocs']['description']) : null;
+            if (null !== $desc) {
+                $code .= "{$pad}    ->externalDocs('{$url}', '{$desc}')\n";
+            } else {
+                $code .= "{$pad}    ->externalDocs('{$url}')\n";
+            }
+        }
+
+        $code .= "{$pad}->end();\n";
+
+        return $code;
+    }
+
+    /**
+     * @param array<mixed> $array
+     */
+    protected function buildRouteCode(array $array, string $routeName, int $indent): string
+    {
+        $pad = str_repeat('    ', $indent);
+        $code = '';
+
+        $paths = $array['documentation']['paths'] ?? $array['paths'] ?? [];
+        foreach ($paths as $path => $methods) {
+            if (!is_array($methods)) {
+                continue;
+            }
+            foreach ($methods as $method => $definition) {
+                if (!is_array($definition)) {
+                    continue;
+                }
+                $upperMethod = strtoupper($method);
+                $code .= "{$pad}\$builder->addRoute()\n";
+                $code .= "{$pad}    ->path('{$path}')\n";
+                $code .= "{$pad}    ->method('{$upperMethod}')\n";
+
+                if (isset($definition['operationId'])) {
+                    $code .= "{$pad}    ->operationId('{$definition['operationId']}')\n";
+                }
+                if (isset($definition['summary'])) {
+                    $code .= "{$pad}    ->summary('" . addslashes($definition['summary']) . "')\n";
+                }
+                if (isset($definition['description'])) {
+                    $code .= "{$pad}    ->description('" . addslashes($definition['description']) . "')\n";
+                }
+                if (isset($definition['tags']) && is_array($definition['tags'])) {
+                    foreach ($definition['tags'] as $tag) {
+                        $code .= "{$pad}    ->tag('{$tag}')\n";
+                    }
+                }
+                if (isset($definition['security']) && is_array($definition['security'])) {
+                    foreach ($definition['security'] as $securityEntry) {
+                        if (is_array($securityEntry)) {
+                            foreach (array_keys($securityEntry) as $schemeName) {
+                                $code .= "{$pad}    ->security('{$schemeName}')\n";
+                            }
+                        }
+                    }
+                }
+
+                if (isset($definition['requestBody']['content']['application/json']['schema']['$ref'])) {
+                    $schemaName = str_replace('#/components/schemas/', '', (string)$definition['requestBody']['content']['application/json']['schema']['$ref']);
+                    $code .= "{$pad}    ->requestBody()\n";
+                    $code .= "{$pad}        ->content('application/json')\n";
+                    $code .= "{$pad}        ->refByName('{$schemaName}')\n";
+                    $code .= "{$pad}    ->end()\n";
+                }
+
+                if (isset($definition['responses']) && is_array($definition['responses'])) {
+                    foreach ($definition['responses'] as $statusCode => $responseDef) {
+                        if (!is_array($responseDef)) {
+                            continue;
+                        }
+                        $code .= "{$pad}    ->response({$statusCode})\n";
+                        if (isset($responseDef['description'])) {
+                            $code .= "{$pad}        ->description('" . addslashes($responseDef['description']) . "')\n";
+                        }
+                        if (isset($responseDef['content']['application/json']['schema']['$ref'])) {
+                            $schemaName = str_replace('#/components/schemas/', '', (string)$responseDef['content']['application/json']['schema']['$ref']);
+                            $code .= "{$pad}        ->content('application/json')\n";
+                            $code .= "{$pad}            ->refByName('{$schemaName}')\n";
+                            $code .= "{$pad}        ->end()\n";
+                        }
+                        $code .= "{$pad}        ->end()\n";
+                    }
+                }
+
+                $code .= "{$pad}    ->end();\n";
+            }
+        }
+
+        return $code;
+    }
+
+    /**
      * Build the full output path for a file.
      */
     protected function buildOutputPath(string $outputDir, string $filename, string $extension, ?string $subdirectory = null): string
@@ -262,5 +1145,150 @@ trait GenerateFileTrait
         }
 
         return $path . $filename . '.' . $extension;
+    }
+
+    /**
+     * Detect the default output format based on existing files.
+     */
+    protected function detectComponentFormat(string $componentName, string $componentType): string
+    {
+        $hasPhp = null !== $this->getApiDocConfigHelper()->findPhpComponentFile($componentName, $componentType);
+        $hasYaml = null !== $this->getApiDocConfigHelper()->findYamlComponentFile($componentName, $componentType);
+
+        return $hasPhp && $hasYaml ? 'both' : ($hasPhp ? 'php' : 'yaml');
+    }
+
+    /**
+     * Parse a non-schema PHP component file and extract builder method calls into an array.
+     *
+     * @return array<string, mixed>
+     */
+    protected function parseNonSchemaPhpFile(string $filePath, string $builderMethod): array
+    {
+        $content = @file_get_contents($filePath);
+        if (false === $content) {
+            return [];
+        }
+
+        $result = [];
+        $inBlock = false;
+
+        foreach (explode("\n", $content) as $line) {
+            $line = trim($line);
+
+            if (preg_match('/->' . preg_quote($builderMethod, '/') . '\(/', $line)) {
+                $inBlock = true;
+                continue;
+            }
+
+            if (!$inBlock) {
+                continue;
+            }
+
+            if (preg_match('/->end\(\)/', $line)) {
+                break;
+            }
+
+            // ->ref('value')
+            if (preg_match("/->ref\\s*\\(\\s*'([^']*)'\\s*\\)/", $line, $m)) {
+                $result['$ref'] = $m[1];
+                continue;
+            }
+
+            // ->schema(['key' => 'value', ...])
+            if (preg_match('/->schema\s*\(\s*\[(.+)\]\s*\)/s', $line, $m)) {
+                $arr = [];
+                if (preg_match_all("/'([^']+)'\\s*=>\\s*'([^']*)'/", $m[1], $pairs)) {
+                    foreach ($pairs[1] as $i => $k) {
+                        $arr[$k] = $pairs[2][$i];
+                    }
+                }
+                $result['schema'] = $arr;
+                continue;
+            }
+
+            // ->method('value')
+            if (preg_match("/->(\\w+)\\s*\\(\\s*'([^']*)'\\s*\\)/", $line, $m)) {
+                $result[$m[1]] = $m[2];
+                continue;
+            }
+
+            // ->method() → boolean true
+            if (preg_match('/->(\w+)\(\)/', $line, $m)) {
+                $result[$m[1]] = true;
+                continue;
+            }
+
+            // ->method(true) or ->method(false)
+            if (preg_match('/->(\w+)\s*\(\s*(true|false)\s*\)/', $line, $m)) {
+                $result[$m[1]] = 'true' === $m[2];
+                continue;
+            }
+
+            // ->method(number)
+            if (preg_match('/->(\w+)\s*\((\d+(?:\.\d+)?)\)/', $line, $m)) {
+                $result[$m[1]] = str_contains($m[2], '.') ? (float)$m[2] : (int)$m[2];
+                continue;
+            }
+
+            // ->method(['val1', 'val2'])
+            if (preg_match('/->enum\s*\(\s*\[(.+)\]\s*\)/s', $line, $m)) {
+                $values = [];
+                if (preg_match_all("/'([^']*)'/", $m[1], $items)) {
+                    $values = $items[1];
+                }
+                $result['enum'] = $values;
+                continue;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Merge an array with existing PHP component config.
+     *
+     * @param array<string, mixed> $array
+     *
+     * @return array<string, mixed>
+     */
+    protected function mergeWithExistingPhp(array $array, string $componentName, string $componentType, string $builderMethod): array
+    {
+        $phpFile = $this->getApiDocConfigHelper()->findPhpComponentFile($componentName, $componentType);
+        if (null === $phpFile) {
+            return $array;
+        }
+
+        $existing = $this->parseNonSchemaPhpFile($phpFile->getPathname(), $builderMethod);
+        if (empty($existing)) {
+            return $array;
+        }
+
+        // Merge existing config into the new array, keeping new values for overlapping keys
+        $componentKey = match ($componentType) {
+            'parameters' => 'parameters',
+            'headers' => 'headers',
+            'responses' => 'responses',
+            'examples' => 'examples',
+            'requestBodies' => 'requestBodies',
+            'tags' => 'tags',
+            'securitySchemes' => 'securitySchemes',
+            'links' => 'links',
+            'callbacks' => 'callbacks',
+            'pathItems' => 'pathItems',
+            'schemas' => 'schemas',
+            default => null,
+        };
+
+        if (null === $componentKey || !isset($array['documentation']['components'][$componentKey][$componentName])) {
+            return $array;
+        }
+
+        $array['documentation']['components'][$componentKey][$componentName] = array_merge(
+            $existing,
+            $array['documentation']['components'][$componentKey][$componentName],
+        );
+
+        return $array;
     }
 }

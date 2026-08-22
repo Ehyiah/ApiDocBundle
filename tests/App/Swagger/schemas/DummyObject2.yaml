@@ -1,0 +1,43 @@
+documentation:
+    components:
+        schemas:
+            DummyObject2:
+                type: object
+                required:
+                    - stringNotNullable
+                    - booleanNotNullable
+                    - datetimeNotNullable
+                    - enumNotNullable
+                properties:
+                    stringNotNullable:
+                        type: string
+                        description: ''
+                    booleanNotNullable:
+                        type: boolean
+                        description: ''
+                    booleanNullable:
+                        type: boolean
+                        description: ''
+                        nullable: true
+                    stringNullable:
+                        type: string
+                        description: ''
+                        nullable: true
+                    datetimeNullable:
+                        type: string
+                        format: date-time
+                        nullable: true
+                    datetimeNotNullable:
+                        type: string
+                        format: date-time
+                    enumNotNullable:
+                        type: string
+                        enum:
+                            - enum_value_1
+                            - enum_value_2
+                    enumNullable:
+                        type: string
+                        enum:
+                            - enum_value_1
+                            - enum_value_2
+                        nullable: true

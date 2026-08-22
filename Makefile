@@ -69,4 +69,7 @@ phptests:  ## Execute phpunit
 serve: ## Start the test app server on port 8000
 	$(PHP) php -S 0.0.0.0:8000 -t tests/App/public
 
-.PHONY: serve
+command:
+	$(PHP) php tests/App/bin/console apidocbundle:component:tui
+
+.PHONY: serve command

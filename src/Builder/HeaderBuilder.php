@@ -9,7 +9,8 @@ namespace Ehyiah\ApiDocBundle\Builder;
  */
 class HeaderBuilder
 {
-    private ResponseBuilder $responseBuilder;
+    /** @var ResponseBuilder|ApiDocBuilder */
+    private $parentBuilder;
 
     private string $name;
 
@@ -19,9 +20,12 @@ class HeaderBuilder
     /** @var ExampleBuilder[] */
     private array $exampleBuilders = [];
 
-    public function __construct(ResponseBuilder $responseBuilder, string $name)
+    /**
+     * @param string $name The header name (also used as component name when used as a reusable component)
+     */
+    public function __construct(ResponseBuilder|ApiDocBuilder $parentBuilder, string $name)
     {
-        $this->responseBuilder = $responseBuilder;
+        $this->parentBuilder = $parentBuilder;
         $this->name = $name;
     }
 
@@ -270,11 +274,51 @@ class HeaderBuilder
     }
 
     /**
-     * Finish building this header and return to the response builder.
+     * Set the serialization style.
+     *
+     * @param string $style Serialization style (e.g., 'simple', 'label', 'matrix')
      */
-    public function end(): ResponseBuilder
+    public function style(string $style): self
     {
-        return $this->responseBuilder;
+        $this->definition['style'] = $style;
+
+        return $this;
+    }
+
+    /**
+     * Set explode behavior.
+     *
+     * @param bool $explode Whether to explode the parameter
+     */
+    public function explode(bool $explode = true): self
+    {
+        $this->definition['explode'] = $explode;
+
+        return $this;
+    }
+
+    /**
+     * Allow reserved characters in parameter value.
+     *
+     * @param bool $allowReserved Whether to allow reserved characters
+     */
+    public function allowReserved(bool $allowReserved = true): self
+    {
+        $this->definition['allowReserved'] = $allowReserved;
+
+        return $this;
+    }
+
+    /**
+     * Finish building this header and return to the parent builder.
+     */
+    public function end(): ResponseBuilder|ApiDocBuilder
+    {
+        if ($this->parentBuilder instanceof ApiDocBuilder) {
+            $this->parentBuilder->registerHeader($this->name, $this->buildArray());
+        }
+
+        return $this->parentBuilder;
     }
 
     /**

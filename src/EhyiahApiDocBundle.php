@@ -2,9 +2,12 @@
 
 namespace Ehyiah\ApiDocBundle;
 
+use Ehyiah\ApiDocBundle\Attributes\AsTuiGenerator;
 use Ehyiah\ApiDocBundle\DependencyInjection\Compiler\ApiDocConfigPass;
 use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
+use ReflectionClass;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
+use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
@@ -66,6 +69,13 @@ class EhyiahApiDocBundle extends AbstractBundle
         $container->registerForAutoconfiguration(ApiDocConfigInterface::class)
             ->addTag('ehyiah_api_doc.config_provider')
         ;
+
+        $container->registerAttributeForAutoconfiguration(
+            AsTuiGenerator::class,
+            static function (ChildDefinition $definition, AsTuiGenerator $attribute, ReflectionClass $reflector) {
+                $definition->addTag('ehyiah_api_doc.tui_generator');
+            }
+        );
 
         $container->addCompilerPass(new ApiDocConfigPass());
     }

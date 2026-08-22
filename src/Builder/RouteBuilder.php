@@ -64,7 +64,9 @@ class RouteBuilder
      */
     public function operationId(string $operationId): self
     {
-        $this->definition['operationId'] = $operationId;
+        if ('' !== $operationId) {
+            $this->definition['operationId'] = $operationId;
+        }
 
         return $this;
     }
@@ -125,6 +127,75 @@ class RouteBuilder
     public function noSecurity(): self
     {
         $this->security = [[]];
+
+        return $this;
+    }
+
+    /**
+     * Mark this operation as deprecated.
+     *
+     * @param bool $deprecated Whether the operation is deprecated
+     */
+    public function deprecated(bool $deprecated = true): self
+    {
+        $this->definition['deprecated'] = $deprecated;
+
+        return $this;
+    }
+
+    /**
+     * Set external documentation for this operation.
+     *
+     * @param string $url External documentation URL
+     * @param string|null $description External documentation description
+     */
+    public function externalDocs(string $url, ?string $description = null): self
+    {
+        $this->definition['externalDocs'] = ['url' => $url];
+        if (null !== $description) {
+            $this->definition['externalDocs']['description'] = $description;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add a callback for this operation.
+     *
+     * @param string $name Callback name
+     * @param array<string, mixed> $callback Callback definition
+     */
+    public function callback(string $name, array $callback): self
+    {
+        if (!isset($this->definition['callbacks'])) {
+            $this->definition['callbacks'] = [];
+        }
+        $this->definition['callbacks'][$name] = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Add an alternative server for this operation.
+     *
+     * @param string $url Server URL
+     * @param string|null $description Server description
+     * @param array<string, array<string, mixed>> $variables Server variables
+     */
+    public function server(string $url, ?string $description = null, array $variables = []): self
+    {
+        $server = ['url' => $url];
+        if (null !== $description) {
+            $server['description'] = $description;
+        }
+        if (!empty($variables)) {
+            $server['variables'] = $variables;
+        }
+
+        if (!isset($this->definition['servers'])) {
+            $this->definition['servers'] = [];
+        }
+        $this->definition['servers'][] = $server;
 
         return $this;
     }

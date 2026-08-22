@@ -9,9 +9,11 @@
 
 namespace Ehyiah\ApiDocBundle\Tests\App\Swagger;
 
+use Ehyiah\ApiDocBundle\Attributes\ApiDocConfig;
 use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
 use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
 
+#[ApiDocConfig(component: 'FullOpenApiSpecConfig', type: 'schemas')]
 class FullOpenApiSpecConfig implements ApiDocConfigInterface
 {
     public function configure(ApiDocBuilder $builder): void

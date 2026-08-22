@@ -1,0 +1,17 @@
+<?php
+
+namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Response;
+
+class ResponseTuiState
+{
+    public string $name = '';
+    public string $statusCode = '200';
+    public string $description = '';
+    public ?string $schemaRef = null;
+    public string $contentType = 'application/json';
+    public string $headers = '';
+    public string $links = '';
+    public string $format_output = 'yaml';
+    public string $outputDir = '';
+    public ?string $loadedFrom = null;
+}

@@ -163,6 +163,16 @@ class PropertyBuilder
     }
 
     /**
+     * Mark this property as required in the parent schema.
+     */
+    public function required(): self
+    {
+        $this->schemaBuilder->required([$this->propertyName]);
+
+        return $this;
+    }
+
+    /**
      * Mark property as nullable.
      *
      * @param bool $nullable Whether the property is nullable
@@ -410,6 +420,34 @@ class PropertyBuilder
     public function title(string $title): self
     {
         $this->definition['title'] = $title;
+
+        return $this;
+    }
+
+    /**
+     * Set external documentation for this property.
+     *
+     * @param string $url External documentation URL
+     * @param string|null $description External documentation description
+     */
+    public function externalDocs(string $url, ?string $description = null): self
+    {
+        $this->definition['externalDocs'] = ['url' => $url];
+        if (null !== $description) {
+            $this->definition['externalDocs']['description'] = $description;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Set additional properties constraint for object type.
+     *
+     * @param bool|array<string, mixed> $additionalProperties false to forbid, true to allow, or a schema to validate
+     */
+    public function additionalProperties($additionalProperties = false): self
+    {
+        $this->definition['additionalProperties'] = $additionalProperties;
 
         return $this;
     }

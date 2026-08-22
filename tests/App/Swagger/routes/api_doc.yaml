@@ -1,0 +1,45 @@
+paths:
+    /api/doc:
+        post:
+            summary: nb
+            description: bada
+            security:
+                -
+                    ApiKey: []
+                -
+                    BearerAuth: []
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DummyType'
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DummyObject'
+        put:
+            summary: babar
+            description: 'babar des'
+            security:
+                -
+                    ApiKey: []
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DummyObject'
+        get:
+            summary: ''
+            description: ''
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DummyObject2'
+                            examples:
+                                test:
+                                    $ref: '#/components/examples/test'

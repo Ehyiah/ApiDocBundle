@@ -12,7 +12,7 @@ use InvalidArgumentException;
  */
 class ExampleBuilder
 {
-    /** @var ContentBuilder|ParameterBuilder|HeaderBuilder */
+    /** @var ContentBuilder|ParameterBuilder|HeaderBuilder|ApiDocBuilder */
     private $parentBuilder;
 
     private string $name;
@@ -21,8 +21,8 @@ class ExampleBuilder
     private array $definition = [];
 
     /**
-     * @param ContentBuilder|ParameterBuilder|HeaderBuilder $parentBuilder The parent builder
-     * @param string $name The name/key for this example
+     * @param ContentBuilder|ParameterBuilder|HeaderBuilder|ApiDocBuilder $parentBuilder The parent builder
+     * @param string $name The name/key for this example (also used as component name when used as a reusable component)
      */
     public function __construct($parentBuilder, string $name)
     {
@@ -88,12 +88,26 @@ class ExampleBuilder
     }
 
     /**
-     * Finish building this example and return to the parent builder.
+     * Set a reference to an existing example component.
      *
-     * @return ContentBuilder|ParameterBuilder|HeaderBuilder
+     * @param string $ref Reference path (e.g., '#/components/examples/SuccessResponse')
      */
-    public function end()
+    public function ref(string $ref): self
     {
+        $this->definition = ['$ref' => $ref];
+
+        return $this;
+    }
+
+    /**
+     * Finish building this example and return to the parent builder.
+     */
+    public function end(): ContentBuilder|ParameterBuilder|HeaderBuilder|ApiDocBuilder
+    {
+        if ($this->parentBuilder instanceof ApiDocBuilder) {
+            $this->parentBuilder->registerExample($this->name, $this->buildArray());
+        }
+
         return $this->parentBuilder;
     }
 

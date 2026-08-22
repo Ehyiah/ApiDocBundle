@@ -305,6 +305,142 @@ class SchemaBuilder
     }
 
     /**
+     * Mark schema as deprecated.
+     *
+     * @param bool $deprecated Whether the schema is deprecated
+     */
+    public function deprecated(bool $deprecated = true): self
+    {
+        $this->definition['deprecated'] = $deprecated;
+
+        return $this;
+    }
+
+    /**
+     * Set the schema title.
+     *
+     * @param string $title Schema title
+     */
+    public function title(string $title): self
+    {
+        $this->definition['title'] = $title;
+
+        return $this;
+    }
+
+    /**
+     * Set external documentation for this schema.
+     *
+     * @param string $url External documentation URL
+     * @param string|null $description External documentation description
+     */
+    public function externalDocs(string $url, ?string $description = null): self
+    {
+        $this->definition['externalDocs'] = ['url' => $url];
+        if (null !== $description) {
+            $this->definition['externalDocs']['description'] = $description;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Set a constant value for this schema.
+     *
+     * @param mixed $value The constant value
+     */
+    public function constValue($value): self
+    {
+        $this->definition['const'] = $value;
+
+        return $this;
+    }
+
+    /**
+     * Set allOf composition (AND).
+     *
+     * @param array<array<string, mixed>> $schemas Array of schema definitions
+     */
+    public function allOf(array $schemas): self
+    {
+        $this->definition['allOf'] = $schemas;
+
+        return $this;
+    }
+
+    /**
+     * Set anyOf composition (OR).
+     *
+     * @param array<array<string, mixed>> $schemas Array of schema definitions
+     */
+    public function anyOf(array $schemas): self
+    {
+        $this->definition['anyOf'] = $schemas;
+
+        return $this;
+    }
+
+    /**
+     * Set oneOf composition (XOR).
+     *
+     * @param array<array<string, mixed>> $schemas Array of schema definitions
+     */
+    public function oneOf(array $schemas): self
+    {
+        $this->definition['oneOf'] = $schemas;
+
+        return $this;
+    }
+
+    /**
+     * Set not composition (NOT).
+     *
+     * @param array<string, mixed> $schema Schema definition that must NOT match
+     */
+    public function not(array $schema): self
+    {
+        $this->definition['not'] = $schema;
+
+        return $this;
+    }
+
+    /**
+     * Set additional properties constraint.
+     *
+     * @param bool|array<string, mixed> $additionalProperties false to forbid, true to allow, or a schema to validate
+     */
+    public function additionalProperties($additionalProperties = false): self
+    {
+        $this->definition['additionalProperties'] = $additionalProperties;
+
+        return $this;
+    }
+
+    /**
+     * Set minimum number of properties for object type.
+     *
+     * @param int $minProperties Minimum number of properties
+     */
+    public function minProperties(int $minProperties): self
+    {
+        $this->definition['minProperties'] = $minProperties;
+
+        return $this;
+    }
+
+    /**
+     * Set maximum number of properties for object type.
+     *
+     * @param int $maxProperties Maximum number of properties
+     */
+    public function maxProperties(int $maxProperties): self
+    {
+        $this->definition['maxProperties'] = $maxProperties;
+
+        return $this;
+    }
+
+    /**
      * Finish building this schema and return to the parent builder.
      */
     public function end(): ApiDocBuilder|ContentBuilder|ResponseBuilder|null

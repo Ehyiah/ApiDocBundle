@@ -154,6 +154,21 @@ class ContentBuilder
     }
 
     /**
+     * Set encoding for a property.
+     *
+     * Defines encoding for a specific property within a multipart request body.
+     *
+     * @param string $property Property name
+     * @param array<string, mixed> $encoding Encoding definition
+     */
+    public function encoding(string $property, array $encoding): self
+    {
+        $this->definition['encoding'][$property] = $encoding;
+
+        return $this;
+    }
+
+    /**
      * Finish building this content and return to the parent builder.
      */
     public function end(): RequestBodyBuilder|ResponseBuilder

@@ -1,0 +1,40 @@
+documentation:
+    components:
+        examples:
+            test:
+                value:
+                    id: string
+                    skipedValue: string
+                    stringNotNullable: string
+                    intNotNullable: 0
+                    booleanNotNullable: true
+                    booleanNullable: true
+                    stringNullable: string
+                    datetimeNullable: '2024-01-15T12:00:00Z'
+                    datetimeNotNullable: '2024-01-15T12:00:00Z'
+                    enumNotNullable: enum_value_1
+                    enumNullable: enum_value_1
+                    objectNotNullable:
+                        stringNotNullable: string
+                        booleanNotNullable: true
+                        booleanNullable: true
+                        stringNullable: string
+                        datetimeNullable: '2024-01-15T12:00:00Z'
+                        datetimeNotNullable: '2024-01-15T12:00:00Z'
+                        enumNotNullable: enum_value_1
+                        enumNullable: enum_value_1
+                    objectNullable:
+                        stringNotNullable: string
+                        booleanNotNullable: true
+                        booleanNullable: true
+                        stringNullable: string
+                        datetimeNullable: '2024-01-15T12:00:00Z'
+                        datetimeNotNullable: '2024-01-15T12:00:00Z'
+                        enumNotNullable: enum_value_1
+                        enumNullable: enum_value_1
+                    arrayString:
+                        - string
+                    arrayInteger:
+                        - string
+                    collectionOfDummyObject2:
+                        - []

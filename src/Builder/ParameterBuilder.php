@@ -7,7 +7,10 @@ namespace Ehyiah\ApiDocBundle\Builder;
  */
 class ParameterBuilder
 {
-    private RouteBuilder $routeBuilder;
+    /** @var RouteBuilder|ApiDocBuilder */
+    private $parentBuilder;
+
+    private ?string $componentName = null;
 
     /** @var array<string, mixed> */
     private array $definition = [];
@@ -15,9 +18,13 @@ class ParameterBuilder
     /** @var ExampleBuilder[] */
     private array $exampleBuilders = [];
 
-    public function __construct(RouteBuilder $routeBuilder)
+    /**
+     * @param string|null $componentName The component name when used as a reusable component
+     */
+    public function __construct(RouteBuilder|ApiDocBuilder $parentBuilder, ?string $componentName = null)
     {
-        $this->routeBuilder = $routeBuilder;
+        $this->parentBuilder = $parentBuilder;
+        $this->componentName = $componentName;
     }
 
     /**
@@ -135,11 +142,85 @@ class ParameterBuilder
     }
 
     /**
-     * Finish building this parameter and return to the route builder.
+     * Mark the parameter as deprecated.
+     *
+     * @param bool $deprecated Whether the parameter is deprecated
      */
-    public function end(): RouteBuilder
+    public function deprecated(bool $deprecated = true): self
     {
-        return $this->routeBuilder;
+        $this->definition['deprecated'] = $deprecated;
+
+        return $this;
+    }
+
+    /**
+     * Allow empty value for the parameter.
+     *
+     * @param bool $allowEmptyValue Whether empty values are allowed
+     */
+    public function allowEmptyValue(bool $allowEmptyValue = true): self
+    {
+        $this->definition['allowEmptyValue'] = $allowEmptyValue;
+
+        return $this;
+    }
+
+    /**
+     * Set the serialization style.
+     *
+     * Common styles by location:
+     * - query, header, cookie: 'form', 'spaceDelimited', 'pipeDelimited', 'deepObject'
+     * - path: 'simple', 'label', 'matrix'
+     *
+     * @param string $style Serialization style
+     */
+    public function style(string $style): self
+    {
+        $this->definition['style'] = $style;
+
+        return $this;
+    }
+
+    /**
+     * Set explode behavior.
+     *
+     * When true, parameter values of type array or object generate separate parameters.
+     * When false, array and object values are serialized using the style serialization.
+     *
+     * @param bool $explode Whether to explode the parameter
+     */
+    public function explode(bool $explode = true): self
+    {
+        $this->definition['explode'] = $explode;
+
+        return $this;
+    }
+
+    /**
+     * Allow reserved characters in parameter value.
+     *
+     * Applies to query parameters. When true, allows RFC3986 reserved characters
+     * in the parameter value.
+     *
+     * @param bool $allowReserved Whether to allow reserved characters
+     */
+    public function allowReserved(bool $allowReserved = true): self
+    {
+        $this->definition['allowReserved'] = $allowReserved;
+
+        return $this;
+    }
+
+    /**
+     * Finish building this parameter and return to the parent builder.
+     */
+    public function end(): RouteBuilder|ApiDocBuilder
+    {
+        if ($this->parentBuilder instanceof ApiDocBuilder && null !== $this->componentName) {
+            $this->parentBuilder->registerParameter($this->componentName, $this->buildArray());
+        }
+
+        return $this->parentBuilder;
     }
 
     /**
