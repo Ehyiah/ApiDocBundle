@@ -1,0 +1,69 @@
+documentation:
+    components:
+        schemas:
+            DummyObject:
+                type: object
+                required:
+                    - id
+                    - skipedValue
+                    - stringNotNullable
+                    - intNotNullable
+                    - booleanNotNullable
+                    - datetimeNotNullable
+                    - enumNotNullable
+                    - objectNotNullable
+                    - collectionOfDummyObject2
+                properties:
+                    id:
+                        type: string
+                        description: ''
+                    skipedValue:
+                        type: string
+                        description: ''
+                    stringNotNullable:
+                        type: string
+                        description: ''
+                    intNotNullable:
+                        type: integer
+                        description: ''
+                    booleanNotNullable:
+                        type: boolean
+                        description: ''
+                    booleanNullable:
+                        type: boolean
+                        description: ''
+                    stringNullable:
+                        type: string
+                        description: ''
+                    datetimeNullable:
+                        type: string
+                        format: date-time
+                    datetimeNotNullable:
+                        type: string
+                        format: date-time
+                    enumNotNullable:
+                        type: string
+                        enum:
+                            - enum_value_1
+                            - enum_value_2
+                    enumNullable:
+                        type: string
+                        enum:
+                            - enum_value_1
+                            - enum_value_2
+                    objectNotNullable:
+                        $ref: '#/components/schemas/DummyObject2'
+                    objectNullable:
+                        $ref: '#/components/schemas/DummyObject2'
+                    arrayString:
+                        items:
+                            type: string
+                        type: array
+                    arrayInteger:
+                        items:
+                            type: string
+                        type: array
+                    collectionOfDummyObject2:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/Collection'

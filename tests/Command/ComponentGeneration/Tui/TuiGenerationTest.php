@@ -28,6 +28,9 @@ use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Response\ResponseTuiManager;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Response\ResponseTuiState;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Route\RouteTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Route\RouteTuiManager;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Route\RouteTuiState;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Schema\SchemaTuiGenerator;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Schema\SchemaTuiManager;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Security\SecuritySchemeTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Security\SecuritySchemeTuiManager;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Security\SecuritySchemeTuiState;
@@ -38,10 +41,15 @@ use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use ReflectionProperty;
+use SplFileInfo;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\PropertyInfo\PropertyInfoExtractorInterface;
+use Symfony\Component\Routing\Route as SymfonyRoute;
+use Symfony\Component\Routing\RouteCollection;
+use Symfony\Component\Routing\RouterInterface;
+use Symfony\Component\TypeInfo\Type;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -55,7 +63,7 @@ class TuiGenerationTest extends TestCase
     protected function setUp(): void
     {
         $this->tmpDir = sys_get_temp_dir() . '/apidoc_gen_test_' . uniqid();
-        mkdir($this->tmpDir, 0755, true);
+        mkdir($this->tmpDir . '/Swagger', 0755, true);
         $this->output = new BufferedOutput();
     }
 
@@ -271,8 +279,12 @@ class TuiGenerationTest extends TestCase
         $this->assertStringContainsString("'page'", $content);
     }
 
-    private function createGenerator(string $generatorClass, string $managerClass): object
-    {
+    private function createGenerator(
+        string $generatorClass,
+        string $managerClass,
+        ?PropertyInfoExtractorInterface $propertyInfo = null,
+        ?LoadApiDocConfigHelper $helper = null,
+    ): object {
         $parameterBag = $this->createMock(ParameterBagInterface::class);
         $parameterBag->method('get')->willReturnMap([
             ['ehyiah_api_doc.source_path', '/Swagger'],
@@ -283,17 +295,42 @@ class TuiGenerationTest extends TestCase
         $kernel = $this->createMock(KernelInterface::class);
         $kernel->method('getProjectDir')->willReturn($this->tmpDir);
 
-        $propertyInfo = $this->createMock(PropertyInfoExtractorInterface::class);
-        $helper = $this->createMock(LoadApiDocConfigHelper::class);
+        $propertyInfo ??= $this->createMock(PropertyInfoExtractorInterface::class);
+        $helper ??= $this->createMock(LoadApiDocConfigHelper::class);
 
         if (RouteTuiManager::class === $managerClass) {
-            $router = $this->createMock(\Symfony\Component\Routing\RouterInterface::class);
+            $router = $this->createMock(RouterInterface::class);
             $manager = new $managerClass($router, $parameterBag, $kernel, $helper);
+        } elseif (SchemaTuiManager::class === $managerClass) {
+            $manager = new $managerClass($kernel, $parameterBag, $propertyInfo);
         } else {
             $manager = new $managerClass($kernel, $parameterBag);
         }
 
         return new $generatorClass($manager, $kernel, $parameterBag, $propertyInfo, $helper);
+    }
+
+    /**
+     * @param array<int|string, mixed> $args
+     */
+    private function invokePrivate(object $generator, string $method, array $args = []): mixed
+    {
+        if (property_exists($generator, 'currentOutput')) {
+            $outputReflection = new ReflectionProperty($generator, 'currentOutput');
+            $outputReflection->setValue($generator, $this->output);
+        }
+
+        if (property_exists($generator, 'currentInput')) {
+            $inputReflection = new ReflectionProperty($generator, 'currentInput');
+            if (null === $inputReflection->getValue($generator)) {
+                $inputReflection->setValue($generator, $this->createMock(\Symfony\Component\Console\Input\InputInterface::class));
+            }
+        }
+
+        $reflection = new ReflectionMethod($generator, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invokeArgs($generator, $args);
     }
 
     private function invokeGenerate(object $generator, object $state): void
@@ -1262,5 +1299,307 @@ class TuiGenerationTest extends TestCase
         $this->assertStringContainsString('->response(201)', $phpCode);
         $this->assertStringContainsString('->response(400)', $phpCode);
         $this->assertStringContainsString('->end();', $phpCode);
+    }
+
+    // ── Schema tests ──
+
+    private function createSchemaFixtureClass(): string
+    {
+        $dir = $this->tmpDir . '/src/Fixture';
+        mkdir($dir, 0755, true);
+        $namespace = 'SchemaFixtures_' . uniqid();
+        $className = 'GenUser';
+        $code = "<?php\nnamespace {$namespace};\nclass {$className}\n{\n    public string \$name = '';\n    public string \$email = '';\n    protected int \$internal = 0;\n}\n";
+        file_put_contents($dir . '/' . $className . '.php', $code);
+        require_once $dir . '/' . $className . '.php';
+
+        return $namespace . '\\' . $className;
+    }
+
+    /**
+     * @return array{object, PropertyInfoExtractorInterface}
+     */
+    private function createSchemaGenerator(?LoadApiDocConfigHelper $helper = null): array
+    {
+        $propertyInfo = $this->createMock(PropertyInfoExtractorInterface::class);
+        $propertyInfo->method('getProperties')->willReturn(['name', 'email']);
+        $propertyInfo->method('getType')->willReturnCallback(static fn (): Type => Type::string());
+
+        $generator = $this->createGenerator(SchemaTuiGenerator::class, SchemaTuiManager::class, $propertyInfo, $helper);
+
+        return [$generator, $propertyInfo];
+    }
+
+    public function testSchemaYamlGenerationFromPhpClass(): void
+    {
+        $fqcn = $this->createSchemaFixtureClass();
+        [$generator] = $this->createSchemaGenerator();
+
+        $this->invokePrivate($generator, 'generateFiles', [$fqcn, 'yaml', '/Swagger/', []]);
+
+        $file = $this->tmpDir . '/Swagger/schemas/GenUser.yaml';
+        $this->assertFileExists($file);
+
+        $yaml = Yaml::parseFile($file);
+        $schema = $yaml['documentation']['components']['schemas']['GenUser'];
+        $this->assertSame('object', $schema['type']);
+        $this->assertEqualsCanonicalizing(['name', 'email'], $schema['required']);
+        $this->assertSame('string', $schema['properties']['name']['type']);
+        $this->assertSame('string', $schema['properties']['email']['type']);
+        $this->assertArrayNotHasKey('internal', $schema['properties']);
+    }
+
+    public function testSchemaPhpGenerationFromPhpClass(): void
+    {
+        $fqcn = $this->createSchemaFixtureClass();
+        [$generator] = $this->createSchemaGenerator();
+
+        $this->invokePrivate($generator, 'generateFiles', [$fqcn, 'php', '/Swagger/', []]);
+
+        $file = $this->tmpDir . '/Swagger/schemas/GenUser.php';
+        $this->assertFileExists($file);
+
+        $content = file_get_contents($file);
+        $this->assertStringContainsString("addSchema('GenUser')", $content);
+        $this->assertStringContainsString("addProperty('name')", $content);
+        $this->assertStringContainsString("type('string')", $content);
+    }
+
+    public function testSchemaUpdateMergesManualPropertiesFromExistingPhpFile(): void
+    {
+        $fqcn = $this->createSchemaFixtureClass();
+
+        $phpFile = $this->tmpDir . '/Swagger/schemas/GenUser.php';
+        mkdir(dirname($phpFile), 0755, true);
+        file_put_contents($phpFile, <<<'PHP'
+<?php
+
+namespace App\Swagger\schemas;
+
+use Ehyiah\ApiDocBundle\Attributes\ApiDocConfig;
+use Ehyiah\ApiDocBundle\Builder\ApiDocBuilder;
+use Ehyiah\ApiDocBundle\Interfaces\ApiDocConfigInterface;
+
+#[ApiDocConfig(component: 'GenUser', type: 'schemas')]
+class GenUser implements ApiDocConfigInterface
+{
+    public function configure(ApiDocBuilder $builder): void
+    {
+        $builder->addSchema('GenUser')
+            ->type('object')
+            ->description('Manual description')
+            ->addProperty('name')
+                ->type('string')
+                ->example('John')
+            ->end()
+            ->addProperty('manualField')
+                ->type('string')
+                ->description('Manually added field')
+                ->required()
+            ->end()
+        ->end();
+    }
+}
+PHP);
+
+        $helper = $this->createMock(LoadApiDocConfigHelper::class);
+        $helper->method('findPhpComponentFile')->willReturn(new SplFileInfo($phpFile));
+        $helper->method('findYamlComponentFile')->willReturn(null);
+
+        [$generator] = $this->createSchemaGenerator($helper);
+
+        $this->invokePrivate($generator, 'generateFiles', [$fqcn, 'yaml', '/Swagger/', []]);
+
+        $yamlFile = $this->tmpDir . '/Swagger/schemas/GenUser.yaml';
+        $this->assertFileExists($yamlFile);
+
+        $yaml = Yaml::parseFile($yamlFile);
+        $schema = $yaml['documentation']['components']['schemas']['GenUser'];
+
+        $this->assertSame('Manual description', $schema['description']);
+        $this->assertSame(
+            'Manually added field',
+            $schema['properties']['manualField']['description'],
+            'Manual property from existing PHP file must be preserved'
+        );
+        $this->assertSame('John', $schema['properties']['name']['example'], 'Manual override on entity property must be preserved');
+        // PHP file state wins for properties it defines: "name" is not required() in the existing PHP file
+        $this->assertEqualsCanonicalizing(['email', 'manualField'], $schema['required']);
+    }
+
+    public function testSchemaCompositionAllOfGeneration(): void
+    {
+        $generator = $this->createGenerator(SchemaTuiGenerator::class, SchemaTuiManager::class);
+
+        $refs = [
+            ['$ref' => '#/components/schemas/User'],
+            ['$ref' => '#/components/schemas/Pet'],
+        ];
+        $this->invokePrivate($generator, 'generateComposition', ['SearchFilter', 'allOf', $refs, 'yaml', '/Swagger/']);
+
+        $file = $this->tmpDir . '/Swagger/schemas/SearchFilter.yaml';
+        $this->assertFileExists($file);
+
+        $yaml = Yaml::parseFile($file);
+        $schema = $yaml['documentation']['components']['schemas']['SearchFilter'];
+        $this->assertSame($refs, $schema['allOf']);
+    }
+
+    // ── Tag update merge tests ──
+
+    public function testTagUpdateMergesIntoMultiTagFileAndPreservesOthers(): void
+    {
+        $tagsDir = $this->tmpDir . '/Swagger/tags/';
+        mkdir($tagsDir, 0755, true);
+        $yamlFile = $tagsDir . 'mixed.yaml';
+        file_put_contents($yamlFile, Yaml::dump([
+            'documentation' => [
+                'tags' => [
+                    ['name' => 'Users', 'description' => 'Old users desc'],
+                    ['name' => 'Admin', 'description' => 'Admin desc'],
+                ],
+            ],
+        ]));
+
+        $state = new TagTuiState();
+        $state->name = 'Users';
+        $state->description = 'Updated users desc';
+        $state->format_output = 'yaml';
+        $state->outputDir = '/Swagger/';
+        $state->loadedFrom = $yamlFile;
+
+        $generator = $this->createGenerator(TagTuiGenerator::class, TagTuiManager::class);
+        $this->invokeGenerate($generator, $state);
+
+        $this->assertFileExists($yamlFile);
+        $yaml = Yaml::parseFile($yamlFile);
+        $tags = $yaml['documentation']['tags'];
+        $this->assertCount(2, $tags, 'Existing sibling tags must be preserved');
+
+        $byName = [];
+        foreach ($tags as $tag) {
+            $byName[$tag['name']] = $tag;
+        }
+        $this->assertSame('Updated users desc', $byName['Users']['description'], 'Edited tag must be updated in place');
+        $this->assertSame('Admin desc', $byName['Admin']['description'], 'Sibling tag must stay untouched');
+        $this->assertFileDoesNotExist($this->tmpDir . '/Swagger/tags/Users.yaml');
+    }
+
+    // ── Route generation tests ──
+
+    private function createRouteGenerator(RouterInterface $router): object
+    {
+        $parameterBag = $this->createMock(ParameterBagInterface::class);
+        $parameterBag->method('get')->willReturnMap([
+            ['ehyiah_api_doc.source_path', '/Swagger'],
+            ['ehyiah_api_doc.dump_path', '/Swagger/dump'],
+            ['ehyiah_api_doc.scan_directories', ['src/Entity']],
+        ]);
+
+        $kernel = $this->createMock(KernelInterface::class);
+        $kernel->method('getProjectDir')->willReturn($this->tmpDir);
+
+        $helper = $this->createMock(LoadApiDocConfigHelper::class);
+        $manager = new RouteTuiManager($router, $parameterBag, $kernel, $helper);
+
+        return new RouteTuiGenerator($manager, $kernel, $parameterBag, $this->createMock(PropertyInfoExtractorInterface::class), $helper);
+    }
+
+    private function createRouterWithUserListRoute(): RouterInterface
+    {
+        $route = new SymfonyRoute('/api/users', [], [], [], '', [], ['GET']);
+        $route->setDefault('_controller', 'App\Controller\UserController::list');
+
+        $collection = new RouteCollection();
+        $collection->add('app_user_list', $route);
+
+        $router = $this->createMock(RouterInterface::class);
+        $router->method('getRouteCollection')->willReturn($collection);
+
+        return $router;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function createRouteMethodConfig(string $operationId): array
+    {
+        return [
+            'operationId' => $operationId,
+            'summary' => 'List users',
+            'description' => 'Returns all users',
+            'security' => ['BearerAuth'],
+            'tags' => ['Users'],
+            'requestBodySchema' => null,
+            'requestBodyExample' => null,
+            'responses' => [
+                200 => ['schema' => null, 'description' => 'OK', 'example' => null],
+            ],
+        ];
+    }
+
+    public function testRouteYamlGeneration(): void
+    {
+        $state = new RouteTuiState();
+        $state->routeName = 'app_user_list';
+        $state->format = 'yaml';
+        $state->outputDir = '/Swagger/';
+        $state->methodsConfig = ['GET' => $this->createRouteMethodConfig('app_user_list_get')];
+
+        $generator = $this->createRouteGenerator($this->createRouterWithUserListRoute());
+
+        $tui = $this->createMock(\Symfony\Component\Tui\Tui::class);
+        $this->invokePrivate($generator, 'generateRoute', [$tui, $state]);
+
+        $file = $this->tmpDir . '/Swagger/routes/app_user_list.yaml';
+        $this->assertFileExists($file);
+
+        $yaml = Yaml::parseFile($file);
+        $operation = $yaml['documentation']['paths']['/api/users']['get'];
+
+        $this->assertSame('app_user_list_get', $operation['operationId']);
+        $this->assertSame('List users', $operation['summary']);
+        $this->assertContains('Users', $operation['tags']);
+        $this->assertStringContainsString('BearerAuth', file_get_contents($file));
+        $this->assertSame('OK', $operation['responses'][200]['description'] ?? $operation['responses']['200']['description']);
+    }
+
+    public function testRouteUpdateWritesToOriginalLocationAndPreservesManualFields(): void
+    {
+        $customDir = $this->tmpDir . '/Swagger/custom/routes/';
+        mkdir($customDir, 0755, true);
+        $originalFile = $customDir . 'app_user_list.yaml';
+        file_put_contents($originalFile, Yaml::dump([
+            'documentation' => [
+                'paths' => [
+                    '/api/users' => [
+                        'get' => [
+                            'operationId' => 'old_op_id',
+                            'x-manual' => 'keep-me',
+                        ],
+                    ],
+                ],
+            ],
+        ]));
+
+        $state = new RouteTuiState();
+        $state->routeName = 'app_user_list';
+        $state->format = 'yaml';
+        $state->outputDir = '/Swagger/';
+        $state->loadedFrom = $originalFile;
+        $state->methodsConfig = ['GET' => $this->createRouteMethodConfig('new_op_id')];
+
+        $generator = $this->createRouteGenerator($this->createRouterWithUserListRoute());
+
+        $tui = $this->createMock(\Symfony\Component\Tui\Tui::class);
+        $this->invokePrivate($generator, 'generateRoute', [$tui, $state]);
+
+        $this->assertFileExists($originalFile, 'Route must be rewritten at its original location');
+        $this->assertFileDoesNotExist($this->tmpDir . '/Swagger/routes/app_user_list.yaml');
+
+        $yaml = Yaml::parseFile($originalFile);
+        $operation = $yaml['documentation']['paths']['/api/users']['get'];
+        $this->assertSame('new_op_id', $operation['operationId'], 'Regenerated fields must be updated');
+        $this->assertSame('keep-me', $operation['x-manual'], 'Manually added fields must be preserved on update');
     }
 }

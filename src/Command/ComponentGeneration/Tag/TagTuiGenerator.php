@@ -250,7 +250,8 @@ class TagTuiGenerator extends AbstractTuiComponentGenerator
         $destination = ComponentType::Tags->value;
 
         if (null !== $state->loadedFrom && file_exists($state->loadedFrom) && !str_ends_with($state->loadedFrom, '.php')) {
-            $dumpLocation = dirname($state->loadedFrom) . '/' . $state->name . '.yaml';
+            // Write back to the original file so sibling tags stay in sync
+            $dumpLocation = $state->loadedFrom;
             // Merge with existing config to preserve manually-added fields
             $existingConfig = \Symfony\Component\Yaml\Yaml::parseFile($state->loadedFrom);
             if (isset($existingConfig['documentation']['tags']) && is_array($existingConfig['documentation']['tags'])) {

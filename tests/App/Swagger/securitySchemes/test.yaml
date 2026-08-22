@@ -1,0 +1,7 @@
+documentation:
+    components:
+        securitySchemes:
+            test:
+                type: apiKey
+                name: 'tes'
+                in: header
