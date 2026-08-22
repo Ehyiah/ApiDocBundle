@@ -15,14 +15,13 @@ use Symfony\Component\PropertyInfo\PropertyInfoExtractorInterface;
 use Symfony\Component\Tui\Event\CancelEvent;
 use Symfony\Component\Tui\Event\SelectEvent;
 use Symfony\Component\Tui\Event\SettingChangeEvent;
-use Symfony\Component\Tui\Event\SubmitEvent;
 use Symfony\Component\Tui\Tui;
 use Symfony\Component\Tui\Widget\ContainerWidget;
-use Symfony\Component\Tui\Widget\InputWidget;
 use Symfony\Component\Tui\Widget\SelectListWidget;
 use Symfony\Component\Tui\Widget\SettingItem;
 use Symfony\Component\Tui\Widget\SettingsListWidget;
 use Symfony\Component\Tui\Widget\TextWidget;
+use Throwable;
 
 use function Symfony\Component\String\u;
 
@@ -30,8 +29,6 @@ use function Symfony\Component\String\u;
 class RouteTuiGenerator extends AbstractTuiComponentGenerator
 {
     private const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
-
-    private ?OutputInterface $currentOutput = null;
 
     public function __construct(
         private readonly RouteTuiManager $manager,
@@ -85,9 +82,11 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $container->add(TuiUi::header('Route Selection'));
+        $searchWidget = $this->attachSearchFilter($tui, $container, $selectWidget, $choices);
+
         $container->add($selectWidget);
         $container->add(new TextWidget(''));
-        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · Esc Back'));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · / Search · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -225,7 +224,12 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             }
 
             if ('__generate__' === $value) {
-                $this->generateRoute($tui, $state);
+                try {
+                    $this->generateRoute($tui, $state);
+                    $this->showResult($tui, sprintf('Route "%s" was generated successfully.', $state->routeName), true, function () use ($tui, $state, $onBack): void { $this->showMethodList($tui, $state, $onBack); });
+                } catch (Throwable $error) {
+                    $this->showResult($tui, $error->getMessage(), false, function () use ($tui, $state, $onBack): void { $this->showMethodList($tui, $state, $onBack); });
+                }
 
                 return;
             }
@@ -253,19 +257,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
     private function showRouteSettings(Tui $tui, RouteTuiState $state, callable $onBack): void
     {
-        $textInputCallback = static function (string $currentValue, callable $onDone) {
-            $inputWidget = new InputWidget();
-            $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Input: ');
-            $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
-                $onDone($event->getValue());
-            });
-            $inputWidget->onCancel(static function (CancelEvent $event) use ($onDone) {
-                $onDone(null);
-            });
-
-            return $inputWidget;
-        };
+        $textInputCallback = TuiUi::textInput();
 
         $settingItems = [];
         $settingItems[] = new SettingItem('format', 'Format', $state->format, 'YAML or PHP', ['yaml', 'php']);
@@ -333,19 +325,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
             'responses' => [],
         ];
 
-        $textInputCallback = static function (string $currentValue, callable $onDone) {
-            $inputWidget = new InputWidget();
-            $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Input: ');
-            $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
-                $onDone($event->getValue());
-            });
-            $inputWidget->onCancel(static function (CancelEvent $event) use ($onDone) {
-                $onDone(null);
-            });
-
-            return $inputWidget;
-        };
+        $textInputCallback = TuiUi::textInput();
 
         $schemas = $this->manager->getAvailableSchemas();
         $examples = $this->manager->getAvailableExamples();
@@ -958,19 +938,7 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $schemas = $this->manager->getAvailableSchemas();
         $examples = $this->manager->getAvailableExamples();
 
-        $textInputCallback = static function (string $currentValue, callable $onDone) {
-            $inputWidget = new InputWidget();
-            $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Input: ');
-            $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
-                $onDone($event->getValue());
-            });
-            $inputWidget->onCancel(static function (CancelEvent $event) use ($onDone) {
-                $onDone(null);
-            });
-
-            return $inputWidget;
-        };
+        $textInputCallback = TuiUi::textInput();
 
         $formatter = $this->currentOutput->getFormatter();
         $settingItems = [];
@@ -1074,7 +1042,6 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
 
     private function generateRoute(Tui $tui, RouteTuiState $state): void
     {
-        $tui->stop();
         $this->currentOutput->writeln(sprintf('<info>Generating route "%s"...</info>', $state->routeName));
 
         $routeData = $this->manager->getAllRoutes()[$state->routeName];

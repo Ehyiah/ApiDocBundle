@@ -2,7 +2,6 @@
 
 namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
-use Ehyiah\ApiDocBundle\Command\ComponentGeneration\Schema\SchemaTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\Traits\GenerateFileTrait;
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use LogicException;
@@ -98,9 +97,7 @@ final class GenerateComponentTuiCommand extends Command
 
         // Pass the console HelperSet to generators to handle overwrite confirmation
         foreach ($this->generators as $generator) {
-            if ($generator instanceof SchemaTuiGenerator) {
-                $generator->setHelperSet($this->getHelperSet());
-            }
+            $generator->setHelperSet($this->getHelperSet());
         }
 
         $this->showMainMenu($tui, $input, $output);
@@ -119,6 +116,9 @@ final class GenerateComponentTuiCommand extends Command
 
         // 1. Add generators registered via DI
         foreach ($this->generators as $generator) {
+            if (!$generator->isSupported()) {
+                continue;
+            }
             $choices[] = [
                 'value' => $generator->getLabel(),
                 'label' => $formatter->format(sprintf('  <fg=cyan>›</> %-13s <fg=gray>%s</fg=gray>', $generator->getLabel(), $generator->getDescription())),

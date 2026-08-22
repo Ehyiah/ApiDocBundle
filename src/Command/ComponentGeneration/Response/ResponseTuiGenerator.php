@@ -15,22 +15,19 @@ use Symfony\Component\PropertyInfo\PropertyInfoExtractorInterface;
 use Symfony\Component\Tui\Event\CancelEvent;
 use Symfony\Component\Tui\Event\SelectEvent;
 use Symfony\Component\Tui\Event\SettingChangeEvent;
-use Symfony\Component\Tui\Event\SubmitEvent;
 use Symfony\Component\Tui\Tui;
 use Symfony\Component\Tui\Widget\ContainerWidget;
-use Symfony\Component\Tui\Widget\InputWidget;
 use Symfony\Component\Tui\Widget\SelectListWidget;
 use Symfony\Component\Tui\Widget\SettingItem;
 use Symfony\Component\Tui\Widget\SettingsListWidget;
 use Symfony\Component\Tui\Widget\TextWidget;
+use Throwable;
 
 use function Symfony\Component\String\u;
 
 #[AsTuiGenerator]
 class ResponseTuiGenerator extends AbstractTuiComponentGenerator
 {
-    private ?OutputInterface $currentOutput = null;
-
     public function __construct(
         private readonly ResponseTuiManager $manager,
         KernelInterface $kernel,
@@ -78,9 +75,11 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $container->add(TuiUi::header('Responses'));
+        $searchWidget = $this->attachSearchFilter($tui, $container, $selectWidget, $choices);
+
         $container->add($selectWidget);
         $container->add(new TextWidget(''));
-        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · Esc Back'));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · / Search · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -134,19 +133,7 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
 
     private function showForm(Tui $tui, ResponseTuiState $state, callable $onBack): void
     {
-        $textInputCallback = static function (string $currentValue, callable $onDone) {
-            $inputWidget = new InputWidget();
-            $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Input: ');
-            $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
-                $onDone($event->getValue());
-            });
-            $inputWidget->onCancel(static function (CancelEvent $event) use ($onDone) {
-                $onDone(null);
-            });
-
-            return $inputWidget;
-        };
+        $textInputCallback = TuiUi::textInput();
 
         $schemas = $this->manager->getAvailableSchemas();
         $schemaChoices = array_merge(['none'], $schemas);
@@ -206,14 +193,22 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
 
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-                    $tui->stop();
-                    $this->generateComponent($state);
+
+                    try {
+                        $this->generateComponent($state);
+                        $this->showResult($tui, sprintf('"%s" was generated successfully.', $state->name), true, function () use ($tui, $onBack): void { $this->showComponentList($tui, $onBack); });
+                    } catch (Throwable $error) {
+                        $this->showResult($tui, $error->getMessage(), false, function () use ($tui, $onBack): void { $this->showComponentList($tui, $onBack); });
+                    }
                     break;
                 case 'action_delete':
-                    $this->deleteComponent($state);
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-                    $this->showComponentList($tui, $onBack);
+
+                    $this->requestConfirm($tui, sprintf('Delete "%s" permanently?', $state->name), function () use ($tui, $state, $onBack): void {
+                        $this->deleteComponent($state);
+                        $this->showComponentList($tui, $onBack);
+                    }, function () use ($tui, $onBack): void { $this->showComponentList($tui, $onBack); });
                     break;
             }
         };

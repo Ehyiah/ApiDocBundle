@@ -24,14 +24,13 @@ use Symfony\Component\Tui\Widget\SelectListWidget;
 use Symfony\Component\Tui\Widget\SettingItem;
 use Symfony\Component\Tui\Widget\SettingsListWidget;
 use Symfony\Component\Tui\Widget\TextWidget;
+use Throwable;
 
 use function Symfony\Component\String\u;
 
 #[AsTuiGenerator]
 class ExampleTuiGenerator extends AbstractTuiComponentGenerator
 {
-    private ?OutputInterface $currentOutput = null;
-
     public function __construct(
         private readonly ExampleTuiManager $manager,
         KernelInterface $kernel,
@@ -79,9 +78,11 @@ class ExampleTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $container->add(TuiUi::header('Examples'));
+        $searchWidget = $this->attachSearchFilter($tui, $container, $selectWidget, $choices);
+
         $container->add($selectWidget);
         $container->add(new TextWidget(''));
-        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · Esc Back'));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · / Search · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -137,19 +138,7 @@ class ExampleTuiGenerator extends AbstractTuiComponentGenerator
         // Track full JSON value separately (preview text is just for display)
         $fullJsonValue = $state->value;
 
-        $textInputCallback = static function (string $currentValue, callable $onDone) {
-            $inputWidget = new InputWidget();
-            $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Input: ');
-            $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
-                $onDone($event->getValue());
-            });
-            $inputWidget->onCancel(static function (CancelEvent $event) use ($onDone) {
-                $onDone(null);
-            });
-
-            return $inputWidget;
-        };
+        $textInputCallback = TuiUi::textInput();
 
         $valueInputCallback = static function (string $currentValue, callable $onDone) use (&$fullJsonValue) {
             $inputWidget = new InputWidget();
@@ -236,14 +225,22 @@ class ExampleTuiGenerator extends AbstractTuiComponentGenerator
 
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-                    $tui->stop();
-                    $this->generateComponent($state);
+
+                    try {
+                        $this->generateComponent($state);
+                        $this->showResult($tui, sprintf('"%s" was generated successfully.', $state->name), true, function () use ($tui, $onBack): void { $this->showComponentList($tui, $onBack); });
+                    } catch (Throwable $error) {
+                        $this->showResult($tui, $error->getMessage(), false, function () use ($tui, $onBack): void { $this->showComponentList($tui, $onBack); });
+                    }
                     break;
                 case 'action_delete':
-                    $this->deleteComponent($state);
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-                    $this->showComponentList($tui, $onBack);
+
+                    $this->requestConfirm($tui, sprintf('Delete "%s" permanently?', $state->name), function () use ($tui, $state, $onBack): void {
+                        $this->deleteComponent($state);
+                        $this->showComponentList($tui, $onBack);
+                    }, function () use ($tui, $onBack): void { $this->showComponentList($tui, $onBack); });
                     break;
             }
         };

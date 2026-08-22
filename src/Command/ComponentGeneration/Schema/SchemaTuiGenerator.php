@@ -13,30 +13,24 @@ use ReflectionClass;
 use ReflectionException;
 use ReflectionNamedType;
 use ReflectionProperty;
-use Symfony\Component\Console\Helper\HelperSet;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Tui\Event\CancelEvent;
-use Symfony\Component\Tui\Event\ChangeEvent;
 use Symfony\Component\Tui\Event\SelectEvent;
 use Symfony\Component\Tui\Event\SettingChangeEvent;
-use Symfony\Component\Tui\Event\SubmitEvent;
 use Symfony\Component\Tui\Tui;
 use Symfony\Component\Tui\Widget\ContainerWidget;
-use Symfony\Component\Tui\Widget\InputWidget;
 use Symfony\Component\Tui\Widget\SelectListWidget;
 use Symfony\Component\Tui\Widget\SettingItem;
 use Symfony\Component\Tui\Widget\SettingsListWidget;
 use Symfony\Component\Tui\Widget\TextWidget;
 use Symfony\Component\TypeInfo\TypeIdentifier;
+use Throwable;
 
 #[AsTuiGenerator]
 class SchemaTuiGenerator extends AbstractTuiComponentGenerator
 {
     private ?InputInterface $currentInput = null;
-    private ?OutputInterface $currentOutput = null;
-    // Helper properties to implement getHelper() needed by GenerateFileTrait
-    private ?HelperSet $helperSet = null;
 
     public function __construct(
         private readonly SchemaTuiManager $manager,
@@ -61,16 +55,6 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
     public function isSupported(): bool
     {
         return true;
-    }
-
-    public function setHelperSet(HelperSet $helperSet): void
-    {
-        $this->helperSet = $helperSet;
-    }
-
-    public function getHelper(string $name): mixed
-    {
-        return $this->helperSet?->get($name);
     }
 
     public function run(Tui $tui, InputInterface $input, OutputInterface $output, callable $onBack): void
@@ -193,40 +177,19 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         }
 
         $classListWidget = new SelectListWidget($choices, 12);
-        $searchWidget = new InputWidget();
-        $searchWidget->setPrompt($formatter->format('Search for a class: '));
 
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $container->add(TuiUi::header('Schema Generation', 'Class Selection'));
-        $container->add($searchWidget);
-        $container->add(new TextWidget(''));
+        $this->attachSearchFilter($tui, $container, $classListWidget, $choices);
+
         $container->add($classListWidget);
-        $container->add(new TextWidget($formatter->format("\n<comment>Navigation:\n- Type to filter classes\n- Enter: Confirm search and switch to the list\n- Esc: Back to main menu</comment>")));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · / Search · Esc Back'));
 
         $tui->add($container);
-        $tui->setFocus($searchWidget);
-
-        $updateList = static function (string $query) use ($tui, $classListWidget, $choices) {
-            $filteredChoices = array_filter($choices, static function ($choice) use ($query) {
-                return empty($query) || str_contains(strtolower($choice['value']), strtolower($query));
-            });
-            $classListWidget->setItems(array_values($filteredChoices));
-            $tui->requestRender();
-        };
-
-        $searchWidget->onChange(static function (ChangeEvent $event) use ($updateList) {
-            $updateList($event->getValue());
-        });
-
-        $searchWidget->onSubmit(static function (SubmitEvent $event) use ($tui, $classListWidget) {
-            $tui->setFocus($classListWidget);
-        });
-
-        $searchWidget->onCancel(function (CancelEvent $event) use ($tui, $onBack) {
-            $this->run($tui, $this->currentInput, $this->currentOutput, $onBack);
-        });
+        $tui->setFocus($classListWidget);
 
         $selectListener = function (SelectEvent $event) use ($tui, $classListWidget, $onBack, &$selectListener, &$cancelListener) {
             if ($event->getTarget() === $classListWidget) {
@@ -306,19 +269,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $formatter = $this->currentOutput->getFormatter();
         $schemas = $this->manager->getAvailableSchemas();
 
-        $textInputCallback = static function (string $currentValue, callable $onDone) {
-            $inputWidget = new InputWidget();
-            $inputWidget->setValue($currentValue);
-            $inputWidget->setPrompt('Input: ');
-            $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
-                $onDone($event->getValue());
-            });
-            $inputWidget->onCancel(static function (CancelEvent $event) use ($onDone) {
-                $onDone(null);
-            });
-
-            return $inputWidget;
-        };
+        $textInputCallback = TuiUi::textInput();
 
         $settingItems = [];
         $settingItems[] = new SettingItem('schemaName', 'Schema Name', '', 'Name of the new composition schema', [], $textInputCallback);
@@ -381,9 +332,13 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
 
                     $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                     $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
-                    $tui->stop();
 
-                    $this->generateComposition($schemaName, $compositionType, $refs, $format, $outputDir);
+                    try {
+                        $this->generateComposition($schemaName, $compositionType, $refs, $format, $outputDir);
+                        $this->showResult($tui, sprintf('Composition "%s" was generated successfully.', $schemaName), true, function () use ($tui, $onBack): void { $this->showCompositionType($tui, $onBack); });
+                    } catch (Throwable $error) {
+                        $this->showResult($tui, $error->getMessage(), false, function () use ($tui, $onBack): void { $this->showCompositionType($tui, $onBack); });
+                    }
                     break;
             }
         };
@@ -523,7 +478,6 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
             ['yaml', 'php', 'both']
         );
 
-        // 3. Output directory (editable)
         $defaultDumpLocation = $this->manager->getDefaultDumpLocation();
         $settingItems[] = new SettingItem(
             'output',
@@ -531,19 +485,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
             $defaultDumpLocation,
             'Target directory for file writing. Press Enter to edit.',
             [],
-            static function (string $currentValue, callable $onDone) {
-                $inputWidget = new InputWidget();
-                $inputWidget->setValue($currentValue);
-                $inputWidget->setPrompt('Path: ');
-                $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone) {
-                    $onDone($event->getValue());
-                });
-                $inputWidget->onCancel(static function (CancelEvent $event) use ($onDone) {
-                    $onDone(null);
-                });
-
-                return $inputWidget;
-            }
+            TuiUi::textInput('Path: ')
         );
 
         // 4. Actions
@@ -632,9 +574,12 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
                 $tui->getEventDispatcher()->removeListener(SettingChangeEvent::class, $changeListener);
                 $tui->getEventDispatcher()->removeListener(CancelEvent::class, $cancelListener);
 
-                $tui->stop();
-
-                $this->generateFiles($selectedClass, $format, $outputDir, $propertiesToSkip);
+                try {
+                    $this->generateFiles($selectedClass, $format, $outputDir, $propertiesToSkip);
+                    $this->showResult($tui, sprintf('Schema "%s" was generated successfully.', (new ReflectionClass($selectedClass))->getShortName()), true, function () use ($tui, $onBack): void { $this->showClassSelection($tui, $onBack); });
+                } catch (Throwable $error) {
+                    $this->showResult($tui, $error->getMessage(), false, function () use ($tui, $onBack): void { $this->showClassSelection($tui, $onBack); });
+                }
                 break;
         }
     }

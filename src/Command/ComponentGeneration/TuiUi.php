@@ -2,6 +2,9 @@
 
 namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration;
 
+use Symfony\Component\Tui\Event\CancelEvent;
+use Symfony\Component\Tui\Event\SelectEvent;
+use Symfony\Component\Tui\Event\SubmitEvent;
 use Symfony\Component\Tui\Style\Align;
 use Symfony\Component\Tui\Style\Border;
 use Symfony\Component\Tui\Style\BorderPattern;
@@ -11,6 +14,7 @@ use Symfony\Component\Tui\Style\StyleSheet;
 use Symfony\Component\Tui\Style\TextAlign;
 use Symfony\Component\Tui\Tui;
 use Symfony\Component\Tui\Widget\ContainerWidget;
+use Symfony\Component\Tui\Widget\InputWidget;
 use Symfony\Component\Tui\Widget\SelectListWidget;
 use Symfony\Component\Tui\Widget\SettingsListWidget;
 use Symfony\Component\Tui\Widget\TextWidget;
@@ -72,5 +76,67 @@ final class TuiUi
         $widget->setStyle(new Style(color: 'gray'));
 
         return $widget;
+    }
+
+    /**
+     * Standard editable text input used by SettingsListWidget items.
+     */
+    public static function textInput(string $prompt = 'Input: '): callable
+    {
+        return static function (string $currentValue, callable $onDone) use ($prompt): InputWidget {
+            $inputWidget = new InputWidget();
+            $inputWidget->setValue($currentValue);
+            $inputWidget->setPrompt($prompt);
+            $inputWidget->onSubmit(static function (SubmitEvent $event) use ($onDone): void {
+                $onDone($event->getValue());
+            });
+            $inputWidget->onCancel(static function (CancelEvent $event) use ($onDone): void {
+                $onDone(null);
+            });
+
+            return $inputWidget;
+        };
+    }
+
+    /**
+     * Register a paired select/cancel listener on a widget; both are removed
+     * automatically as soon as one of them fires for this target.
+     *
+     * @param callable(string): void $onSelect receives the selected value
+     */
+    public static function onSelect(Tui $tui, object $target, callable $onSelect, ?callable $onCancel = null): void
+    {
+        /** @var array<class-string, callable> $listeners */
+        $listeners = [];
+
+        $dispose = static function () use ($tui, &$listeners): void {
+            /** @var array<string, callable> $listeners */
+            foreach ($listeners as $eventClass => $listener) {
+                $tui->getEventDispatcher()->removeListener($eventClass, $listener);
+            }
+            $listeners = [];
+        };
+
+        $selectListener = static function (SelectEvent $event) use ($target, $dispose, $onSelect): void {
+            if ($event->getTarget() !== $target) {
+                return;
+            }
+            $dispose();
+            $onSelect((string)$event->getValue());
+        };
+        $listeners[SelectEvent::class] = $selectListener;
+        $tui->addListener($selectListener);
+
+        if (null !== $onCancel) {
+            $cancelListener = static function (CancelEvent $event) use ($target, $dispose, $onCancel): void {
+                if ($event->getTarget() !== $target) {
+                    return;
+                }
+                $dispose();
+                $onCancel();
+            };
+            $listeners[CancelEvent::class] = $cancelListener;
+            $tui->addListener($cancelListener);
+        }
     }
 }
