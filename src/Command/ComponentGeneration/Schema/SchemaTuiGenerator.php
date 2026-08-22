@@ -4,6 +4,7 @@ namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Schema;
 
 use Ehyiah\ApiDocBundle\Attributes\AsTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\AbstractTuiComponentGenerator;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\TuiUi;
 use Ehyiah\ApiDocBundle\Enum\ComponentType;
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use Ehyiah\ApiDocBundle\Helper\SchemaHelper;
@@ -89,12 +90,10 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($formatter->format('<info>|  Schema Generation</info>')));
-        $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header('Schema Generation'));
         $container->add($selectWidget);
-        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -200,7 +199,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($formatter->format("<info>Schema Generation: Class Selection</info>\n")));
+        $container->add(TuiUi::header('Schema Generation', 'Class Selection'));
         $container->add($searchWidget);
         $container->add(new TextWidget(''));
         $container->add($classListWidget);
@@ -267,12 +266,10 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($formatter->format('<info>|  Composition Type</info>')));
-        $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header('Composition Type'));
         $container->add($selectWidget);
-        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -343,12 +340,10 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($formatter->format("<info>|  Composition : {$compositionType}</info>")));
-        $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header("Composition : {$compositionType}"));
         $container->add($settingsWidget);
-        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↵ Save    Esc Cancel</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↵ Save · Esc Cancel'));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 
@@ -574,7 +569,7 @@ class SchemaTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($formatter->format('<info>Schema Configuration for: ' . $selectedClass . "</info>\n")));
+        $container->add(TuiUi::header('Schema Configuration', $selectedClass));
         $container->add($settingsWidget);
         $container->add(new TextWidget($formatter->format("\n<comment>Navigation: ↑/↓  Edit: Space/Left/Right  Confirm: Enter  Back: Esc</comment>")));
         $tui->add($container);

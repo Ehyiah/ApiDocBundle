@@ -4,6 +4,7 @@ namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Response;
 
 use Ehyiah\ApiDocBundle\Attributes\AsTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\AbstractTuiComponentGenerator;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\TuiUi;
 use Ehyiah\ApiDocBundle\Enum\ComponentType;
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use Symfony\Component\Console\Input\InputInterface;
@@ -76,12 +77,10 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<info>|  Responses                                |</info>')));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header('Responses'));
         $container->add($selectWidget);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -175,12 +174,10 @@ class ResponseTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $title = $state->name ? "Edit: {$state->name}" : 'New Response';
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  {$title}</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header($title));
         $container->add($settingsWidget);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Save    Esc Cancel</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↵ Save · Esc Cancel'));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 

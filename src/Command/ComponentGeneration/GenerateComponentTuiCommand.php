@@ -16,6 +16,7 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Tui\Event\CancelEvent;
 use Symfony\Component\Tui\Event\SelectEvent;
+use Symfony\Component\Tui\Style\Style;
 use Symfony\Component\Tui\Tui;
 use Symfony\Component\Tui\Widget\ContainerWidget;
 use Symfony\Component\Tui\Widget\SelectListWidget;
@@ -93,6 +94,7 @@ final class GenerateComponentTuiCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $tui = new Tui();
+        TuiUi::applyTheme($tui);
 
         // Pass the console HelperSet to generators to handle overwrite confirmation
         foreach ($this->generators as $generator) {
@@ -119,7 +121,7 @@ final class GenerateComponentTuiCommand extends Command
         foreach ($this->generators as $generator) {
             $choices[] = [
                 'value' => $generator->getLabel(),
-                'label' => $formatter->format(sprintf('  %-15s <fg=gray>%s</fg=gray>', $generator->getLabel(), $generator->getDescription())),
+                'label' => $formatter->format(sprintf('  <fg=cyan>›</> %-13s <fg=gray>%s</fg=gray>', $generator->getLabel(), $generator->getDescription())),
             ];
             $generatorsMap[$generator->getLabel()] = $generator;
         }
@@ -135,13 +137,16 @@ final class GenerateComponentTuiCommand extends Command
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($formatter->format("\n<info>+══════════════════════════════════════════════════+</info>")));
-        $container->add(new TextWidget($formatter->format('<info>║       ApiDocBundle TUI Generator                ║</info>')));
-        $container->add(new TextWidget($formatter->format("<info>+══════════════════════════════════════════════════+</info>\n")));
-        $container->add(new TextWidget($formatter->format("<comment>  Choose the component type:</comment>\n")));
+        $container->add(TuiUi::banner());
+        $container->add(new TextWidget(''));
+
+        $prompt = new TextWidget('Choose the component type:');
+        $prompt->setStyle(new Style(bold: true));
+        $container->add($prompt);
+
         $container->add($selectWidget);
-        $container->add(new TextWidget($formatter->format("\n<fg=gray>------------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Quit</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · Esc Quit'));
 
         $tui->add($container);
         $tui->setFocus($selectWidget);

@@ -4,6 +4,7 @@ namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Route;
 
 use Ehyiah\ApiDocBundle\Attributes\AsTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\AbstractTuiComponentGenerator;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\TuiUi;
 use Ehyiah\ApiDocBundle\Enum\ComponentType;
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use Symfony\Component\Console\Input\InputInterface;
@@ -83,12 +84,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<info>|  Route Selection</info>')));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header('Route Selection'));
         $container->add($selectWidget);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -202,13 +201,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $routePath = $this->manager->getAllRoutes()[$state->routeName]['path'] ?? '';
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  Route: {$state->routeName}</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>|  ' . $routePath . '</fg=gray>')));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header("Route: {$state->routeName}", '' !== $routePath ? $routePath : null));
         $container->add($selectWidget);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Configure  Esc Back</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Configure · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -283,13 +279,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $routePath = $this->manager->getAllRoutes()[$state->routeName]['path'] ?? '';
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  Route: {$state->routeName} — Settings</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>|  ' . $routePath . '</fg=gray>')));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header("Route: {$state->routeName} — Settings", '' !== $routePath ? $routePath : null));
         $container->add($settingsWidget);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Save    Esc Cancel</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↵ Save · Esc Cancel'));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 
@@ -386,12 +379,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  {$method} — {$state->routeName}</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header("{$method} — {$state->routeName}"));
         $container->add($settingsWidget);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Save    ⌫ Delete    Esc Cancel</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↵ Save · ⌫ Delete · Esc Cancel'));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 
@@ -529,12 +520,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  Select Example for {$method}</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header("Select Example for {$method}"));
         $container->add($selectWidget);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -592,12 +581,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  Select Example for {$method} — {$statusCode}</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header("Select Example for {$method} — {$statusCode}"));
         $container->add($selectWidget);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -672,12 +659,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($formatter->format("<info>|  Responses — {$method} — {$state->routeName}</info>")));
-        $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header("Responses — {$method} — {$state->routeName}"));
         $container->add($selectWidget);
-        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Navigate  ↵ Configure  Esc Back</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Configure · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -766,11 +751,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $tagCount = count($selectedTags);
-        $headerWidget = new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>\n<info>|  Tags — {$method} — {$state->routeName}</info>\n<fg=gray>|  Selected: {$tagCount}</fg=gray>\n<info>+---------------------------------------------+</info>\n"));
-        $container->add($headerWidget);
+        $container->add(TuiUi::header("Tags — {$method} — {$state->routeName}", "Selected: {$tagCount}"));
         $container->add($selectWidget);
-        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Navigate  ↵ Toggle  Esc Back</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Toggle · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -885,11 +869,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $secCount = count($selectedSchemes);
-        $headerWidget = new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>\n<info>|  Security — {$method} — {$state->routeName}</info>\n<fg=gray>|  Selected: {$secCount}</fg=gray>\n<info>+---------------------------------------------+</info>\n"));
-        $container->add($headerWidget);
+        $container->add(TuiUi::header("Security — {$method} — {$state->routeName}", "Selected: {$secCount}"));
         $container->add($selectWidget);
-        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↑↓ Navigate  ↵ Toggle  Esc Back</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Toggle · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -1017,12 +1000,10 @@ class RouteTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $title = $isNew ? 'New response' : "Response {$statusCode}";
-        $container->add(new TextWidget($formatter->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($formatter->format("<info>|  {$title} — {$method}</info>")));
-        $container->add(new TextWidget($formatter->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header("{$title} — {$method}"));
         $container->add($settingsWidget);
-        $container->add(new TextWidget($formatter->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($formatter->format('<fg=gray>  ↵ Save    Esc Cancel</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↵ Save · Esc Cancel'));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 

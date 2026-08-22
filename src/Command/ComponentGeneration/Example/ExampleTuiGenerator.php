@@ -4,6 +4,7 @@ namespace Ehyiah\ApiDocBundle\Command\ComponentGeneration\Example;
 
 use Ehyiah\ApiDocBundle\Attributes\AsTuiGenerator;
 use Ehyiah\ApiDocBundle\Command\ComponentGeneration\AbstractTuiComponentGenerator;
+use Ehyiah\ApiDocBundle\Command\ComponentGeneration\TuiUi;
 use Ehyiah\ApiDocBundle\Enum\ComponentType;
 use Ehyiah\ApiDocBundle\Helper\LoadApiDocConfigHelper;
 use stdClass;
@@ -77,12 +78,10 @@ class ExampleTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<info>|  Examples                                 |</info>')));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header('Examples'));
         $container->add($selectWidget);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
@@ -194,12 +193,10 @@ class ExampleTuiGenerator extends AbstractTuiComponentGenerator
         $container = new ContainerWidget();
         $container->expandVertically(true);
         $title = $state->name ? "Edit: {$state->name}" : 'New Example';
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>|  {$title}</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
+        $container->add(TuiUi::header($title));
         $container->add($settingsWidget);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↵ Save    Esc Cancel</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↵ Save · Esc Cancel'));
         $tui->add($container);
         $tui->setFocus($settingsWidget);
 
@@ -276,14 +273,11 @@ class ExampleTuiGenerator extends AbstractTuiComponentGenerator
         $tui->clear();
         $container = new ContainerWidget();
         $container->expandVertically(true);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<info>+---------------------------------------------+</info>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<info>|  Select a Schema</info>')));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("<info>+---------------------------------------------+</info>\n")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  Select a schema to auto-generate the example value</fg=gray>')));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  or choose "None" to clear</fg=gray>\n')));
+        $container->add(TuiUi::header('Select a Schema'));
+        $container->add(TuiUi::hints('Select a schema to auto-generate the example value, or choose "None" to clear'));
         $container->add($selectWidget);
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format("\n<fg=gray>--------------------------------------------------</fg=gray>")));
-        $container->add(new TextWidget($this->currentOutput->getFormatter()->format('<fg=gray>  ↑↓ Navigate  ↵ Select  Esc Back</fg=gray>')));
+        $container->add(new TextWidget(''));
+        $container->add(TuiUi::hints('↑↓ Navigate · ↵ Select · Esc Back'));
         $tui->add($container);
         $tui->setFocus($selectWidget);
 
